@@ -1,0 +1,835 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MuSo — Book tickets</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#F5F6F2;--card:#FFFFFF;--ink:#15181C;--ink2:#5F666B;--ink3:#949B9F;
+  --rule:#E4E7E2;--rule2:#CFD4CD;--blue:#1F3FC4;--wash:#EAEEFC;--line:#C4CEF4;
+  --ok:#0E7C6B;--okw:#EDF7F5;--okl:#B6D9D2;--warn:#B4690E;--warnw:#FBF5EA;--warnl:#E5D0AE;
+  --stop:#B32E3E;--stopw:#FBEFF1;--stopl:#E8C4C9;
+  --sans:"Instrument Sans",-apple-system,BlinkMacSystemFont,sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,Menlo,monospace;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{background:var(--paper);color:var(--ink);font-family:var(--sans);font-size:14px;line-height:1.5;-webkit-font-smoothing:antialiased}
+button{font:inherit;color:inherit;background:none;border:none;padding:0;cursor:pointer}
+:focus-visible{outline:2px solid var(--blue);outline-offset:2px;border-radius:3px}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+
+.top{background:#16191B;color:#fff;padding:13px 24px;display:flex;align-items:center;gap:11px}
+.logo{font-weight:700;font-size:16px;letter-spacing:-.02em}
+.top-sub{font-family:var(--mono);font-size:10px;letter-spacing:.15em;text-transform:uppercase;color:#7C848A}
+.top-note{margin-left:auto;font-size:11.5px;color:#8B9298}
+
+.wrap{max-width:1120px;margin:0 auto;padding:22px 24px 70px;display:grid;grid-template-columns:minmax(0,1fr) 292px;gap:26px;align-items:start}
+@media (max-width:940px){.wrap{grid-template-columns:1fr;padding:18px 16px 90px}}
+
+/* stepper */
+.steps{display:flex;gap:3px;margin-bottom:22px;overflow-x:auto;padding-bottom:2px}
+.step{display:flex;align-items:center;gap:8px;padding:8px 12px 8px 9px;border-radius:7px;white-space:nowrap;font-size:12.5px;color:var(--ink3);transition:background .12s,color .12s}
+.step:hover:not([aria-disabled="true"]){background:#EAEDE6;color:var(--ink2)}
+.step[aria-current="true"]{background:var(--ink);color:#fff}
+.step[data-done="1"]{color:var(--ok)}
+.step[aria-disabled="true"]{opacity:.4;cursor:not-allowed}
+.step-n{width:19px;height:19px;border-radius:50%;border:1.5px solid currentColor;display:grid;place-items:center;font-family:var(--mono);font-size:9.5px;flex:none}
+.step[data-done="1"] .step-n{background:var(--ok);border-color:var(--ok);color:#fff}
+.step[aria-current="true"] .step-n{border-color:#fff}
+
+h2{font-size:20px;font-weight:600;letter-spacing:-.02em;margin:0 0 4px}
+.lede{color:var(--ink2);margin:0 0 18px;font-size:13.5px;max-width:60ch}
+.card{background:var(--card);border:1px solid var(--rule);border-radius:10px;padding:18px 20px;margin-bottom:14px}
+
+/* choice tiles */
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(232px,1fr));gap:11px}
+.tile{text-align:left;border:1.5px solid var(--rule2);background:#fff;border-radius:10px;padding:15px 16px;transition:border-color .13s,box-shadow .13s}
+.tile:hover{border-color:var(--ink3)}
+.tile[aria-pressed="true"]{border-color:var(--blue);box-shadow:0 0 0 3px var(--wash)}
+.tile-n{font-size:15.5px;font-weight:600;letter-spacing:-.01em}
+.tile-d{font-size:12.5px;color:var(--ink2);margin-top:4px;min-height:34px}
+.tile-p{font-family:var(--mono);font-size:13px;margin-top:9px;padding-top:9px;border-top:1px solid var(--rule)}
+.tile-p b{font-weight:600}
+.badge{display:inline-block;font-family:var(--mono);font-size:9.5px;letter-spacing:.08em;text-transform:uppercase;border-radius:4px;padding:2px 6px;margin-top:7px;border:1px solid}
+.badge-a{background:var(--okw);border-color:var(--okl);color:var(--ok)}
+
+/* calendar */
+.cal-head{display:flex;align-items:center;gap:12px;margin-bottom:12px}
+.cal-m{font-size:15px;font-weight:600}
+.cal-nav{margin-left:auto;display:flex;gap:5px}
+.cal-nav button{width:28px;height:28px;border:1px solid var(--rule2);border-radius:6px;display:grid;place-items:center;color:var(--ink2)}
+.cal{display:grid;grid-template-columns:repeat(7,1fr);gap:5px}
+.dow{font-family:var(--mono);font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink3);text-align:center;padding-bottom:4px}
+.day{aspect-ratio:1;border:1px solid var(--rule);border-radius:8px;background:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;font-size:13.5px;position:relative;transition:border-color .12s}
+.day:hover:not(:disabled){border-color:var(--ink3)}
+.day:disabled{background:#F4F5F2;color:#BFC5C0;cursor:not-allowed;border-color:transparent}
+.day[aria-pressed="true"]{background:var(--blue);border-color:var(--blue);color:#fff;font-weight:600}
+.day-dot{width:5px;height:5px;border-radius:50%;background:var(--warn)}
+.day[aria-pressed="true"] .day-dot{background:#fff}
+.cal-key{display:flex;flex-wrap:wrap;gap:16px;margin-top:14px;font-size:11.5px;color:var(--ink2)}
+.cal-key span{display:flex;align-items:center;gap:6px}
+.sw-box{width:13px;height:13px;border-radius:3px;border:1px solid var(--rule2);background:#F4F5F2;flex:none}
+
+/* slot rows */
+.slot{width:100%;display:flex;align-items:center;gap:14px;text-align:left;border:1.5px solid var(--rule2);background:#fff;border-radius:9px;padding:13px 15px;margin-bottom:8px;transition:border-color .13s,box-shadow .13s}
+.slot:hover:not(:disabled){border-color:var(--ink3)}
+.slot[aria-pressed="true"]{border-color:var(--blue);box-shadow:0 0 0 3px var(--wash)}
+.slot:disabled{opacity:.5;cursor:not-allowed}
+.slot-t{font-family:var(--mono);font-size:14.5px;font-weight:500;width:118px;flex:none}
+.slot-n{font-weight:500;font-size:13.5px}
+.slot-d{font-size:11.5px;color:var(--ink3);margin-top:2px}
+.slot-r{margin-left:auto;text-align:right;flex:none}
+.slot-p{font-family:var(--mono);font-size:13px}
+.slot-a{font-size:11px;margin-top:3px}
+.left-ok{color:var(--ok)}.left-low{color:var(--warn)}.left-no{color:var(--stop)}
+
+/* quantity */
+.qty{display:flex;align-items:center;gap:14px;padding:14px 0;border-bottom:1px solid var(--rule)}
+.qty:last-of-type{border-bottom:none}
+.qty-i{flex:1;min-width:0}
+.qty-n{font-weight:600;font-size:14px}
+.qty-d{font-size:12px;color:var(--ink2);margin-top:2px}
+.qty-p{font-family:var(--mono);font-size:14px;width:76px;text-align:right;flex:none}
+.stepper{display:flex;align-items:center;gap:2px;border:1px solid var(--rule2);border-radius:7px;overflow:hidden;flex:none}
+.stepper button{width:34px;height:34px;display:grid;place-items:center;font-size:16px;color:var(--ink2);transition:background .1s}
+.stepper button:hover:not(:disabled){background:#F2F4F0}
+.stepper button:disabled{color:#CDD2CB;cursor:not-allowed}
+.stepper span{width:34px;text-align:center;font-family:var(--mono);font-size:14px;font-weight:500}
+
+.alert{border-radius:8px;padding:11px 14px;font-size:12.5px;margin-top:14px;display:flex;gap:9px;align-items:flex-start}
+.alert-bad{border:1px solid var(--stopl);background:var(--stopw);color:#7C1F2B}
+.alert-ok{border:1px solid var(--okl);background:var(--okw);color:#0B5B4F}
+.alert-i{border:1px solid var(--line);background:var(--wash);color:#1B2C6B}
+.alert b{font-weight:600}
+.alert-m{font-family:var(--mono);font-size:9.5px;letter-spacing:.09em;text-transform:uppercase;flex:none;padding-top:2px}
+
+/* add-ons */
+.ad{display:flex;align-items:flex-start;gap:13px;border:1px solid var(--rule);border-radius:9px;padding:13px 15px;margin-bottom:8px}
+.ad[data-on="1"]{border-color:var(--blue);background:#FBFCFF}
+.ad-b{width:20px;height:20px;border-radius:5px;border:1.5px solid var(--rule2);flex:none;margin-top:2px;display:grid;place-items:center;font-size:12px;color:#fff}
+.ad[data-on="1"] .ad-b{background:var(--blue);border-color:var(--blue)}
+.ad-i{flex:1;min-width:0}
+.ad-n{font-weight:600;font-size:13.5px}
+.ad-d{font-size:12px;color:var(--ink2);margin-top:3px}
+.ad-slots{display:flex;flex-wrap:wrap;gap:6px;margin-top:9px}
+.ad-slot{font-family:var(--mono);font-size:11px;border:1px solid var(--rule2);border-radius:5px;padding:3px 8px;color:var(--ink2)}
+.ad-slot[aria-pressed="true"]{border-color:var(--blue);background:var(--wash);color:var(--blue);font-weight:500}
+.ad-slot:disabled{opacity:.4;cursor:not-allowed;text-decoration:line-through}
+.ad-p{font-family:var(--mono);font-size:13px;flex:none}
+
+/* fields */
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:13px}
+@media (max-width:600px){.grid2{grid-template-columns:1fr}}
+label.f{display:block}
+.f-l{font-size:12px;font-weight:500;margin-bottom:5px;display:block}
+.f-l em{font-style:normal;color:var(--ink3);font-weight:400}
+.inp{width:100%;border:1px solid var(--rule2);border-radius:7px;padding:9px 11px;font:inherit;font-size:13.5px;background:#fff}
+.inp:hover{border-color:var(--ink3)}
+.inp::placeholder{color:#B7BDB8}
+.dob{display:grid;grid-template-columns:1fr 1.3fr 1fr;gap:6px}
+.vrow{border:1px solid var(--rule);border-radius:9px;padding:14px 15px;margin-bottom:10px}
+.vrow-h{display:flex;align-items:center;gap:9px;margin-bottom:11px}
+.vrow-t{font-weight:600;font-size:13px}
+.vrow-c{font-family:var(--mono);font-size:10.5px;color:var(--ink3);margin-left:auto}
+
+/* cart */
+.cart{background:var(--card);border:1px solid var(--rule);border-radius:10px;position:sticky;top:18px;overflow:hidden}
+.cart-h{padding:14px 16px;border-bottom:1px solid var(--rule);font-size:12px;font-weight:600}
+.cart-b{padding:6px 16px 12px}
+.line{display:flex;gap:10px;padding:9px 0;border-bottom:1px solid #F1F3EF;font-size:12.5px}
+.line:last-child{border-bottom:none}
+.line-i{flex:1;min-width:0}
+.line-n{font-weight:500}
+.line-d{font-size:11px;color:var(--ink3);margin-top:2px}
+.line-p{font-family:var(--mono);flex:none}
+.cart-f{padding:12px 16px;border-top:1px solid var(--rule);background:#FBFCFA}
+.tot{display:flex;justify-content:space-between;font-size:12.5px;padding:3px 0;color:var(--ink2)}
+.tot-disc{color:var(--ok);align-items:flex-start}
+.tot-disc em{font-style:normal;display:block;font-size:11px;color:var(--ink3);margin-top:1px;max-width:150px}
+.tot-disc span:last-child{font-family:var(--mono);flex:none}
+.tot-g{font-size:16px;font-weight:600;color:var(--ink);padding-top:8px;margin-top:6px;border-top:1px solid var(--rule)}
+.tot-g span:last-child{font-family:var(--mono)}
+.empty{padding:26px 16px;text-align:center;color:var(--ink3);font-size:12.5px}
+
+.nav{display:flex;gap:9px;margin-top:20px;align-items:center;flex-wrap:wrap}
+.btn{border:1px solid var(--rule2);background:#fff;padding:10px 17px;border-radius:8px;font-size:13.5px;font-weight:500}
+.btn:hover{border-color:var(--ink3)}
+.btn-p{background:var(--blue);border-color:var(--blue);color:#fff}
+.btn-p:hover{background:#1935AC;border-color:#1935AC}
+.btn-p:disabled{background:#B9C2E6;border-color:#B9C2E6;cursor:not-allowed}
+.nav-note{font-size:12px;color:var(--ink3)}
+
+.why{border:1px dashed var(--rule2);border-radius:9px;padding:12px 14px;margin-top:16px;font-size:12px;color:var(--ink2);line-height:1.65;background:#FBFCFA}
+.why b{color:var(--ink);font-weight:600}
+.why-m{font-family:var(--mono);font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink3);display:block;margin-bottom:5px}
+
+/* accordion sections */
+.sec{background:var(--card);border:1px solid var(--rule);border-radius:10px;margin-bottom:11px;overflow:hidden;transition:border-color .15s,opacity .15s}
+.sec[data-state="open"]{border-color:var(--rule2);box-shadow:0 1px 3px rgba(20,25,20,.04)}
+.sec[data-state="locked"]{opacity:.45}
+.sec-h{display:flex;align-items:center;gap:11px;padding:14px 17px;width:100%;text-align:left}
+.sec[data-state="done"] .sec-h{cursor:pointer}
+.sec[data-state="done"] .sec-h:hover{background:#FBFCFA}
+.sec-n{width:22px;height:22px;border-radius:50%;border:1.5px solid var(--rule2);display:grid;place-items:center;font-family:var(--mono);font-size:10px;color:var(--ink3);flex:none}
+.sec[data-state="open"] .sec-n{border-color:var(--ink);color:var(--ink)}
+.sec[data-state="done"] .sec-n{background:var(--ok);border-color:var(--ok);color:#fff}
+.sec-t{font-weight:600;font-size:14px}
+.sec[data-state="done"] .sec-t{font-weight:500;color:var(--ink2);font-size:13px}
+.sec-s{margin-left:auto;font-size:13px;font-weight:500;text-align:right;min-width:0}
+.sec-s em{font-style:normal;display:block;font-size:11.5px;color:var(--ink3);font-weight:400;margin-top:1px}
+.sec-e{font-size:12px;color:var(--blue);flex:none;margin-left:12px}
+.sec-b{padding:0 17px 17px;border-top:1px solid var(--rule);padding-top:15px}
+.sec-hint{font-size:12.5px;color:var(--ink2);margin:0 0 13px}
+
+/* compact variants inside sections */
+.tiles-c{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:9px}
+.tiles-c .tile{padding:12px 14px}
+.tiles-c .tile-d{min-height:0;font-size:12px;margin-top:3px}
+.tiles-c .tile-p{margin-top:8px;padding-top:8px;font-size:12.5px}
+.cal .day{aspect-ratio:auto;height:38px;font-size:13px}
+.slot{padding:11px 14px;margin-bottom:6px}
+.slot-t{width:106px;font-size:13.5px}
+.qty{padding:11px 0}
+.ad{padding:11px 14px;margin-bottom:6px}
+.pagehead{margin-bottom:16px}
+.kind{font-size:9.5px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;border-radius:4px;padding:2px 7px;border:1px solid}
+.kind-museum{background:var(--wash);border-color:var(--line);color:var(--blue)}
+.kind-event{background:#FBF0F6;border-color:#EBC9DC;color:#A32468}
+.kind-camp{background:var(--okw);border-color:var(--okl);color:var(--ok)}
+.matrixish{border:1px solid var(--rule);border-radius:8px;overflow:hidden}
+.dayrow{display:grid;grid-template-columns:120px 120px minmax(0,1fr);gap:12px;padding:9px 13px;border-bottom:1px solid var(--rule);font-size:12.5px;align-items:center}
+.dayrow:last-child{border-bottom:none}
+.dayrow-d{font-weight:500}
+.dayrow-t{font-family:var(--mono)}
+.dayrow-n{color:var(--ink3);font-size:11.5px}
+@media (max-width:600px){.dayrow{grid-template-columns:1fr 1fr}.dayrow-n{grid-column:1/-1}}
+.adq{margin-top:12px;padding-top:12px;border-top:1px solid var(--rule)}
+.adq-h{font-size:12px;font-weight:600;margin-bottom:4px}
+.adq-r{display:flex;align-items:center;gap:12px;padding:7px 0}
+.adq-n{flex:1;font-size:13px;font-weight:500}
+.adq-n em{font-style:normal;display:block;font-size:11.5px;color:var(--ink3);font-weight:400;margin-top:1px}
+.adq .stepper button{width:30px;height:30px;font-size:15px}
+.adq .stepper span{width:30px;font-size:13px}
+</style>
+</head>
+<body>
+<div class="top"><span class="logo">MuSo</span><span class="top-sub">Book tickets</span>
+  <span class="top-note">Mockup driven by the masters model — Tuesday 4 August 2026</span></div>
+<div class="wrap">
+  <main>
+    <div class="steps" id="steps"></div>
+    <div id="pane"></div>
+    <div class="nav" id="nav"></div>
+  </main>
+  <aside><div class="cart" id="cart"></div></aside>
+</div>
+<script>
+/* ---- catalogue, straight from the masters ---- */
+const PRODUCTS = [
+  {c:"MUSO",n:"MuSo Tour",type:"Product",
+   d:"The museum itself — three hours, five hours, or the whole day.",
+   from:1500,cutoff:"day-before",hold:10,
+   slots:[
+     {id:"s1",n:"Summer weekday morning",days:[2,3,4,5],t1:"09:00",t2:"12:00",left:318,price:{"Adult":800,"Child 12–17":600,"Child 3–11":500,"Baby":1}},
+     {id:"s2",n:"Three-hour morning",days:[2,3,4,5,6,0],t1:"10:00",t2:"13:00",left:96,price:{"Adult":1500,"Child 12–17":1100,"Child 3–11":900,"Baby":1}},
+     {id:"s3",n:"Five-hour morning",days:[2,3,4,5,6,0],t1:"10:00",t2:"15:00",left:41,price:{"Adult":1200,"Child 12–17":900,"Child 3–11":700,"Baby":1}},
+     {id:"s4",n:"Five-hour afternoon",days:[2,3,4,5,6,0],t1:"14:00",t2:"19:00",left:172,price:{"Adult":1200,"Child 12–17":900,"Child 3–11":700,"Baby":1}},
+     {id:"s5",n:"Full day",days:[2,3,4,5,6,0],t1:"10:00",t2:"19:00",left:0,price:{"Adult":1800,"Child 12–17":1400,"Child 3–11":1100,"Baby":1}}]},
+  {c:"MG",n:"Mini Golf",type:"Add-on",
+   d:"Nine holes on the ground floor.",
+   from:400,cutoff:"same-day",hold:10,
+   slots:[
+     {id:"g1",n:"Golf morning",days:[2,3,4,5,6,0],t1:"10:00",t2:"11:30",left:5,price:{"Adult":400,"Child 12–17":300,"Child 3–11":250,"Baby":1}},
+     {id:"g2",n:"Golf midday",days:[2,3,4,5,6,0],t1:"12:00",t2:"13:30",left:9,price:{"Adult":400,"Child 12–17":300,"Child 3–11":250,"Baby":1}},
+     {id:"g3",n:"Golf afternoon",days:[2,3,4,5,6,0],t1:"15:00",t2:"16:30",left:12,price:{"Adult":450,"Child 12–17":350,"Child 3–11":300,"Baby":1}}]},
+  {c:"LCOP",n:"Lost Code of Play",type:"Add-on",
+   d:"A ninety-minute puzzle trail through the building.",
+   from:500,cutoff:"same-day",hold:10,
+   slots:[
+     {id:"l1",n:"LCOP morning",days:[2,3,4,5,6,0],t1:"10:30",t2:"12:00",left:3,price:{"Adult":500,"Child 12–17":400,"Child 3–11":350,"Baby":1}},
+     {id:"l2",n:"LCOP afternoon",days:[2,3,4,5,6,0],t1:"14:30",t2:"16:00",left:11,price:{"Adult":500,"Child 12–17":400,"Child 3–11":350,"Baby":1}}]},
+  {c:"VROOM",n:"Vroom",type:"Add-on",
+   d:"Weekend racing workshop. Book it with a visit, or on its own.",
+   from:300,cutoff:"day-before",hold:10,
+   slots:[{id:"v1",n:"Vroom session",days:[6,0],t1:"11:00",t2:"12:00",left:7,price:{"Adult":300,"Child 12–17":250,"Child 3–11":200,"Baby":1}}]}
+];
+const LISTINGS = [
+ {k:"museum",n:"Museum visit",kind:"Museum",cat:"Tickets",ages:"All ages",band:"All ages",unacc:false,status:"Active",
+  d:"Three hours, five hours, or the whole day. Pick a date and a time, then add anything else you fancy.",
+  from:800,when:"Tue to Sunday, most of the day"},
+ {k:"event",id:"EVT-2",n:"Storytelling afternoon",kind:"Event",cat:"Activity",ages:"3 years and over",band:"3 years and over",unacc:false,status:"Active",
+  d:"An hour and a half of stories for younger children, on the ground floor.",
+  from:300,when:"Saturday 29 August · 15:00 – 16:30",
+  date:"Sat 29 Aug",t1:"15:00",t2:"16:30",left:8,cap:30,cutoff:"1 day before it starts",
+  price:{"Adult":400,"Child 12–17":300,"Child 3–11":300,"Baby":1}},
+ {k:"event",id:"EVT-1",n:"Robotics taster",kind:"Event",cat:"Activity",ages:"Children 9+ Yrs",band:"Children 9+ Yrs",unacc:true,status:"Draft",
+  d:"A two-hour introduction to building and programming a small robot.",
+  from:450,when:"Saturday 22 August · 11:00 – 13:00",
+  date:"Sat 22 Aug",t1:"11:00",t2:"13:00",left:14,cap:20,cutoff:"1 day before it starts",
+  price:{"Adult":600,"Child 12–17":450,"Child 3–11":450,"Baby":0}},
+ {k:"camp",id:"KIN",n:"Kinetic Kids",kind:"Camp",cat:"Summer Camp",ages:"Children 9+ Yrs",band:"Children 9+ Yrs",unacc:true,status:"Active",
+  d:"Five mornings of building things that move. Children design, test and rebuild their own kinetic machines, and take one home on the Saturday.",
+  from:12999,when:"Five days · next batch 18 to 22 August",
+  cutoff:"2 days before the batch starts",
+  batches:[
+   {n:"Batch 1",from:"14 Jul",to:"18 Jul",left:2,cap:9,price:12999,closed:"Finished"},
+   {n:"Batch 2",from:"21 Jul",to:"25 Jul",left:7,cap:9,price:12999,closed:"Finished"},
+   {n:"Batch 3",from:"18 Aug",to:"22 Aug",left:12,cap:12,price:13999,
+    days:[{d:"Tue 18 Aug",t1:"14:00",t2:"17:00"},{d:"Wed 19 Aug",t1:"14:00",t2:"17:00"},
+          {d:"Thu 20 Aug",t1:"14:00",t2:"17:00"},{d:"Fri 21 Aug",t1:"14:00",t2:"17:00"},
+          {d:"Sat 22 Aug",t1:"14:00",t2:"18:00",note:"Showcase day — parents invited, runs an hour longer"}]}]}
+];
+/* Each band names the ticket types it can be sold to. Nothing is derived. */
+const BANDS = {
+ "Children 9+ Yrs":  ["Child 3–11","Child 12–17"],
+ "3 years and over": ["Adult","Child 12–17","Child 3–11"],
+ "All ages":         ["Adult","Child 12–17","Child 3–11","Baby"]
+};
+const ADMITS = b => BANDS[b] || BANDS["All ages"];
+const AGE_BANDS = ["Everything","Children 9+ Yrs","3 years and over"];
+
+const CATS = [
+  {n:"Adult",       d:"18 and over",  needs:null},
+  {n:"Child 12–17", d:"12 to 17 — can visit without an adult", needs:null},
+  {n:"Child 3–11",  d:"3 to 11 — an adult must be on the booking", needs:"Adult"},
+  {n:"Baby",        d:"0 to 2 — ₹1 so we can count them", needs:"Adult"}
+];
+const SCHOOL_DAYS=[12,19,26], CLOSED_DOW=1, TODAY=4, AUG_START_DOW=6;
+const DOWN=["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
+
+const PAGES = [["browse","What\u2019s on"],["plan","Choose"],["details","Your details"],["pay","Review & pay"]];
+const SECS  = [["what","What to book"],["when","Date"],["slot","Time"],
+               ["who","Who is coming"],["extra","Add-ons"]];
+
+let page=0, open="when", mode=null, listing=null, selBatch=2, campSeats=0, band="Everything",
+    prod=null, date=null, slot=null,
+    qty={}, extras={}, extraSlot={}, extraQty={};
+CATS.forEach(c=>qty[c.n]=0);
+
+const dow=d=>(AUG_START_DOW+d-1)%7;
+const money=n=>"₹"+n.toLocaleString("en-IN");
+const mins=t=>(+t.slice(0,2))*60+(+t.slice(3,5));
+const P=()=>PRODUCTS.find(x=>x.c===prod);
+const S=()=>P()&&P().slots.find(x=>x.id===slot);
+const heads=()=>CATS.reduce((t,c)=>t+(qty[c.n]||0),0);
+const slotsOn=(p,d)=>p.slots.filter(s=>s.days.includes(dow(d)));
+const fits=(a,parent)=>mins(a.t1)>=mins(parent.t1)&&mins(a.t2)<=mins(parent.t2);
+const offered=()=>prod==="MUSO"?PRODUCTS.filter(x=>x.type==="Add-on"):[];
+/* Whether a younger child needs an adult on the booking is a setting on the
+   listing, not something inferred from which tickets happen to be on sale. */
+function needsMissing(){
+  const l=L();
+  if(l && l.unacc) return [];
+  return CATS.filter(c=>c.needs && qty[c.n]>0 && (qty[c.needs]||0)===0);
+}
+const guardianOK=()=>needsMissing().length===0;
+
+function ticketTotal(){const s=S();return s?CATS.reduce((t,c)=>t+qty[c.n]*(s.price[c.n]||0),0):0;}
+const blank=()=>{const o={};CATS.forEach(c=>o[c.n]=0);return o;};
+const eq=k=>extraQty[k]||blank();
+const eqHeads=k=>{const q=eq(k);return CATS.reduce((t,c)=>t+(q[c.n]||0),0);};
+function extraTotal(){let t=0;Object.keys(extras).forEach(k=>{if(!extras[k])return;
+  const p=PRODUCTS.find(x=>x.c===k),sl=p.slots.find(x=>x.id===extraSlot[k]);
+  if(sl)t+=CATS.reduce((a,c)=>a+eq(k)[c.n]*(sl.price[c.n]||0),0);});return t;}
+function extraProblem(k){
+  if(!extras[k]) return null;
+  if(!extraSlot[k]) return "pick a time";
+  if(eqHeads(k)===0) return "add at least one person";
+  const p=PRODUCTS.find(x=>x.c===k), sl=p.slots.find(x=>x.id===extraSlot[k]);
+  if(eqHeads(k)>sl.left) return `only ${sl.left} ${sl.left===1?"place":"places"} left at that time`;
+  return null;
+}
+const L = () => listing;
+const BATCH = () => L() && L().batches && L().batches[selBatch];
+function eventTotal(){const l=L(); if(!l||l.k!=="event")return 0;
+  return CATS.reduce((t,c)=>t+(qty[c.n]||0)*(l.price[c.n]||0),0);}
+function campTotal(){const b=BATCH(); return b?campSeats*b.price:0;}
+const subtotal=()=>{
+  if(mode==="museum") return ticketTotal()+extraTotal();
+  if(mode==="event")  return eventTotal();
+  if(mode==="camp")   return campTotal();
+  return 0;};
+/* §1.6 — applies itself when a tour and an add-on are both in the cart. Nothing typed. */
+function autoDiscount(){
+  if(mode!=="museum"||prod!=="MUSO") return null;
+  const ax=extraTotal();
+  if(!ax) return null;
+  return {n:"Add-on bundling", d:"10% off add-ons, because your visit includes one", amt:Math.round(ax*0.10)};
+}
+const gst=()=>Math.round((subtotal()-(autoDiscount()?.amt||0))*0.18);
+
+/* ---- section state ---- */
+function secState(k){
+  const done={what:!!prod, when:!!date, slot:!!slot, who:heads()>0&&guardianOK(),
+              extra:true}[k];
+  const reach={what:true, when:true, slot:!!date, who:!!slot, extra:!!slot}[k];
+  if(!reach) return "locked";
+  if(k===open) return "open";
+  if(k==="who"||k==="extra") return reach?"open":"locked";
+  return done?"done":"open";
+}
+function summary(k){
+  const p=P(), s=S();
+  if(k==="what") return p?{a:p.n,b:p.type==="Add-on"?"Also sold on its own":"Museum admission"}:null;
+  if(k==="when") return date?{a:`${DOWN[dow(date)]} ${date} August`,b:"2026"}:null;
+  if(k==="slot") return s?{a:`${s.t1} – ${s.t2}`,b:s.n}:null;
+  return null;
+}
+function planReady(){
+  if(mode==="museum") return prod&&date&&slot&&heads()>0&&guardianOK()&&
+    Object.keys(extras).every(k=>!extraProblem(k));
+  if(mode==="event"){ const l=L();
+    return heads()>0&&guardianOK()&&heads()<=l.left; }
+  if(mode==="camp"){ const b=BATCH(); return !!b&&campSeats>0&&campSeats<=b.left; }
+  return false;
+}
+function canContinue(){
+  if(page===0) return !!mode;
+  if(page===1) return planReady();
+  return true;
+}
+
+/* ---- section bodies ---- */
+const B = {
+what(){ return `
+  <p class="sec-hint">Pick the main thing first — it decides which dates, times and prices you see next.</p>
+  <div class="tiles tiles-c">
+    ${PRODUCTS.filter(p=>!p.attachedOnly).map(p=>`
+      <button class="tile" data-prod="${p.c}" aria-pressed="${prod===p.c}">
+        <div class="tile-n">${p.n}</div><div class="tile-d">${p.d}</div>
+        <div class="tile-p">from <b>${money(p.from)}</b> <span style="color:var(--ink3)">per adult</span></div>
+      </button>`).join("")}
+  </div>`;
+},
+
+when(){
+  const p=P(), cells=[];
+  for(let i=0;i<AUG_START_DOW;i++) cells.push("<div></div>");
+  for(let d=1;d<=31;d++){
+    const off = d<=TODAY || dow(d)===CLOSED_DOW || slotsOn(p,d).length===0;
+    cells.push(`<button class="day" data-day="${d}" ${off?"disabled":""} aria-pressed="${date===d&&!off}">
+      ${d}${SCHOOL_DAYS.includes(d)&&!off?'<i class="day-dot"></i>':""}</button>`);
+  }
+  return `
+  <p class="sec-hint">Closed Mondays. Tour tickets close at midnight the night before, so the earliest date is Wednesday 5 August.</p>
+  <div class="cal-head"><span class="cal-m">August 2026</span>
+    <span class="cal-nav"><button>‹</button><button>›</button></span></div>
+  <div class="cal">${DOWN.map(d=>`<div class="dow">${d}</div>`).join("")}${cells.join("")}</div>
+  <div class="cal-key"><span><i class="sw-box"></i>Closed or past the cut-off</span>
+    <span><i class="day-dot" style="position:static"></i>A school group is visiting</span></div>`;
+},
+
+slot(){
+  const p=P(), list=slotsOn(p,date);
+  return `<p class="sec-hint">Prices differ by slot. The figure shown is what one adult pays.</p>
+  ${list.map(s=>{const out=s.left<=0;
+    return `<button class="slot" data-slot="${s.id}" ${out?"disabled":""} aria-pressed="${slot===s.id}">
+      <span class="slot-t">${s.t1} – ${s.t2}</span>
+      <span class="slot-i"><span class="slot-n">${s.n}</span>
+        <span class="slot-d">${(mins(s.t2)-mins(s.t1))/60} hours</span></span>
+      <span class="slot-r"><span class="slot-p">${money(s.price.Adult)}<span style="color:var(--ink3);font-size:11px"> /adult</span></span>
+        <span class="slot-a ${out?"left-no":"left-ok"}">${out?"Sold out":"Available"}</span></span>
+    </button>`;}).join("")}`;
+},
+
+who(){
+  const s=S();
+  return `<p class="sec-hint">One line per person. Prices are for the ${s.t1} – ${s.t2} slot.</p>
+  ${CATS.map(c=>`<div class="qty">
+    <span class="qty-i"><span class="qty-n">${c.n}</span><span class="qty-d">${c.d}</span></span>
+    <span class="qty-p">${money(s.price[c.n])}</span>
+    <span class="stepper">
+      <button data-q="${c.n}" data-dir="-1" ${qty[c.n]===0?"disabled":""}>−</button>
+      <span>${qty[c.n]}</span><button data-q="${c.n}" data-dir="1">+</button></span>
+  </div>`).join("")}
+  ${!guardianOK()?`<div class="alert alert-bad"><span class="alert-m">Check</span><div>
+    ${needsMissing().map(c=>`<b>${c.n}</b> must be booked with at least one <b>${c.needs}</b>.`).join("<br>")}</div></div>`:""}`;
+},
+
+extra(){
+  const parent=S(), list=offered();
+  if(!list.length) return `<p class="sec-hint">Nothing can be added to this booking.</p>`;
+  return `<p class="sec-hint">Only times that fit inside your ${parent.t1} – ${parent.t2} visit are offered, and only people already on your visit can be added.</p>
+  ${list.map(a=>{
+    const on=!!extras[a.c], cand=slotsOn(a,date), none=cand.every(s=>!fits(s,parent));
+    const sl=cand.find(x=>x.id===extraSlot[a.c]), prob=extraProblem(a.c), q=eq(a.c);
+    return `<div class="ad" data-on="${on?1:0}">
+      <button class="ad-b" data-add="${a.c}">${on?"✓":""}</button>
+      <span class="ad-i"><span class="ad-n">${a.n}</span><span class="ad-d">${a.d}</span>
+        ${on?`<span class="ad-slots">${cand.map(x=>{const ok=fits(x,parent);
+          return `<button class="ad-slot" data-addslot="${a.c}|${x.id}" ${ok?"":"disabled"}
+            aria-pressed="${extraSlot[a.c]===x.id}" title="${ok?"":"Runs past the end of your visit"}">${x.t1}–${x.t2}</button>`;}).join("")}</span>
+          ${none?`<div class="alert alert-bad" style="margin-top:9px"><span class="alert-m">None fit</span><div>
+            Every ${a.n} time runs past the end of your visit. Choose a longer slot, or book it on its own another day.</div></div>`:""}
+          ${sl?`<div class="adq">
+            <div class="adq-h">Who is doing ${a.n}?</div>
+            ${CATS.filter(c=>qty[c.n]>0).map(c=>`<div class="adq-r">
+              <span class="adq-n">${c.n}<em>${money(sl.price[c.n])} each · ${qty[c.n]} on your visit</em></span>
+              <span class="stepper">
+                <button data-eq="${a.c}|${c.n}" data-dir="-1" ${q[c.n]===0?"disabled":""}>−</button>
+                <span>${q[c.n]}</span>
+                <button data-eq="${a.c}|${c.n}" data-dir="1" ${q[c.n]>=qty[c.n]?"disabled":""}>+</button></span>
+            </div>`).join("")}
+            ${prob?`<div class="alert alert-bad" style="margin-top:10px"><span class="alert-m">Check</span><div>
+              ${a.n} — ${prob}.</div></div>`:""}
+          </div>`:""}`:""}
+      </span>
+      <span class="ad-p">${on&&sl&&eqHeads(a.c)
+        ? money(CATS.reduce((t,c)=>t+q[c.n]*(sl.price[c.n]||0),0))
+        : money(a.from)+`<span style="color:var(--ink3);font-size:11px"> /adult</span>`}</span>
+    </div>`;}).join("")}`;
+}};
+
+/* ---- pages ---- */
+const V = {
+browse(){
+  const live=LISTINGS.filter(l=>l.status==="Active");
+  const shown=band==="Everything"?live:live.filter(l=>l.band===band);
+  const hidden=LISTINGS.filter(l=>l.status!=="Active");
+  return `<div class="pagehead"><h2>What\u2019s on</h2>
+    <p class="lede">Everything you can book at MuSo — the museum itself, one-day events, and multi-day camps.</p></div>
+  <div class="picker">${AGE_BANDS.map(b=>
+    `<button class="pick" data-band="${b}" aria-pressed="${band===b}">${b}</button>`).join("")}</div>
+  <div class="tiles">
+    ${shown.map(l=>`<button class="tile" data-listing="${l.k}|${l.id||""}" aria-pressed="${listing===l}">
+      <div style="display:flex;align-items:center;gap:7px;margin-bottom:6px">
+        <span class="kind kind-${l.k}">${l.kind}</span>
+        <span style="font-size:11.5px;color:var(--ink3)">${l.ages}</span></div>
+      <div class="tile-n">${l.n}</div>
+      <div class="tile-d">${l.d}</div>
+      <div class="tile-p">${l.when}<br><span style="color:var(--ink3)">from</span> <b>${money(l.from)}</b>
+        ${l.k==="camp"?'<span style="color:var(--ink3)"> per child, per batch</span>':'<span style="color:var(--ink3)"> per adult</span>'}</div>
+    </button>`).join("")}
+  </div>
+  ${shown.length?"":`<div class="card" style="text-align:center;color:var(--ink3)">Nothing under that age filter yet.</div>`}
+  <div class="why"><span class="why-m">What decides this page</span>
+    Three things from the masters. <b>Status</b> — ${hidden.length} listing${hidden.length===1?" is":"s are"} missing here because ${hidden.length===1?"it is":"they are"} still a draft (${hidden.map(l=>l.n).join(", ")}); a draft has never been on the site. <b>Age filter</b> — the chips come from the age-filter master, and the band does more than filter this page: it decides which ticket types the listing can be sold to at all. <b>Booking cut-off</b> — a camp whose batches have all started stops appearing.</div>`;
+},
+
+plan(){
+  if(mode==="museum") return V.planMuseum();
+  if(mode==="event")  return V.planEvent();
+  return V.planCamp();
+},
+
+planEvent(){
+  const l=L();
+  return `<div class="pagehead"><h2>${l.n}</h2>
+    <p class="lede">${l.date} · ${l.t1} – ${l.t2}. One session, ${l.left} of ${l.cap} places left.</p></div>
+  <div class="card">
+    <div style="font-weight:600;font-size:13.5px;margin-bottom:11px">Who is coming?</div>
+    ${CATS.filter(c=>ADMITS(l.band).includes(c.n)).map(c=>`<div class="qty">
+      <span class="qty-i"><span class="qty-n">${c.n}</span><span class="qty-d">${c.d}</span></span>
+      <span class="qty-p">${money(l.price[c.n])}</span>
+      <span class="stepper">
+        <button data-q="${c.n}" data-dir="-1" ${qty[c.n]===0?"disabled":""}>&minus;</button>
+        <span>${qty[c.n]}</span>
+        <button data-q="${c.n}" data-dir="1">+</button></span>
+    </div>`).join("")}
+    <div style="font-size:11.5px;color:var(--ink3);margin-top:11px;padding-top:11px;border-top:1px solid var(--rule)">
+        Not sold for this: <b>${CATS.filter(c=>!ADMITS(l.band).includes(c.n)).map(c=>c.n).join(", ")||"nothing"}</b>. The age band names the ticket types this listing can be sold to.
+      ${l.unacc?"<br>Children may come without an adult — this one is a drop-off."
+               :"<br>A younger child must have an adult on the same booking."}
+    </div>
+    ${!guardianOK()?`<div class="alert alert-bad"><span class="alert-m">Check</span><div>
+      ${needsMissing().map(c=>`<b>${c.n}</b> must be booked with at least one <b>${c.needs}</b>.`).join("<br>")}</div></div>`:""}
+    ${heads()>l.left?`<div class="alert alert-bad"><span class="alert-m">Full</span><div>
+      Only ${l.left} places left in this session.</div></div>`:""}
+  </div>
+  <div class="why"><span class="why-m">Why an event asks so little</span>
+    One date, one time, its own seats. There is no slot to choose because the event <b>is</b> the slot, and nothing can be added alongside it. The only thing it asks that a workshop does not is <b>who</b> is coming — an event is priced per visitor type, so an adult bringing a child pays an adult price, where a camp is one price a seat.<br><br>
+    Bookings close ${l.cutoff.toLowerCase()}, and the ${l.cap}-seat limit is the event\u2019s own. §4 keeps events out of the museum\u2019s 400, so a busy Saturday in the building does not close this.<br><br>
+    <b>Only some ticket types appear.</b> The age band names them outright — ${ADMITS(l.band).join(", ")} here, and nothing else. Nothing is worked out from the wording, so “3 years and over” including an adult ticket is a choice someone made rather than a rule that read the number three. Where a band leaves the adult ticket out, as the 9+ workshops do, the children come without an accompanying ticket because the parent is dropping them off.</div>`;
+},
+
+planCamp(){
+  const l=L(), b=BATCH();
+  return `<div class="pagehead"><h2>${l.n}</h2>
+    <p class="lede">${l.d}</p></div>
+  <div class="card">
+    <div style="font-weight:600;font-size:13.5px;margin-bottom:11px">Which batch?</div>
+    ${l.batches.map((x,i)=>`<button class="slot" data-batch="${i}" ${x.closed?"disabled":""}
+      aria-pressed="${selBatch===i&&!x.closed}">
+      <span class="slot-t">${x.from} – ${x.to}</span>
+      <span class="slot-i"><span class="slot-n">${x.n}</span>
+        <span class="slot-d">${x.days?x.days.length+" days · "+x.days[0].t1+"–"+x.days[0].t2:"5 days"}</span></span>
+      <span class="slot-r"><span class="slot-p">${money(x.price)}<span style="color:var(--ink3);font-size:11px"> /child</span></span>
+        <span class="slot-a ${x.closed?"left-no":"left-ok"}">${x.closed||x.left+" places left"}</span></span>
+    </button>`).join("")}
+  </div>
+  ${b&&b.days?`<div class="card">
+    <div style="font-weight:600;font-size:13.5px;margin-bottom:9px">The five days</div>
+    <div class="matrixish">${b.days.map(d=>`<div class="dayrow">
+      <span class="dayrow-d">${d.d}</span>
+      <span class="dayrow-t">${d.t1} – ${d.t2}</span>
+      <span class="dayrow-n">${d.note||""}</span></div>`).join("")}</div>
+    <div style="font-size:12px;color:var(--ink2);margin-top:11px;line-height:1.6">
+      One booking covers all five days. The Saturday runs an hour longer for the showcase, and the day-before reminder carries each day\u2019s own time.</div>
+  </div>`:""}
+  ${b&&!b.closed?`<div class="card">
+    <div class="qty" style="border:none">
+      <span class="qty-i"><span class="qty-n">How many children?</span>
+        <span class="qty-d">${l.ages} · ${money(b.price)} each, for the whole batch</span></span>
+      <span class="stepper">
+        <button data-cs="-1" ${campSeats===0?"disabled":""}>&minus;</button>
+        <span>${campSeats}</span>
+        <button data-cs="1" ${campSeats>=b.left?"disabled":""}>+</button></span>
+    </div>
+    ${campSeats>=b.left?`<div class="alert alert-i"><span class="alert-m">Last few</span><div>
+      That is every remaining place in this batch.</div></div>`:""}
+  </div>`:""}
+  <div class="why"><span class="why-m">Why a camp books by the batch</span>
+    A batch is the thing on sale, not a day within it. One purchase, one seat, five mornings — so there is no way to book Wednesday alone, and a missed day is simply missed. The price is <b>per child</b> whatever their age, unlike a museum ticket; your own details come next, and the child\u2019s name is asked there.<br><br>
+    ${l.unacc?"Children attend on their own — this is a drop-off, so no adult ticket is sold and none is needed. That is a setting on the workshop rather than something read from its age band.":"An adult must be booked alongside."}<br><br>
+    July\u2019s batches show as finished. Bookings close ${l.cutoff.toLowerCase()}, measured from each batch rather than the workshop, which is why August is open while July has gone.</div>`;
+},
+
+planMuseum(){
+  return `<div class="pagehead"><h2>Plan your visit</h2>
+    <p class="lede">Five choices, one page. Each opens the next — change any of them at any time.</p></div>
+  ${SECS.filter(([k])=>k!=="what").map(([k,label],i)=>{
+    const st=secState(k), sm=summary(k);
+    return `<section class="sec" data-state="${st}">
+      ${st==="done"&&sm
+        ? `<button class="sec-h" data-open="${k}">
+             <span class="sec-n">✓</span><span class="sec-t">${label}</span>
+             <span class="sec-s">${sm.a}<em>${sm.b}</em></span><span class="sec-e">Change</span></button>`
+        : `<div class="sec-h"><span class="sec-n">${i+1}</span><span class="sec-t">${label}</span></div>`}
+      ${st==="locked"?"":`<div class="sec-b">${B[k]()}</div>`}
+    </section>`;}).join("")}
+  <div class="why"><span class="why-m">Add-ons are counted separately</span>
+    Ticking an add-on does not sign the whole group up for it. Each one asks its own how-many, capped at the people already on your visit — two children can play mini golf while two adults sit it out, which is the common case. Quantities start pre-filled with the adults and children on the visit and babies at zero, so the usual booking is no extra clicks and the exception is two taps. The cap matters for capacity too: golf holds twelve per slot and the museum four hundred, so the two counts are checked against different pools.<br><br>
+    <b>One discount applies itself here.</b> §1.6 gives 10% off add-ons when they are bundled with a ticket, and it is automatic — nothing is typed, the cart just shows the line and the reason. Tick an add-on and watch the summary on the right.<br><br>
+    <b>One question this raises.</b> §1.11's supervision rule is written for museum entry. Whether it also applies to an add-on — two children on the golf course while the adults stay upstairs — is not stated anywhere in the scope.</div>
+  <div class="why"><span class="why-m">Why these five belong together</span>
+    They are one decision, not five. Product decides which dates run; date decides which times exist; time decides the price and which add-ons fit. Splitting them across pages meant every back-click threw away the choice below it. Here the sections collapse to a line once answered, so the whole visit stays visible in about a screen — and <b>Change</b> reopens any of them without losing the rest.</div>`;
+},
+
+details(){
+  const rows=[];
+  if(mode==="camp"){ for(let i=0;i<campSeats;i++) rows.push({cat:"Child",i:i+1}); }
+  else CATS.forEach(c=>{ for(let i=0;i<qty[c.n];i++) rows.push({cat:c.n,i:i+1}); });
+  return `<div class="pagehead"><h2>Your details</h2>
+    <p class="lede">Where the tickets go, and who is in the group.</p></div>
+  <div class="card">
+    <div style="font-weight:600;font-size:13.5px;margin-bottom:12px">Booking contact</div>
+    <div class="grid2">
+      <label class="f"><span class="f-l">Full name</span><input class="inp" placeholder="Your name"></label>
+      <label class="f"><span class="f-l">Mobile number</span><input class="inp" placeholder="+91"></label>
+      <label class="f" style="grid-column:1/-1"><span class="f-l">Email address</span><input class="inp" placeholder="you@example.com"></label>
+      <label class="f" style="grid-column:1/-1"><span class="f-l">How did you hear about us? <em>optional</em></span>
+        <select class="inp"><option>Choose one…</option><option>Instagram</option><option>Google search</option>
+        <option>Friend or family</option><option>Child's school</option><option>Walked past</option>
+        <option>Event or fair</option><option>Newspaper or magazine</option><option>Other</option></select></label>
+    </div>
+  </div>
+  <div style="font-weight:600;font-size:13.5px;margin:18px 0 10px">${
+    mode==="camp"?"Each child attending":"Everyone visiting"}</div>
+  ${rows.length?rows.map((r,i)=>`<div class="vrow">
+    <div class="vrow-h"><span class="vrow-t">${r.cat} ${r.i}</span>
+      <span class="vrow-c">${i===0?"Lead visitor":""}</span></div>
+    <div class="grid2">
+      <label class="f"><span class="f-l">Full name</span><input class="inp" placeholder="Name"></label>
+      <label class="f"><span class="f-l">${mode==="camp"?"Age":"Date of birth"} <em>optional</em></span>
+        <span class="dob"><select class="inp"><option>Day</option></select>
+        <select class="inp"><option>Month</option></select>
+        <select class="inp"><option>Year</option></select></span></label>
+    </div></div>`).join("")
+    :`<div class="card" style="text-align:center;color:var(--ink3)">Add people on the previous page first.</div>`}
+  ${mode==="camp"?`<div class="why"><span class="why-m">What a camp asks for</span>
+    §2 collects the parent\u2019s name and phone, the child\u2019s name, and the child\u2019s age. The age is <b>not mandatory</b>, so the “9 years and over” on the listing is guidance rather than something the booking is refused on. The instructor\u2019s register is built from exactly these fields.</div>`:""}
+  <div class="why"><span class="why-m">Two decisions live on this page</span>
+    <b>Where the contact block sits.</b> §1.2 and §3 both ask for name, number and email before booking rather than here. Asking first makes abandoned bookings followable-up; asking here removes a wall in front of anyone who has not seen a price yet. Moving it is a change to this screen alone.<br><br>
+    <b>Date of birth stays optional.</b> §1.7 lists it as optional in one line and required in another; it is optional here. Nothing is computed from it — the buyer picks their own category on the previous page, and the only rule the system enforces is that a Child 3–11 or a Baby has an Adult on the same booking. The date of birth is collected for records and for the visit itself, not to work out a price.</div>`;
+},
+
+pay(){
+  const l=L();
+  if(mode!=="museum"){
+    const b=BATCH();
+    return `<div class="pagehead"><h2>Review and pay</h2>
+      <p class="lede">Nothing is charged until you confirm.</p></div>
+    <div class="alert alert-i" style="margin-bottom:14px"><span class="alert-m">Held</span><div>
+      Your places are held for <b id="holdClock">10:00</b>. After that they go back on sale.</div></div>
+    <div class="card">
+      <div style="font-weight:600;margin-bottom:9px">${l.n}</div>
+      <div style="font-size:13px;color:var(--ink2);line-height:1.7">
+        ${mode==="event"
+          ? `${l.date} · ${l.t1} – ${l.t2}<br>${CATS.filter(c=>qty[c.n]).map(c=>qty[c.n]+" × "+c.n).join(" · ")||"No one added"}`
+          : `${b.n} · ${b.from} to ${b.to}<br>${campSeats} ${campSeats===1?"child":"children"} · ${money(b.price)} each<br>
+             <span style="color:var(--ink3)">${b.days.map(d=>d.d.split(" ")[0]).join(", ")} · ${b.days[0].t1}–${b.days[0].t2}, Saturday until ${b.days[b.days.length-1].t2}</span>`}
+      </div>
+    </div>
+    <div class="card">
+      <div style="font-weight:600;margin-bottom:10px">How would you like to pay?</div>
+      <div class="tiles tiles-c">${["Card","UPI","Net banking"].map((m,i)=>`
+        <button class="tile" style="padding:12px 14px" aria-pressed="${i===0}">
+          <div class="tile-n" style="font-size:14px">${m}</div></button>`).join("")}</div>
+    </div>
+    <div class="why"><span class="why-m">After this</span>
+      ${mode==="camp"
+        ? "§2 sends the confirmation to you and to the instructor, and a separate one to MuSo\u2019s point of contact carrying the parent\u2019s name, the child\u2019s name, the WhatsApp number, the child\u2019s age and the email. A reminder goes out the day before <b>each</b> of the five days, carrying that day\u2019s own time."
+        : "Confirmation on email and WhatsApp, then a reminder the day before."}</div>`;
+  }
+  const s=S(), p=P();
+  return `<div class="pagehead"><h2>Review and pay</h2>
+    <p class="lede">Nothing is charged until you confirm.</p></div>
+  <div class="alert alert-i" style="margin-bottom:14px"><span class="alert-m">Held</span><div>
+    Your places are held for <b id="holdClock">10:00</b>. After that they go back on sale.</div></div>
+  <div class="card">
+    <div style="font-weight:600;margin-bottom:9px">${p.n} · ${s.n}</div>
+    <div style="font-size:13px;color:var(--ink2);line-height:1.7">
+      ${DOWN[dow(date)]} ${date} August 2026 · ${s.t1} – ${s.t2}<br>
+      ${CATS.filter(c=>qty[c.n]).map(c=>qty[c.n]+" × "+c.n).join(" · ")||"No one added"}
+      ${Object.keys(extras).filter(k=>extras[k]&&extraSlot[k]).map(k=>{
+        const a=PRODUCTS.find(x=>x.c===k), sl=a.slots.find(x=>x.id===extraSlot[k]);
+        return `<br>${a.n} · ${sl.t1}–${sl.t2}`;}).join("")}
+    </div>
+  </div>
+  <div class="card">
+    <div style="font-weight:600;margin-bottom:10px">How would you like to pay?</div>
+    <div class="tiles tiles-c">${["Card","UPI","Net banking"].map((m,i)=>`
+      <button class="tile" style="padding:12px 14px" aria-pressed="${i===0}">
+        <div class="tile-n" style="font-size:14px">${m}</div></button>`).join("")}</div>
+    <div class="alert alert-i" style="margin-top:13px"><span class="alert-m">Cash</span><div>
+      Cash is absent on purpose — the payment modes master marks it counter-only, so it never renders online.</div></div>
+  </div>
+  <div class="why"><span class="why-m">What the hold is doing</span>
+    Reaching this screen takes the places out of circulation for ten minutes, so nobody else can buy them while a card is being entered. Availability counts a hold exactly like a confirmed booking, which means a slot can read sold out purely because several people are at checkout, then quietly reopen. If the hold expires the places return by themselves and nothing is charged. The duration sits slightly above the payment gateway's session timeout, so a slow payment never outlives its own hold.</div>`;
+}};
+
+/* ---- chrome ---- */
+function stepsHTML(){
+  return PAGES.map(([k,l],i)=>`<button class="step" data-page="${i}"
+    ${i>page?'aria-disabled="true"':""} aria-current="${i===page}" data-done="${i<page?1:0}">
+    <span class="step-n">${i<page?"✓":i+1}</span>${l}</button>`).join("");
+}
+function cartHTML(){
+  const l=L(), lines=[];
+  if(mode==="event"&&l){
+    CATS.forEach(c=>{ if(qty[c.n]) lines.push({
+      n:`${qty[c.n]} × ${c.n}`, d:`${l.n} · ${l.date}`, p:qty[c.n]*l.price[c.n]});});
+  } else if(mode==="camp"&&l){
+    const b=BATCH();
+    if(b&&campSeats) lines.push({n:`${campSeats} × place`, d:`${l.n} · ${b.n}, ${b.from}–${b.to}`, p:campSeats*b.price});
+  }
+  if(lines.length) return cartShell(lines);
+  const s=S();
+  if(s) CATS.forEach(c=>{ if(qty[c.n]) lines.push({
+    n:`${qty[c.n]} × ${c.n}`, d:`${P().n} · ${s.t1}–${s.t2}`, p:qty[c.n]*s.price[c.n]});});
+  Object.keys(extras).forEach(k=>{ if(!extras[k])return;
+    const p=PRODUCTS.find(x=>x.c===k), sl=p.slots.find(x=>x.id===extraSlot[k]);
+    if(!sl)return; const q=eq(k);
+    const amt=CATS.reduce((a,c)=>a+q[c.n]*(sl.price[c.n]||0),0);
+    const who=CATS.filter(c=>q[c.n]).map(c=>q[c.n]+" "+c.n.toLowerCase()).join(", ");
+    if(amt) lines.push({n:p.n,d:`${sl.t1}–${sl.t2} · ${who}`,p:amt});});
+  return cartShell(lines);
+}
+function cartShell(lines){
+  return `<div class="cart-h">Your booking</div>
+  ${lines.length?`<div class="cart-b">${lines.map(l=>`<div class="line">
+    <span class="line-i"><span class="line-n">${l.n}</span><span class="line-d">${l.d}</span></span>
+    <span class="line-p">${money(l.p)}</span></div>`).join("")}</div>
+  <div class="cart-f">
+    <div class="tot"><span>Subtotal</span><span>${money(subtotal())}</span></div>
+    ${(()=>{const d=autoDiscount(); return d?`<div class="tot tot-disc">
+      <span>${d.n}<em>${d.d}</em></span><span>− ${money(d.amt)}</span></div>`:"";})()}
+    <div class="tot"><span>GST 18% <span style="color:var(--ink3)">(CGST 9 + SGST 9)</span></span><span>${money(gst())}</span></div>
+    <div class="tot tot-g"><span>Total</span><span>${money(subtotal()-(autoDiscount()?.amt||0)+gst())}</span></div>
+  </div>`:`<div class="empty">Nothing added yet.<br>Your booking builds up here as you go.</div>`}`;
+}
+function navHTML(){
+  const last=page===PAGES.length-1;
+  let note="";
+  if(page===0&&!mode) note="Choose something to book";
+  if(page===1&&mode==="event"&&!planReady())
+    note = !guardianOK()?needsMissing().map(c=>c.n+" needs an "+c.needs.toLowerCase()).join(", ")
+         : heads()===0?"Add at least one person" : "Only "+L().left+" places left";
+  if(page===1&&mode==="camp"&&!planReady())
+    note = BATCH()&&BATCH().closed?"That batch has finished — choose another"
+         : campSeats===0?"Add at least one child" : "Not enough places left in that batch";
+  if(page===1&&mode==="museum"&&!planReady()){
+    note = !prod?"Choose what to book" : !date?"Choose a date" : !slot?"Choose a time"
+      : !guardianOK()?needsMissing().map(c=>c.n+" needs an "+c.needs.toLowerCase()).join(", ")
+      : heads()===0?"Add at least one person"
+      : (()=>{const k=Object.keys(extras).find(x=>extraProblem(x));
+              return PRODUCTS.find(x=>x.c===k).n+" — "+extraProblem(k);})();
+  }
+  return `${page>0?`<button class="btn" data-nav="-1">Back</button>`:""}
+    <button class="btn btn-p" data-nav="1" ${canContinue()?"":"disabled"}>${last?"Pay now":"Continue"}</button>
+    ${note?`<span class="nav-note">${note}</span>`:""}`;
+}
+function render(){
+  document.getElementById("steps").innerHTML=stepsHTML();
+  document.getElementById("pane").innerHTML=V[PAGES[page][0]]();
+  document.getElementById("nav").innerHTML=navHTML();
+  document.getElementById("cart").innerHTML=cartHTML();
+}
+
+document.addEventListener("click",e=>{
+  const st=e.target.closest("[data-page]");
+  if(st){ if(st.getAttribute("aria-disabled")==="true")return;
+    page=+st.dataset.page; render(); window.scrollTo({top:0,behavior:"smooth"}); return; }
+  const nv=e.target.closest("[data-nav]");
+  if(nv){ const d=+nv.dataset.nav; if(d>0&&!canContinue())return;
+    page=Math.max(0,Math.min(PAGES.length-1,page+d));
+    if(page===0){ mode=null; listing=null; }
+    render();
+    window.scrollTo({top:0,behavior:"smooth"}); return; }
+  const op=e.target.closest("[data-open]");
+  if(op){ open=op.dataset.open; render(); return; }
+  const bd=e.target.closest("[data-band]");
+  if(bd){ band=bd.dataset.band; render(); return; }
+  const li=e.target.closest("[data-listing]");
+  if(li){ const [k,id]=li.dataset.listing.split("|");
+    mode=k; listing=LISTINGS.find(x=>x.k===k&&(x.id||"")===id);
+    prod=null;date=null;slot=null;extras={};extraSlot={};extraQty={};campSeats=0;
+    CATS.forEach(c=>qty[c.n]=0);
+    if(k==="camp") selBatch=listing.batches.findIndex(b=>!b.closed);
+    if(k==="museum"){ prod="MUSO"; open="when"; }
+    page=1; render(); window.scrollTo({top:0,behavior:"smooth"}); return; }
+  const bt=e.target.closest("[data-batch]");
+  if(bt){ selBatch=+bt.dataset.batch; campSeats=0; render(); return; }
+  const cs=e.target.closest("[data-cs]");
+  if(cs){ const b=BATCH(); campSeats=Math.max(0,Math.min(b?b.left:0,campSeats + +cs.dataset.cs)); render(); return; }
+  const pr=e.target.closest("[data-prod]");
+  if(pr){ prod=pr.dataset.prod; date=null; slot=null; extras={}; extraSlot={}; extraQty={};
+    open="when"; render(); return; }
+  const dy=e.target.closest("[data-day]");
+  if(dy){ date=+dy.dataset.day; slot=null; extras={}; extraSlot={}; extraQty={};
+    open="slot"; render(); return; }
+  const sl=e.target.closest("[data-slot]");
+  if(sl){ slot=sl.dataset.slot; extras={}; extraSlot={}; extraQty={}; open="who"; render(); return; }
+  const q=e.target.closest("[data-q]");
+  if(q){ qty[q.dataset.q]=Math.max(0,qty[q.dataset.q]+ +q.dataset.dir); render(); return; }
+  const ad=e.target.closest("[data-add]");
+  if(ad){ const k=ad.dataset.add; extras[k]=!extras[k];
+    if(extras[k]){ const o=blank(); CATS.forEach(c=>{ if(c.n!=="Baby") o[c.n]=qty[c.n]; }); extraQty[k]=o; }
+    else { delete extraSlot[k]; delete extraQty[k]; }
+    render(); return; }
+  const eqb=e.target.closest("[data-eq]");
+  if(eqb){ const [k,c]=eqb.dataset.eq.split("|");
+    const q=extraQty[k]||(extraQty[k]={Adult:0,Child:0,Baby:0});
+    q[c]=Math.max(0,Math.min(qty[c], q[c] + +eqb.dataset.dir)); render(); return; }
+  const as=e.target.closest("[data-addslot]");
+  if(as){ const [k,id]=as.dataset.addslot.split("|"); extraSlot[k]=id; render(); return; }
+});
+
+let holdEnd=null;
+setInterval(()=>{
+  const el=document.getElementById("holdClock");
+  if(!el){ holdEnd=null; return; }
+  if(!holdEnd) holdEnd=Date.now()+600000;
+  const left=Math.max(0,Math.round((holdEnd-Date.now())/1000));
+  el.textContent=Math.floor(left/60)+":"+String(left%60).padStart(2,"0");
+},1000);
+render();
+
+</script>
+</body>
+</html>
