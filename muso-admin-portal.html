@@ -321,7 +321,7 @@ tbody tr[aria-selected="true"] td:first-child{box-shadow:inset 2px 0 0 var(--blu
 .booking-discount-msg.ok{color:var(--ok);font-weight:600}
 .booking-discount-msg.bad{color:var(--stop)}
 .attendee-list{grid-column:1/-1;display:grid;gap:10px}
-.attendee-row{display:grid;grid-template-columns:150px minmax(0,1fr) minmax(150px,.7fr);gap:12px;align-items:end;padding:11px 12px;border:1px solid var(--rule);border-radius:6px}
+.attendee-row{display:grid;grid-template-columns:150px minmax(0,1fr) minmax(140px,.7fr) 92px;gap:12px;align-items:end;padding:11px 12px;border:1px solid var(--rule);border-radius:6px}
 .attendee-kind{align-self:center;font-size:12px;font-weight:600;color:var(--ink2)}
 .event-pricing-field{grid-column:1/-1}
 .event-pricing-field>.lab{display:none}
@@ -629,9 +629,9 @@ const GROUPS = [
   {name:"4 · Offers", color:"#C2286E"},
   {name:"5 · Checkout & site", color:"#6B3FC4"}
 ];
-const ORDER = ["categories","pools","tax","hsn","progcats","products","programs","events","camps","blackout","bookings",
+const ORDER = ["categories","pools","tax","hsn","progcats","products","programs","blackout","bookings",
                "discounts","affiliates","paymodes","sources","scripts"];
-const PHASE = {categories:0,pools:0,tax:0,hsn:0,progcats:0, products:1, programs:1, events:1, camps:1, blackout:2,
+const PHASE = {categories:0,pools:0,tax:0,hsn:0,progcats:0, products:1, programs:1, blackout:2,
                discounts:3,affiliates:3,
                paymodes:4,sources:4,scripts:4,bookings:2};
 const PREREQ = {
@@ -1111,8 +1111,8 @@ const P = [
 ];
 
 const BOOKINGS = [
-  {ref:"BK-1048",customer:"Aarav Mehta",email:"aarav@example.com",phone:"1234567890",member:{tier:"Gold",passesTotal:10,passesUsed:4,addonDiscountPct:10},product:"MuSo Tour",date:"15 Aug 2026",slot:"Three-hour morning",tickets:"2 Adult · 1 Child 3–11",ticketRows:[["Adult","2","1500"],["Child 3–11","1","900"]],attendees:[{category:"Adult",index:0,name:"Aarav Mehta",dob:""},{category:"Adult",index:1,name:"Riya Mehta",dob:""},{category:"Child 3–11",index:0,name:"Vihaan Mehta",dob:"12/06/2018"}],heads:3,total:3900,status:"Confirmed",payment:"Paid",paymentMode:"POS"},
-  {ref:"BK-1049",customer:"Nisha Rao",email:"nisha@example.com",phone:"9876543210",product:"Mini Golf",date:"16 Aug 2026",slot:"Golf midday",tickets:"1 Adult · 2 Child 3–11",ticketRows:[["Adult","1","400"],["Child 3–11","2","250"]],attendees:[{category:"Adult",index:0,name:"Nisha Rao",dob:""},{category:"Child 3–11",index:0,name:"Anya Rao",dob:"03/09/2017"},{category:"Child 3–11",index:1,name:"Neel Rao",dob:""}],heads:3,total:900,status:"Confirmed",payment:"Paid",paymentMode:"POS"},
+  {ref:"BK-1048",customer:"Aarav Mehta",email:"aarav@example.com",phone:"1234567890",member:{tier:"Gold",passesTotal:10,passesUsed:4,addonDiscountPct:10},product:"MuSo Tour",date:"15 Aug 2026",slot:"Three-hour morning",tickets:"2 Adult · 1 Child 3–11",ticketRows:[["Adult","2","1500"],["Child 3–11","1","900"]],attendees:[{category:"Adult",index:0,name:"Aarav Mehta",dob:""},{category:"Adult",index:1,name:"Riya Mehta",dob:""},{category:"Child 3–11",index:0,name:"Vihaan Mehta",dob:"12/06/2018"}],heads:3,total:3900,status:"Confirmed",payment:"Paid",paymentMode:"Card"},
+  {ref:"BK-1049",customer:"Nisha Rao",email:"nisha@example.com",phone:"9876543210",product:"Mini Golf",date:"16 Aug 2026",slot:"Golf midday",tickets:"1 Adult · 2 Child 3–11",ticketRows:[["Adult","1","400"],["Child 3–11","2","250"]],attendees:[{category:"Adult",index:0,name:"Nisha Rao",dob:""},{category:"Child 3–11",index:0,name:"Anya Rao",dob:"03/09/2017"},{category:"Child 3–11",index:1,name:"Neel Rao",dob:""}],heads:3,total:900,status:"Confirmed",payment:"Paid",paymentMode:"Card"},
   {ref:"BK-1050",customer:"Kabir Shah",email:"kabir@example.com",phone:"99302 44556",product:"Lost Code of Play",date:"18 Aug 2026",slot:"LCOP afternoon",tickets:"2 Child 12–17",ticketRows:[["Child 12–17","2","400"]],attendees:[{category:"Child 12–17",index:0,name:"Kabir Shah",dob:"14/02/2012"},{category:"Child 12–17",index:1,name:"Mira Shah",dob:""}],heads:2,total:800,status:"Pending",payment:"Pending",paymentMode:"Cash"}
 ];
 
@@ -1599,10 +1599,7 @@ const CAMP = {
       <td class="code">${odd?`<b style="color:var(--warn)">${d.t2}</b>`:d.t2}</td>
       <td class="code muted">${(len/60).toFixed(len%60?1:0)} hr</td>
       <td class="muted" style="font-size:12px">${d.note||""}</td></tr>`;}).join("")}
-      ${addRowOpen("Add day","day")}</tbody></table></div>
-    <div class="card-body" style="border-top:1px solid var(--rule);font-size:12.5px;color:var(--ink2);line-height:1.65">
-      Days are generated from the batch's dates and the days of the week it runs, then edited. The Saturday is longer because it is the showcase — that is a property of <b style="color:var(--ink)">that day</b>, not of the batch, and putting it on the batch would send every reminder the wrong time.
-    </div>
+    </tbody></table></div>
   </div>
   ${addOpen==="day"?dayFormCard(b):""}`;
  },
@@ -1664,46 +1661,27 @@ const CAMP = {
  },
 
  attendees(w,b){
-  const seats=[...Array(b.cap).keys()].map(i=>i+1);
+  const batches=(w.batches&&w.batches.length)?w.batches:[b];
+  const totalCap=batches.reduce((t,x)=>t+(x.cap||0),0), totalSold=batches.reduce((t,x)=>t+(x.sold||0),0);
   return `<div class="note note-scope"><span class="note-mark">Scope</span><div>
     §2 asks for the attendee list <b>per batch</b>, filterable by date and workshop, and says the host should see everyone registered on the day. It names exactly what the confirmation to MuSo's point of contact must carry: parent name, child name, WhatsApp number, the child's age and the parent's email. That is the whole of what a running camp needs — nothing else is in the scope, and nothing else is built here.
   </div></div>
   <div class="card">
-    <div class="card-head"><span class="card-title">Register &middot; ${b.n}</span>
-      <span class="card-note">${b.sold} of ${b.cap} seats taken</span></div>
+    <div class="card-head"><span class="card-title">Register</span>
+      <span class="card-note">${totalSold} of ${totalCap} seats taken &middot; ${batches.length} ${batches.length>1?"batches":"batch"}</span></div>
     <div class="matrix-wrap"><table><thead><tr>
-      <th>Seat</th><th>Child</th><th>Age</th><th>Parent</th><th>WhatsApp</th><th>Email</th><th>Status</th></tr></thead>
-    <tbody>${seats.map(i=>`<tr>
+      <th>Batch</th><th>Seat</th><th>Child</th><th>Age</th><th>Parent</th><th>WhatsApp</th><th>Email</th><th>Status</th></tr></thead>
+    <tbody>${batches.map((bx,bi)=>[...Array(bx.cap).keys()].map(i=>i+1).map((i,ri)=>`<tr${(bi>0&&ri===0)?' style="border-top:2px solid var(--rule2)"':''}>
+      <td>${ri===0?`<b style="font-weight:500">${bx.n}</b>`:''}</td>
       <td class="code">${String(i).padStart(2,"0")}</td>
-      ${i<=b.sold
+      ${i<=bx.sold
         ? `<td class="muted" style="font-size:12px">From the booking</td><td class="muted">&mdash;</td>
            <td class="muted" style="font-size:12px">From the booking</td><td class="muted">&mdash;</td><td class="muted">&mdash;</td>
            <td><span class="pill pill-ok"><i class="dot"></i>Booked</span></td>`
         : `<td colspan="5" class="muted" style="font-size:12px">Open</td><td class="muted">&mdash;</td>`}
-    </tr>`).join("")}</tbody></table>
+    </tr>`).join("")).join("")}</tbody></table>
     <div style="padding:12px 16px;border-top:1px solid var(--rule)">
       <button class="btn">Download for the instructor</button></div></div>
-    <div class="card-body" style="border-top:1px solid var(--rule);font-size:12.5px;color:var(--ink2);line-height:1.65">
-      Filterable by date and by workshop, per §2, so the instructor can pull one batch's list for one day.
-      <b style="color:var(--ink)">Age is collected but not mandatory.</b> §2 shows age with validation against the minimum, so with it optional the minimum age becomes guidance shown to the parent rather than something the system can refuse on.
-    </div>
-  </div>
-
-  <div class="card">
-    <div class="card-head"><span class="card-title">Who is told, and when</span>
-      <span class="card-note">§2 Notifications</span></div>
-    <div class="matrix-wrap"><table><thead><tr><th>When</th><th>Who</th><th>Carrying</th></tr></thead>
-    <tbody>
-      <tr><td><b style="font-weight:500">On booking</b></td><td>The parent, and the instructor</td>
-        <td style="font-size:12px">Confirmation on email and WhatsApp.</td></tr>
-      <tr><td><b style="font-weight:500">On booking</b></td><td>MuSo's point of contact for the workshop</td>
-        <td style="font-size:12px">Parent name, child name, WhatsApp number, child's age, parent's email &mdash; §2 names all five.</td></tr>
-      <tr><td><b style="font-weight:500">Day before each day</b></td><td>The parent</td>
-        <td style="font-size:12px">Reminder carrying <b>that day's</b> time, which is why the time lives on the day rather than the batch.</td></tr>
-    </tbody></table></div>
-    <div class="card-body" style="border-top:1px solid var(--rule);font-size:12.5px;color:var(--ink2);line-height:1.65">
-      <b style="color:var(--ink)">A missed day is missed.</b> The batch is sold whole, there is no make-up session and no partial refund, so nothing needs to track who attended which day.
-    </div>
   </div>`;
  }
 };
@@ -2182,7 +2160,7 @@ let addOpen = null;   // which inline add-form is open: "slot"|"batch"|"day"|"ad
 let current = "categories", selP = 0, tab = "list", sub = "details", pType = "product",
     selW = 0, selB = 0, selE = 0, esub = "details", eventCats = new Set(), selBooking = 0, bookingProduct = 0, bookingSlot = "", bookingDiscountCode = "", csub = "details", copyFrom = 0, copyTo = new Set(), copyWhat = new Set(["price","seats"]), editD = -1,
     progKind = "event", progCat = "Event", prodBuildingPool = false,
-    bookingProducts = new Map(), bookingAddons = new Map(), bookingPrograms = new Map(), bookingPay = "POS", bookingTab = "products",
+    bookingProducts = new Map(), bookingAddons = new Map(), bookingPrograms = new Map(), bookingPay = "Cash", bookingTab = "products",
     bookingCustomer = {name:"",phone:"",email:"",member:null}, bookingCustomerLinked = -1, bookingStep = 1, bookingOpenItem = null, bookingCalMonth = null, bookingCancelConfirm = false, bookingDiscountTried = false,
     selD = 0, dsub = "summary", editCond = -1, condDraft = null, draftDiscount = null, condStep = 0, condItemsOpen = false;
 
@@ -2480,8 +2458,12 @@ const VIEWS = {
       <td class="ctr code">${r.slots.length}</td>
       <td class="code">${money(Math.min(...r.slots.map(s=>s.price.Adult||Infinity)))}</td>
       <td class="code muted">${r.pool}</td>
-      <td><span class="pill pill-ok"><i class="dot"></i>Active</span></td>
-      <td><button class="btn" data-editp="${i}" aria-label="Edit ${r.n}">Edit</button></td></tr>`).join("")}
+      <td>${r.active===false?'<span class="pill pill-off">Inactive</span>':'<span class="pill pill-ok"><i class="dot"></i>Active</span>'}</td>
+      <td><div style="display:flex;align-items:center;gap:8px">
+        <button class="btn" data-open="prod:${i}" aria-label="View ${r.n}">View</button>
+        <button class="btn" data-editp="${i}" aria-label="Edit ${r.n}">Edit</button>
+        <button class="sw" data-toggle-active="${i}" data-on="${r.active===false?0:1}" role="switch" aria-checked="${r.active===false?'false':'true'}" aria-label="${r.active===false?'Activate':'Deactivate'} ${r.n}"><i></i></button>
+      </div></td></tr>`).join("")}
       <tr><td colspan="7"><button class="rep-add" data-tab="new" style="border-radius:4px">+ New product or add-on</button></td></tr>
     </tbody></table></div></div>`;
   },
@@ -2705,7 +2687,10 @@ const VIEWS = {
         <td class="code">${when}</td>
         <td class="muted">${p.rec.ages}</td>
         <td>${statusPill(p.rec.listing.status)}</td>
-        <td><button class="btn" ${editAttr} aria-label="Edit ${p.rec.n}">Edit</button></td></tr>`;
+        <td><div style="display:flex;align-items:center;gap:8px">
+          <button class="btn" data-open="${p.kind}:${p.idx}" aria-label="View ${p.rec.n}">View</button>
+          <button class="btn" ${editAttr} aria-label="Edit ${p.rec.n}">Edit</button>
+        </div></td></tr>`;
     }).join("");
     return `${toolbar("Search programs",PROGRAMS().length+" records")}
     <div class="card"><div class="matrix-wrap"><table class="reclist"><thead><tr>
@@ -2955,7 +2940,7 @@ function bookingForm(editing=false){
   const grand=subtotal-discAmt-addonDiscountAmt+gst;
   const section=(title,body)=>`<section class="form-sec"><div class="form-sec-head"><span class="form-sec-title">${title}</span></div><div class="form-sec-body">${body}</div></section>`;
   const step=(pfx,cat,q)=>`<div class="pos-qty-row"><span class="n">${cat}</span><span class="p">${money(q.price)} each</span><span class="pos-step"><button data-book-qty="${pfx}|${escAttr(cat)}|-1" ${q.n===0?"disabled":""}>−</button><span>${q.n}</span><button data-book-qty="${pfx}|${escAttr(cat)}|1">+</button></span></div>`;
-  const slotBadge=(s)=>{const left=slotLeft(s);if(left===Infinity)return"";if(left<=0)return`<span class="slot-avail slot-sold">Sold out · ${left}/${s.cap}</span>`;const low=left<=Math.max(3,Math.round((s.cap||0)*0.15));return `<span class="slot-avail${low?" slot-low":""}">${left}/${s.cap} remaining</span>`;};
+  const slotBadge=(s)=>{const left=slotLeft(s),st=availState(left,s.cap);if(!st)return"";const cls=st.key==="sold"?" slot-sold":st.key==="low"?" slot-low":"";return `<span class="slot-avail${cls}">${st.label} · ${left}/${s.cap}</span>`;};
   // ---- date-driven slot picker: calendar on the left, that day's slots on the right ----
   const slotBar=(pfx,list,cfg)=>{
     const selDate=cfg.date||defaultDateFor(list);
@@ -2980,8 +2965,8 @@ function bookingForm(editing=false){
     const dOf=parseDMY(selDate);
     const dayLabel=dOf?`${WEEKDAYS[dayIndexMon0(dOf)]} ${dOf.getDate()} ${MONTHS[dOf.getMonth()]}`:selDate;
     const rows=candidates.length?candidates.map(s=>{
-      const left=slotLeft(s),sold=left<=0,low=!sold&&left<=Math.max(3,Math.round((s.cap||0)*0.15)),cur=s.n===cfg.slot;
-      const pill=sold?["cal-pill-off","Sold out"]:low?["cal-pill-low","Fast Filling"]:["cal-pill-ok","Available"];
+      const left=slotLeft(s),sold=left<=0,cur=s.n===cfg.slot,st=availState(left,s.cap)||{key:"ok",label:"Available"};
+      const pill=st.key==="sold"?["cal-pill-off",st.label]:st.key==="low"?["cal-pill-low",st.label]:["cal-pill-ok",st.label];
       return `<button class="cal-slot-row${cur?" cal-slot-row-selected":""}" data-book-slot="${pfx}|${escAttr(s.n)}" ${sold&&!cur?"disabled":""}>
         <div class="cal-slot-main"><div class="cal-slot-time">${s.t1}–${s.t2}</div><div class="cal-slot-sub">${s.n}</div></div>
         <div class="cal-slot-right"><span class="cal-pill ${pill[0]}">${pill[1]}</span><div class="cal-slot-price">${money(s.price.Adult||0)} / ticket</div>${s.cap!=null?`<div class="cal-slot-remaining">${left}/${s.cap}</div>`:""}</div>
@@ -3058,11 +3043,11 @@ function bookingForm(editing=false){
 
   // ---- attendees (one per ticket) — step 3 ----
   const heads=[];
-  const collect=(items,recFn,catsFn)=>items.forEach(([id,cfg])=>{const nm=recFn(id);catsFn(id).forEach(c=>{const total=((cfg.qty&&cfg.qty[c])||0)+((cfg.redeem&&cfg.redeem[c])||0);for(let n=0;n<total;n++)heads.push({label:nm+" · "+c+" "+(n+1)});});});
+  const collect=(items,recFn,catsFn)=>items.forEach(([id,cfg])=>{const nm=recFn(id);catsFn(id).forEach(c=>{const total=((cfg.qty&&cfg.qty[c])||0)+((cfg.redeem&&cfg.redeem[c])||0);for(let n=0;n<total;n++)heads.push({label:nm+" · "+c+" "+(n+1), cat:c});});});
   collect([...bookingProducts],i=>P[i].n,i=>P[i].cats);
   collect([...bookingAddons],code=>(P.find(x=>x.c===code)||{}).n,code=>(P.find(x=>x.c===code)||{cats:[]}).cats);
   collect([...bookingPrograms],key=>progRec(key).n,()=>PCATS);
-  const attendeesTab = heads.length ? `<div class="pos-lbl">Attendee details <small>one per ticket</small></div><div class="attendee-list">${heads.map(h=>`<div class="attendee-row"><div class="attendee-kind">${h.label}</div><div class="fld"><div class="lab"><span class="lab-n">Name</span></div><input class="inp" placeholder="Full name"></div><div class="fld"><div class="lab"><span class="lab-n">Date of birth</span></div><input class="inp mono" placeholder="DD/MM/YYYY"></div></div>`).join("")}</div>` : `<div class="pos-empty">Add tickets first — attendees appear here.</div>`;
+  const attendeesTab = heads.length ? `<div class="pos-lbl">Attendee details <small>one per ticket</small></div><div class="attendee-list">${heads.map((h,idx)=>{const child=/child/i.test(h.cat||"");const req=child?'<span class="lab-req">Required</span>':'';const rq=child?" required aria-required=\"true\"":"";return `<div class="attendee-row"><div class="attendee-kind">${h.label}</div><div class="fld"><div class="lab"><span class="lab-n">Name</span>${req}</div><input class="inp"${rq} placeholder="Full name"></div><div class="fld"><div class="lab"><span class="lab-n">Date of birth</span></div><input class="inp mono" data-dob="${idx}" placeholder="DD/MM/YYYY"></div><div class="fld"><div class="lab"><span class="lab-n">Age</span>${req}</div><input class="inp mono" id="age_${idx}"${rq} placeholder="Years" aria-live="polite"></div></div>`;}).join("")}</div>` : `<div class="pos-empty">Add tickets first — attendees appear here.</div>`;
 
   // ---- step 2 sub-tabs, each labelled with how many tickets are already in it ----
   const prodCount=[...bookingProducts.values()].reduce((s,c)=>s+qtySum(c),0);
@@ -3103,7 +3088,7 @@ function bookingForm(editing=false){
     if(lines) cartRows.push(cartGroup(r.n,b.n||r.cat,lines));});
   const summaryPay=hasItems?`<div class="summary-pay">
     <div class="summary-pay-lbl">Payment method</div>
-    <div class="summary-pay-grid">${["POS","Cash"].map(m=>`<button class="summary-pay-btn" data-book-pay="${escAttr(m)}" aria-pressed="${bookingPay===m}">${m}</button>`).join("")}</div>
+    <div class="summary-pay-grid">${["Cash","Card","UPI","Voucher"].map(m=>`<button class="summary-pay-btn" data-book-pay="${escAttr(m)}" aria-pressed="${bookingPay===m}">${m}</button>`).join("")}</div>
     ${editing?"":`<button class="btn btn-primary summary-pay-cta">Take payment · ${money(grand)}</button>`}
   </div>`:"";
   const summary=`<aside class="booking-summary"><div class="booking-summary-head">Order summary${cartRows.length?` <span class="booking-summary-count">${cartRows.length} item${cartRows.length===1?"":"s"}</span>`:""}</div><div class="booking-summary-body">
@@ -3460,6 +3445,28 @@ function render(){
 }
 
 /* Append the record built in the open inline add-form to the right collection. */
+/* Parse a "DD Mon YYYY" string to a Date (null if unparseable). */
+function parseDMY(str){
+  const m=/(\d{1,2})\s+([A-Za-z]{3,})\s+(\d{4})/.exec(str||"");
+  if(!m) return null;
+  const MON={jan:0,feb:1,mar:2,apr:3,may:4,jun:5,jul:6,aug:7,sep:8,oct:9,nov:10,dec:11};
+  const mo=MON[m[2].slice(0,3).toLowerCase()];
+  if(mo===undefined) return null;
+  const dt=new Date(+m[3],mo,+m[1]);
+  return isNaN(dt.getTime())?null:dt;
+}
+/* One session per calendar day between a batch's from/to dates. */
+function genBatchDays(from,to,t1,t2){
+  const a=parseDMY(from), b=parseDMY(to);
+  if(!a||!b||b<a) return [];
+  const WD=["Sun","Mon","Tue","Wed","Thu","Fri","Sat"], MO=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+  const days=[], cur=new Date(a); let guard=0;
+  while(cur<=b && guard++<400){
+    days.push({ d:`${WD[cur.getDay()]} ${String(cur.getDate()).padStart(2,"0")} ${MO[cur.getMonth()]}`, t1:t1||"10:00", t2:t2||"13:00" });
+    cur.setDate(cur.getDate()+1);
+  }
+  return days;
+}
 function addSubmit(){
   const g=id=>{ const el=document.getElementById(id); return el?el.value.trim():""; };
   const a=P[selP]; const _p=curProgram(); const w=_p.arr[_p.i];
@@ -3475,8 +3482,10 @@ function addSubmit(){
       days:days.join(", ")||"—", t1:g("slotT1")||"—", t2:g("slotT2")||"—",
       pool:g("slotPool"), hold:+g("slotHold")||0, price:{} });
   } else if(addOpen==="batch"){
-    w.batches.push({ n:g("af_bn")||("Batch "+(w.batches.length+1)), from:g("af_bfrom")||"—", to:g("af_bto")||"—",
-      cap:+g("af_bcap")||+w.cap||9, sold:0, price:+g("af_bprice")||0, days:[] });
+    const bfrom=g("af_bfrom")||"—", bto=g("af_bto")||"—";
+    const def=(w.batches[0]&&w.batches[0].days&&w.batches[0].days[0])||{};
+    w.batches.push({ n:g("af_bn")||("Batch "+(w.batches.length+1)), from:bfrom, to:bto,
+      cap:+g("af_bcap")||+w.cap||9, sold:0, price:+g("af_bprice")||0, days:genBatchDays(bfrom,bto,def.t1,def.t2) });
     selB=w.batches.length-1;
   } else if(addOpen==="day"){
     const b=w.batches[selB]; if(b) b.days.push({ d:g("af_dd")||"New day", t1:g("af_dt1")||"—", t2:g("af_dt2")||"—", note:g("af_dnote") });
@@ -3491,10 +3500,17 @@ function addSubmit(){
   addOpen=null; render(); $(".stage").scrollTop=0;
 }
 
-function resetBooking(){ bookingProducts=new Map(); bookingAddons=new Map(); bookingPrograms=new Map(); bookingPay="POS"; bookingDiscountCode=""; bookingDiscountTried=false; bookingTab="products"; bookingCustomer={name:"",phone:"",email:"",member:null}; bookingCustomerLinked=-1; bookingStep=1; bookingOpenItem=null; bookingCalMonth=null; bookingCancelConfirm=false; }
+function resetBooking(){ bookingProducts=new Map(); bookingAddons=new Map(); bookingPrograms=new Map(); bookingPay="Cash"; bookingDiscountCode=""; bookingDiscountTried=false; bookingTab="products"; bookingCustomer={name:"",phone:"",email:"",member:null}; bookingCustomerLinked=-1; bookingStep=1; bookingOpenItem=null; bookingCalMonth=null; bookingCancelConfirm=false; }
 
 /* ---- POS cart helpers — shared by bookingForm() (display) and the click handlers (state changes) ---- */
 function slotLeft(s){ if(!s||s.cap==null) return Infinity; return Math.max(0,(s.cap||0)-(s.sold||0)); }
+/* Availability status from seats left vs capacity: none left = Sold out, ≤25% left = Fast filling, else Available. */
+function availState(left,cap){
+  if(left===Infinity||cap==null) return null;
+  if(left<=0) return {key:"sold",label:"Sold out"};
+  if(cap>0 && left<=cap*0.25) return {key:"low",label:"Fast filling"};
+  return {key:"ok",label:"Available"};
+}
 function firstAvailableSlot(list){ return list.find(s=>slotLeft(s)>0) || list[0]; }
 function primaryCatFor(kind,id){
   if(kind==="prod") return P[+id].cats[0];
@@ -3635,7 +3651,7 @@ document.addEventListener("click",e=>{
     bookingCustomerLinked=CUSTOMERS.findIndex(c=>c.phone===b.phone);
     const pi=P.findIndex(p=>p.n===b.product);
     if(pi>=0){ const qty={}; (b.ticketRows||[]).forEach(r=>{ qty[r[0]]=+r[1]||0; }); bookingProducts.set(pi,{slot:b.slot||P[pi].slots[0].n,qty}); }
-    bookingPay=b.paymentMode||"POS";
+    bookingPay=b.paymentMode||"Cash";
     tab="edit"; addOpen=null; render(); $(".stage").scrollTop=0; return; }
   // ---- POS order flow: 3-step wizard (Customer / Booking / Attendees), payment docked in the summary ----
   const stepBtn=e.target.closest("[data-book-step]");
@@ -3682,6 +3698,9 @@ document.addEventListener("click",e=>{
   if(pickCust){ const c=CUSTOMERS.find(x=>x.phone===pickCust.dataset.pickCustomer); if(c){ bookingCustomer={name:c.name,phone:c.phone,email:c.email,member:c.member||null}; bookingCustomerLinked=CUSTOMERS.indexOf(c); } render(); return; }
   const unlinkCust=e.target.closest("[data-unlink-customer]");
   if(unlinkCust){ bookingCustomerLinked=-1; bookingCustomer.member=null; render(); return; }
+  // ---- activate / deactivate a product from the listing ----
+  const tgl=e.target.closest("[data-toggle-active]");
+  if(tgl){ const i=+tgl.dataset.toggleActive; P[i].active = (P[i].active===false); render(); return; }
   // ---- open a record's detail page ----
   const od=e.target.closest("[data-open]");
   if(od){ const [kind,i]=od.dataset.open.split(":"); const idx=+i;
@@ -3758,7 +3777,23 @@ document.addEventListener("change",e=>{
   if(e.target.id==="bookingSlotSelect"){ bookingSlot=e.target.value; render(); }
   refreshDiscountSummaries();
 });
+/* Whole years from a DD/MM/YYYY date of birth to today; null if incomplete/invalid. */
+function ageFromDOB(str){
+  const m=/^\s*(\d{1,2})\/(\d{1,2})\/(\d{4})\s*$/.exec(str||"");
+  if(!m) return null;
+  const d=+m[1], mo=+m[2], y=+m[3];
+  if(mo<1||mo>12||d<1||d>31||y<1900) return null;
+  const today=new Date();
+  let age=today.getFullYear()-y;
+  const hadBirthday=(today.getMonth()+1>mo)||(today.getMonth()+1===mo&&today.getDate()>=d);
+  if(!hadBirthday) age--;
+  if(age<0||age>120) return null;
+  return age;
+}
+function ageLabel(str){ const a=ageFromDOB(str); return a===null?"":(a===0?"Under 1 yr":a+(a===1?" yr":" yrs")); }
 document.addEventListener("input",e=>{
+  const dob=e.target.closest&&e.target.closest("[data-dob]");
+  if(dob){ const el=document.getElementById("age_"+dob.dataset.dob); if(el) el.value=ageLabel(e.target.value); return; }
   if(e.target.classList&&e.target.classList.contains("msel-search")){
     const q=e.target.value.trim().toLowerCase(), wrap=e.target.closest(".msel");
     if(wrap) wrap.querySelectorAll(".msel-opt").forEach(o=>{ o.style.display=(!q||(o.dataset.label||"").includes(q))?"":"none"; });
