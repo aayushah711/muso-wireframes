@@ -428,6 +428,10 @@ tbody tr[aria-selected="true"] td:first-child{box-shadow:inset 2px 0 0 var(--blu
 .lnk{background:none;border:0;color:var(--blue);cursor:pointer;padding:0;font-size:11.5px}
 .chk{display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--ink);cursor:pointer}
 .chk input{width:15px;height:15px;flex:none;accent-color:var(--blue);cursor:pointer}
+.seg2{display:inline-flex;border:1px solid var(--rule2);border-radius:7px;overflow:hidden;background:#fff}
+.seg2-btn{border:0;background:none;padding:7px 15px;font-size:12.5px;font-weight:500;color:var(--ink2);cursor:pointer;border-right:1px solid var(--rule2)}
+.seg2-btn:last-child{border-right:0}
+.seg2-btn[data-on="1"]{background:var(--blue-wash);color:var(--blue);font-weight:600}
 .lnk:hover{text-decoration:underline}
 .msel-field{display:flex;flex-wrap:wrap;gap:5px;align-items:center;min-height:34px;padding:6px 30px 6px 8px;border:1px solid var(--rule2);border-radius:7px;background:#fff;cursor:pointer;position:relative}
 .msel.open .msel-field{border-color:var(--blue-line)}
@@ -1198,7 +1202,15 @@ const DISCOUNTS = [
    codes:{oncePerUser:true,gen:"1"},no:[],prec:90,status:"Approved",maker:"Sushmita",checker:"Suryanarayan",
    cond:[{k:"Items in the basket",prods:["Workshop"],pm:"any of",cats:[],op:"at least",qty:"1",qtys:{Workshop:"1"},slots:{}}],
    target:"The chosen items",value:"Percentage",v:"10%",
-   src:"category discount: 10% off any Workshop program for members"}
+   src:"category discount: 10% off any Workshop program for members"},
+
+  {n:"",codeType:"series",series:{prefix:"JSW",from:"1",to:"100"},vt:"Flat amount",auto:false,staffOnly:true,memberOnly:false,
+   dates:["01 Sep 2026","31 Dec 2026"],visit:["",""],maxr:"100",
+   codes:{oncePerUser:true,gen:"1"},no:[],prec:60,status:"Approved",maker:"Hasmukh",checker:"Suryanarayan",
+   cond:[],
+   value:"Flat amount",v:"₹500",
+   utm:{source:"",medium:"",campaign:"",term:"",content:""},
+   src:"JSW employee vouchers — a series of 100 single-use codes (JSW001–JSW100), ₹500 off each"}
 ];
 
 const DISC_ITEMS = () => [...P.map(x=>x.n), ...EVENTS.map(x=>x.n), ...WORKSHOPS.map(x=>x.n)];
@@ -1828,11 +1840,12 @@ function discountRuleSummary(d){
 function discSummaryPanel(d){
   const a=applyInfo(d), aud=audienceText(a);
   const rows=[
-    ["Method", a.auto?"Automatic discount":("Code · "+(d.n||"—"))],
+    ["Method", a.auto?"Automatic discount":(isSeries(d)?("Series · "+codeLabel(d)):("Code · "+(d.n||"—")))],
     ["For", aud.charAt(0).toUpperCase()+aud.slice(1)],
     ["Amount", d.v?(d.value?d.value+" · "+d.v:d.v):"—"],
     ["Runs", d.dates&&d.dates[0]?(d.dates[0]+(d.dates[1]?" – "+d.dates[1]:" onward")):"Any time"],
     ...(d.visit&&d.visit[0]?[["Visit",d.visit[0]+(d.visit[1]&&d.visit[1]!==d.visit[0]?" – "+d.visit[1]:"")]]:[]),
+    ...(isSeries(d)?[["Vouchers", seriesCount(d.series).toLocaleString()+" codes"]]:[]),
     ["Per user", (d.codes&&d.codes.oncePerUser===false)?"Reusable":"Once"],
     ["Total uses", d.maxr||"No limit"],
     ["Status", d.status||"Draft"]
@@ -1903,6 +1916,7 @@ function syncDiscountForm(){
   const as=document.querySelector("[data-apply-staff]"); if(as) d.staffOnly=!!as.checked;
   const am=document.querySelector("[data-apply-member]"); if(am) d.memberOnly=!!am.checked;
   const co=document.querySelector("[data-code-once]"); if(co){ d.codes=d.codes||{gen:"1"}; d.codes.oncePerUser=co.dataset.on==="1"; }
+  document.querySelectorAll("[data-series]").forEach(el=>{ d.series=d.series||{prefix:"",from:"1",to:"100"}; d.series[el.dataset.series]=el.value; });
 }
 /* Live in-form summaries so the user sees what they are configuring. */
 function refreshDiscountSummaries(){
@@ -1918,6 +1932,28 @@ function saveDiscount(){
 }
 /* A 12-character alphanumeric discount code (ambiguous chars omitted). */
 function genCode(){ const cs="ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; let s=""; for(let i=0;i<12;i++) s+=cs.charAt(Math.floor(Math.random()*cs.length)); return s; }
+/* ---- voucher series: one discount → many unique codes (prefix + numeric range) ---- */
+const SERIES_CAP = 1000;   // most codes the wireframe will render in one list
+function seriesPad(to){ return String(Math.max(1,Math.floor(+to||0))).length; }
+function seriesCount(s){ const a=Math.floor(+s.from||0),b=Math.floor(+s.to||0); return b>=a?(b-a+1):0; }
+function seriesCode(s,n){ return (s.prefix||"")+String(n).padStart(seriesPad(s.to),"0"); }
+function seriesCodes(s,cap){ const out=[],a=Math.floor(+s.from||0),b=Math.floor(+s.to||0),lim=cap||SERIES_CAP; for(let n=a;n<=b&&out.length<lim;n++) out.push(seriesCode(s,n)); return out; }
+function seriesLabel(s){ const a=Math.floor(+s.from||0),b=Math.floor(+s.to||0); return seriesCode(s,a)+"–"+seriesCode(s,b); }   // e.g. JSW001–JSW100
+/* The code identity shown across listing / summary / detail. */
+function isSeries(d){ return d.codeType==="series" && d.series && (d.series.prefix||d.series.to); }
+function codeLabel(d){ return isSeries(d) ? seriesLabel(d.series) : (d.n||"—"); }
+/* Validation message for the series inputs, or "" when valid. */
+function seriesError(s){
+  if(!s) return "";
+  if(!(s.prefix||"").trim()) return "Enter a code prefix.";
+  const a=+s.from, b=+s.to;
+  if(!Number.isInteger(a)||!Number.isInteger(b)||a<0||b<0) return "From and To must be whole numbers.";
+  if(b<a) return "“To” must be greater than or equal to “From”.";
+  const n=seriesCount(s);
+  if(n===0) return "This range produces no codes.";
+  if(n>SERIES_CAP) return `That is ${n.toLocaleString()} codes — keep a single series to ${SERIES_CAP.toLocaleString()} or fewer.`;
+  return "";
+}
 /* Build the shareable booking link: code (always) + the five main UTM params (blank ones omitted). */
 const UTM_FIELDS=[["source","utm_source","instagram",true],["medium","utm_medium","social",true],["campaign","utm_campaign","summer-camp",true],["term","utm_term","workshops",false],["content","utm_content","story-cta",false]];
 function shareLink(d){
@@ -1952,7 +1988,7 @@ function shareFormCard(){
   </div>`;
 }
 function discountForm(editing){
-  if(!editing && !draftDiscount) draftDiscount={n:"",auto:false,staffOnly:false,memberOnly:false,cond:[],dates:["",""],value:"Percentage",v:"",prec:"",status:"Draft",maker:"",checker:"—",codes:{oncePerUser:true,gen:"1"},maxr:"",visit:["",""],utm:{source:"",medium:"",campaign:"",term:"",content:""}};
+  if(!editing && !draftDiscount) draftDiscount={n:"",auto:false,staffOnly:false,memberOnly:false,cond:[],dates:["",""],value:"Percentage",v:"",prec:"",status:"Draft",maker:"",checker:"—",codes:{oncePerUser:true,gen:"1"},maxr:"",visit:["",""],utm:{source:"",medium:"",campaign:"",term:"",content:""},codeType:"single",series:{prefix:"",from:"1",to:"100"}};
   const d = editing ? DISCOUNTS[selD] : draftDiscount;
   const v = discountValues(d);
   const a = applyInfo(d);
@@ -1961,16 +1997,34 @@ function discountForm(editing){
       <option value="code"${a.auto?"":" selected"}>Discount code</option>
       <option value="auto"${a.auto?" selected":""}>Automatic discount</option>
     </select></div></div>`;
-  const identityControl = a.auto
-    ? `<div class="fld wide" data-df="name"><div class="lab"><span class="lab-n">Title</span>${tip("Shown to the customer in their cart and at checkout.")}<span class="lab-req">Required</span></div>
-        <input class="inp" id="discountTitle" value="${escAttr(d.n||"")}" placeholder="e.g. Members' 10% off Workshops">
-        <div style="font-size:11px;color:var(--ink3);margin-top:4px">Customers will see this in their cart and at checkout.</div></div>`
-    : `<div class="fld wide" data-df="name"><div class="lab"><span class="lab-n">Discount code</span>${tip("The code a customer enters at checkout to get this discount. Generate a random one, or type your own.")}<span class="lab-req">Required</span></div>
+  const series = d.series||{prefix:"",from:"1",to:"100"};
+  const isSer = d.codeType==="series";
+  const serErr = isSer ? seriesError(series) : "";
+  const serPreview = isSer ? (()=>{ if(serErr) return serErr; const list=seriesCodes(series,4); const n=seriesCount(series);
+      return `${list.slice(0,3).join(", ")}${n>3?` … ${seriesCode(series,Math.floor(+series.to||0))}`:""} · ${n.toLocaleString()} code${n===1?"":"s"}`; })() : "";
+  const codeTypeToggle = `<div class="fld wide"><div class="lab"><span class="lab-n">Code type</span>${tip("A single code everyone shares, or a voucher series that issues one unique code per voucher (e.g. JSW001–JSW100).")}</div>
+      <div class="seg2">
+        <button type="button" class="seg2-btn" data-codetype="single" data-on="${isSer?0:1}">Single code</button>
+        <button type="button" class="seg2-btn" data-codetype="series" data-on="${isSer?1:0}">Code series</button>
+      </div></div>`;
+  const singleCodeControl = `<div class="fld wide" data-df="name"><div class="lab"><span class="lab-n">Discount code</span>${tip("The code a customer enters at checkout to get this discount. Generate a random one, or type your own.")}<span class="lab-req">Required</span></div>
         <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
           <input class="inp mono" id="discountCode" value="${escAttr(d.n||"")}" placeholder="e.g. A1B2C3D4E5F6" style="flex:1;min-width:120px">
           <button type="button" class="btn" data-gencode style="flex:none;white-space:nowrap">Generate random code</button>
           <button type="button" class="btn" data-sharelink style="flex:none;white-space:nowrap"><span style="margin-right:4px">&#128279;</span><span>Get a shareable link</span></button></div>
         <div style="font-size:11px;color:var(--ink3);margin-top:4px">Customers must enter this code at checkout.</div></div>`;
+  const seriesControl = `<div class="fld wide"><div class="lab"><span class="lab-n">Voucher series</span>${tip("A shared prefix plus a number range. The suffix is padded to the width of the last number, so 1–100 gives 001–100.")}<span class="lab-req">Required</span></div>
+        <div style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap">
+          <div style="flex:2;min-width:120px"><div style="font-size:10.5px;color:var(--ink3);margin-bottom:3px">Prefix</div><input class="inp mono" data-series="prefix" value="${escAttr(series.prefix||"")}" placeholder="e.g. JSW"></div>
+          <div style="flex:1;min-width:72px"><div style="font-size:10.5px;color:var(--ink3);margin-bottom:3px">From</div><input class="inp mono" data-series="from" value="${escAttr(series.from||"")}" placeholder="1"></div>
+          <div style="flex:1;min-width:72px"><div style="font-size:10.5px;color:var(--ink3);margin-bottom:3px">To</div><input class="inp mono" data-series="to" value="${escAttr(series.to||"")}" placeholder="100"></div>
+        </div>
+        <div id="seriesPreview" class="mono" style="font-size:11.5px;margin-top:7px;color:${serErr?"var(--stop)":"var(--blue)"}">${serPreview}</div></div>`;
+  const identityControl = a.auto
+    ? `<div class="fld wide" data-df="name"><div class="lab"><span class="lab-n">Title</span>${tip("Shown to the customer in their cart and at checkout.")}<span class="lab-req">Required</span></div>
+        <input class="inp" id="discountTitle" value="${escAttr(d.n||"")}" placeholder="e.g. Members' 10% off Workshops">
+        <div style="font-size:11px;color:var(--ink3);margin-top:4px">Customers will see this in their cart and at checkout.</div></div>`
+    : codeTypeToggle + (isSer ? seriesControl : singleCodeControl);
   const audienceControl=`<div class="fld wide" style="gap:6px">
       <label class="chk"><input type="checkbox" data-apply-staff${a.staffOnly?" checked":""}><span>Can be used by staff only</span></label>
       <label class="chk"><input type="checkbox" data-apply-member${a.memberOnly?" checked":""}><span>Can be applied for members only</span></label>
@@ -2098,7 +2152,7 @@ function discountDetail(){
   const subs=[["summary","Summary"],["rule","Discount rule"]].concat(applyInfo(d).auto?[]:[["codelink","Code & link"]]);
   if(!subs.some(([k])=>k===dsub)) dsub="summary";
   const tabs=`<div class="subs">${subs.map(([k,l])=>`<button class="sub-tab" data-dsub="${k}" aria-selected="${dsub===k}">${l}</button>`).join("")}</div>`;
-  return `<div class="detailhead"><h2 class="detailname">${d.n||"—"}</h2>${applyBadge(d)}</div>${tabs}<div class="sub-body">${discDetailBody(d)}</div>`;
+  return `<div class="detailhead"><h2 class="detailname">${codeLabel(d)}</h2>${isSeries(d)?`<span class="q">series · ${seriesCount(d.series)}</span>`:""}${applyBadge(d)}</div>${tabs}<div class="sub-body">${discDetailBody(d)}</div>`;
 }
 function discDetailBody(d){
   const row=(k,vv)=>`<tr><td><b style="font-weight:500">${k}</b></td><td style="font-size:12.5px">${vv}</td></tr>`;
@@ -2123,15 +2177,36 @@ function discDetailBody(d){
   // ---- Code & link: the code + shareable UTM link (code discounts only) ----
   if(view==="codelink"){
     const u=d.utm||{};
-    return `<div class="card"><div class="card-head"><span class="card-title">Code</span>
-        <span class="card-note">${once?"Once per user":"Reusable"} · one code per discount</span></div>
-      <div class="matrix-wrap"><table><thead><tr><th>Code</th><th>Redemptions</th><th>Valid to</th><th>Status</th></tr></thead>
-      <tbody><tr>
-        <td class="code"><b style="font-weight:600">${d.n||"—"}</b></td>
-        <td class="code">${once?"12 users, once each":"18 redeemed"}</td>
-        <td class="code muted">${d.dates&&d.dates[1]?d.dates[1]:"—"}</td>
-        <td><span class="pill pill-ok"><i class="dot"></i>Live</span></td></tr></tbody></table></div></div>
-      <div class="card"><div class="card-head"><span class="card-title">Shareable link</span></div>
+    const validTo=d.dates&&d.dates[1]?d.dates[1]:"—";
+    let codeCard;
+    if(isSeries(d)){
+      const s=d.series, total=seriesCount(s), codes=seriesCodes(s,SERIES_CAP), capped=total>codes.length;
+      // deterministic mock: roughly every 3rd voucher redeemed, so the list reads as live
+      const rows=codes.map((c,i)=>{ const redeemed=(i%3===1); return `<tr>
+        <td class="code"><b style="font-weight:600">${c}</b></td>
+        <td>${redeemed?'<span class="pill pill-off">Redeemed</span>':'<span class="pill pill-ok"><i class="dot"></i>Unused</span>'}</td>
+        <td class="code muted">${validTo}</td></tr>`; }).join("");
+      codeCard=`<div class="card"><div class="card-head"><span class="card-title">Voucher series</span>
+          <span class="card-note">${escAttr(s.prefix||"")} · ${s.from}–${s.to} · ${total.toLocaleString()} codes · one per voucher</span></div>
+        <div class="card-body" style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;border-bottom:1px solid var(--rule)">
+          <span class="code" style="font-size:13px"><b style="font-weight:600">${seriesLabel(s)}</b></span>
+          <span style="flex:1"></span>
+          <button class="btn" data-export-series="${selD}">Download all codes (CSV)</button></div>
+        ${capped?`<div class="card-body" style="border-bottom:1px solid var(--rule);font-size:12px;color:var(--ink3)">Showing the first ${codes.length.toLocaleString()} of ${total.toLocaleString()} codes.</div>`:""}
+        <div class="matrix-wrap" style="max-height:340px;overflow:auto"><table><thead><tr><th>Code</th><th>Status</th><th>Valid to</th></tr></thead>
+        <tbody>${rows}</tbody></table></div></div>`;
+    } else {
+      codeCard=`<div class="card"><div class="card-head"><span class="card-title">Code</span>
+          <span class="card-note">${once?"Once per user":"Reusable"} · one code per discount</span></div>
+        <div class="matrix-wrap"><table><thead><tr><th>Code</th><th>Redemptions</th><th>Valid to</th><th>Status</th></tr></thead>
+        <tbody><tr>
+          <td class="code"><b style="font-weight:600">${d.n||"—"}</b></td>
+          <td class="code">${once?"12 users, once each":"18 redeemed"}</td>
+          <td class="code muted">${validTo}</td>
+          <td><span class="pill pill-ok"><i class="dot"></i>Live</span></td></tr></tbody></table></div></div>`;
+    }
+    return codeCard+
+      `<div class="card"><div class="card-head"><span class="card-title">Shareable link</span></div>
         <div class="card-body"><div class="code" style="word-break:break-all;font-size:12px">${shareLink(d)}</div></div>
         <div class="matrix-wrap"><table><thead><tr><th>UTM tag</th><th>Value</th></tr></thead>
         <tbody>${UTM_FIELDS.map(([k,p,,req])=>`<tr><td class="code">${p}${req?"":' <span class="q">optional</span>'}</td><td>${u[k]?escAttr(u[k]):'<span class="muted">—</span>'}</td></tr>`).join("")}</tbody></table></div></div>`;
@@ -2142,6 +2217,7 @@ function discDetailBody(d){
     <div class="card"><div class="matrix-wrap"><table><thead><tr><th style="width:34%">Field</th><th>Value</th></tr></thead>
     <tbody>
       ${row("Method",applyText(d))}
+      ${isSeries(d)?row("Voucher series",codeLabel(d)+" · "+seriesCount(d.series).toLocaleString()+" codes"):""}
       ${row("Reward",valueOnlyPhrase(d))}
       ${row("Applies to",it.length?it.join(", "):"Any item")}
       ${row("Offer runs between",d.dates[0]?(d.dates[0]+(d.dates[1]?" – "+d.dates[1]:" onward")):"Any time")}
@@ -2551,7 +2627,7 @@ const VIEWS = {
     `<div class="card"><div class="matrix-wrap"><table class="reclist"><thead><tr>
       <th>Code / title</th><th>Method</th><th>Reward</th><th>Applies to</th><th>Status</th><th>Actions</th></tr></thead>
     <tbody>${DISCOUNTS.map((d,i)=>{const it=discBasketItems(d);return `<tr data-open="disc:${i}">
-      <td><b style="font-weight:500">${d.n||"—"}</b><div class="sub" style="max-width:420px">${discountSummaryShort(d)}</div></td>
+      <td><b style="font-weight:500">${codeLabel(d)}</b>${isSeries(d)?` <span class="q">series · ${seriesCount(d.series)}</span>`:""}<div class="sub" style="max-width:420px">${discountSummaryShort(d)}</div></td>
       <td>${applyBadge(d)}</td>
       <td style="font-size:12px">${valueOnlyPhrase(d)}</td>
       <td style="font-size:12px">${it.length?it.join(", "):'<span class="muted">Any item</span>'}</td>
@@ -3610,6 +3686,10 @@ document.addEventListener("click",e=>{
   if(t){ tab=t.dataset.tab; if(tab==="new"&&current==="bookings") resetBooking(); if(tab==="new"&&current==="programs"){progKind=progFormat(progCat)==="multi"?"camp":"event";eventCats=new Set();} if(tab==="new"&&current==="events") eventCats=new Set(); if(tab==="new"&&current==="discounts") draftDiscount=null; if(tab==="new"&&(current==="products"||current==="programs")) prodBuildingPool=false; addOpen=null; render(); $(".stage").scrollTop=0; return; }
   if(e.target.closest("#hAdd")){ tab="new"; if(current==="bookings") resetBooking(); if(current==="events") eventCats=new Set(); if(current==="discounts") draftDiscount=null; if(current==="products"||current==="programs") prodBuildingPool=false; addOpen=null; render(); $(".stage").scrollTop=0; return; }
   if(e.target.closest("[data-savediscount]")){ saveDiscount(); return; }
+  const ctype=e.target.closest&&e.target.closest("[data-codetype]");
+  if(ctype){ syncDiscountForm(); curDiscount().codeType=ctype.dataset.codetype; render(); return; }
+  const expSer=e.target.closest&&e.target.closest("[data-export-series]");
+  if(expSer){ const dd=DISCOUNTS[+expSer.dataset.exportSeries]; if(dd&&isSeries(dd)){ const b=expSer.querySelector("span")||expSer, t=b.textContent; b.textContent=`Prepared ${seriesCount(dd.series).toLocaleString()} codes`; setTimeout(()=>{b.textContent=t;},1600); } return; }
   if(e.target.closest("[data-gencode]")){ const el=document.getElementById("discountCode"); if(el) el.value=genCode(); return; }
   // open the shareable-link flyout — capture the current code first so the link matches
   if(e.target.closest("[data-sharelink]")){ syncDiscountForm(); addOpen="share"; render(); $(".stage").scrollTop=0; return; }
@@ -3800,6 +3880,10 @@ document.addEventListener("input",e=>{
     return;
   }
   if(e.target.matches&&e.target.matches("[data-utm]")){ captureUtmFlyout(); const el=document.getElementById("shareLinkPreview"); if(el) el.textContent=shareLink(curDiscount()); return; }
+  if(e.target.matches&&e.target.matches("[data-series]")){ syncDiscountForm(); const el=document.getElementById("seriesPreview"); if(el){ const s=curDiscount().series||{}; const err=seriesError(s);
+      if(err){ el.textContent=err; el.style.color="var(--stop)"; }
+      else{ const list=seriesCodes(s,4),n=seriesCount(s); el.textContent=`${list.slice(0,3).join(", ")}${n>3?` … ${seriesCode(s,Math.floor(+s.to||0))}`:""} · ${n.toLocaleString()} code${n===1?"":"s"}`; el.style.color="var(--blue)"; } }
+    return; }
   if(!e.target.matches("[data-bookqty]")){ refreshDiscountSummaries(); return; }
   const qty=Math.max(0,+e.target.value||0), unit=+e.target.dataset.unit||0, index=e.target.dataset.bookindex;
   const summary=document.querySelector(`[data-summary-line="${index}"]`);
