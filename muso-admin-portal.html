@@ -138,6 +138,59 @@ tbody tr[aria-selected="true"] td:first-child{box-shadow:inset 2px 0 0 var(--blu
 
 .two{display:grid;grid-template-columns:minmax(0,1fr) 312px;gap:18px;align-items:start}
 @media (max-width:1180px){.two{grid-template-columns:minmax(0,1fr)}}
+/* ---- dashboard ---- */
+.rail-div{height:1px;background:#2C3134;margin:9px 16px 4px}
+.mitem-top{font-weight:600;color:#EDEFEA}
+.mitem-ico{font-size:13px;width:14px;flex:none;text-align:center;color:var(--rail-txt)}
+.mitem-top[aria-current="true"] .mitem-ico{color:#fff}
+.dash-row{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:18px;align-items:start;margin-bottom:16px}
+@media (max-width:1180px){.dash-row{grid-template-columns:minmax(0,1fr)}}
+.set-v.pos{color:var(--ink)}
+.kpi-sub{font-size:11px;color:var(--ink3);margin-top:7px;font-family:var(--mono);letter-spacing:.03em}
+.kpi-sample{display:inline-block;font-size:9px;font-family:var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--ink3);border:1px solid var(--rule2);border-radius:4px;padding:1px 5px;margin-left:6px;vertical-align:middle}
+.bars{display:flex;align-items:flex-end;gap:9px;height:104px;padding:6px 2px 0}
+.bar{flex:1;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;gap:6px;min-width:0}
+.bar-track{width:100%;display:flex;align-items:flex-end;justify-content:center;height:78px}
+.bar-fill{width:70%;background:var(--blue-wash);border:1px solid var(--blue-line);border-bottom:0;border-radius:5px 5px 0 0;min-height:3px}
+.bar.today .bar-fill{background:var(--blue);border-color:var(--blue)}
+.bar-x{font-size:10px;color:var(--ink3);font-family:var(--mono)}
+.bar.today .bar-x{color:var(--blue);font-weight:600}
+.bar-v{font-size:9.5px;color:var(--ink2);font-family:var(--mono)}
+.meterrow{display:grid;grid-template-columns:120px 1fr 92px;gap:12px;align-items:center;padding:9px 0;border-top:1px solid var(--rule)}
+.meterrow:first-child{border-top:0}
+.meterrow .mname{font-size:12.5px;font-weight:500}
+.meter{height:9px;background:var(--rule);border-radius:6px;overflow:hidden}
+.meter-fill{height:100%;border-radius:6px}
+.meter-fill.ok{background:var(--teal)}.meter-fill.low{background:var(--amber)}.meter-fill.sold{background:var(--stop)}
+.meterrow .mnum{font-family:var(--mono);font-size:11.5px;color:var(--ink2);text-align:right}
+.attn{display:flex;flex-direction:column}
+.attn-row{display:flex;align-items:center;gap:11px;width:100%;text-align:left;padding:11px 14px;border-top:1px solid var(--rule);background:none;cursor:pointer;transition:background .12s}
+.attn-row:first-child{border-top:0}
+.attn-row:hover{background:var(--paper)}
+.attn-row .attn-n{font-size:9px;font-family:var(--mono);font-weight:600;min-width:22px;text-align:center;border-radius:5px;padding:2px 0}
+.attn-row .attn-t{flex:1;font-size:12.5px;color:var(--ink)}
+.attn-row .attn-go{font-size:15px;color:var(--ink3);flex:none}
+.attn-warn .attn-n{color:var(--amber);background:var(--amber-wash)}
+.attn-stop .attn-n{color:var(--stop);background:#FBEFF1}
+.attn-info .attn-n{color:var(--blue);background:var(--blue-wash)}
+.splitbar{display:flex;height:16px;border-radius:8px;overflow:hidden;margin:4px 0 12px;background:var(--rule)}
+.splitbar span{display:block;height:100%}
+.legend{display:flex;gap:20px;flex-wrap:wrap;font-size:12.5px;color:var(--ink2)}
+.legend i{width:10px;height:10px;border-radius:3px;display:inline-block;margin-right:7px;vertical-align:middle}
+.legend b{color:var(--ink);font-family:var(--mono)}
+.cmp{display:flex;flex-direction:column;gap:11px}
+.cmp-row{display:grid;grid-template-columns:82px 1fr auto;gap:11px;align-items:center}
+.cmp-k{font-size:12px;color:var(--ink2)}
+.cmp-bar{height:13px;border-radius:7px;background:var(--rule);overflow:hidden}
+.cmp-fill{height:100%;border-radius:7px}
+.cmp-v{font-family:var(--mono);font-size:12px;color:var(--ink);text-align:right}
+.kpi-top{display:flex;align-items:center;gap:10px;margin-bottom:2px}
+.kpi-ico{width:34px;height:34px;flex:none;border-radius:9px;display:inline-flex;align-items:center;justify-content:center}
+.kpi-ico svg{width:18px;height:18px;display:block}
+.kpi-blue{background:var(--blue-wash);color:var(--blue)}
+.kpi-teal{background:var(--teal-wash);color:var(--teal)}
+.kpi-amber{background:var(--amber-wash);color:var(--amber)}
+.kpi-top .set-k{margin:0}
 .insp{background:var(--card);border:1px solid var(--rule);border-radius:8px}
 .insp-head{padding:13px 16px;border-bottom:1px solid var(--rule);display:flex;align-items:flex-start;gap:10px}
 .insp-code{font-family:var(--mono);font-size:10.5px;color:var(--ink3)}
@@ -977,7 +1030,8 @@ const M = {
   sources:{g:4,n:"Referral sources",owner:OWN_RETAIL,perm:"master.crm.manage",src:"Scope §1.7",q:0,
     d:"The options behind the optional “How did you hear about us?” question.",
     schema:[["Option shown|label","string","Shown in the dropdown."],["Offered|is_active","bool",""],["Position in the list|sort_order","int",""]]},
-  bookings:{g:2,n:"Orders",owner:"Visitor Experience",perm:"order.manage",q:0,view:"bookings"}
+  bookings:{g:2,n:"Orders",owner:"Visitor Experience",perm:"order.manage",q:0,view:"bookings"},
+  dashboard:{n:"Dashboard",owner:"Visitor Experience",perm:"dashboard.view",view:"dashboard"}
 };
 ORDER.forEach((k,i)=>{ M[k].g = PHASE[k]; M[k].step = i+1; });
 
@@ -2233,7 +2287,7 @@ function discDetailBody(d){
 /* ---------------- render ---------------- */
 const $ = s => document.querySelector(s);
 let addOpen = null;   // which inline add-form is open: "slot"|"batch"|"day"|"addon"|"rate"|"block"|null
-let current = "categories", selP = 0, tab = "list", sub = "details", pType = "product",
+let current = "dashboard", selP = 0, tab = "list", sub = "details", pType = "product",
     selW = 0, selB = 0, selE = 0, esub = "details", eventCats = new Set(), selBooking = 0, bookingProduct = 0, bookingSlot = "", bookingDiscountCode = "", csub = "details", copyFrom = 0, copyTo = new Set(), copyWhat = new Set(["price","seats"]), editD = -1,
     progKind = "event", progCat = "Event", prodBuildingPool = false,
     bookingProducts = new Map(), bookingAddons = new Map(), bookingPrograms = new Map(), bookingPay = "Cash", bookingTab = "products",
@@ -2246,7 +2300,7 @@ const OPENQ = {};
 function computeOpen(){ ORDER.forEach(k=>OPENQ[k]=0); }
 
 function railHTML(){
-  let out="",last=-1;
+  let out=`<button class="mitem mitem-top" data-k="dashboard" aria-current="${current==="dashboard"}"><span class="mitem-ico">▦</span><span>Dashboard</span></button><div class="rail-div"></div>`,last=-1;
   ORDER.forEach(k=>{
     const m=M[k];
     if(m.g!==last){last=m.g;
@@ -2258,6 +2312,19 @@ function railHTML(){
 }
 function head(){
   const m=M[current];
+  const addBtn=$("#hAdd"), histBtn=document.querySelector('.head-actions [data-tab="hist"]');
+  if(current==="dashboard"){
+    $("#crumbGrp").textContent="Overview";
+    $("#hTitle").textContent="Dashboard";
+    $("#hDesc").textContent="";
+    if(addBtn) addBtn.style.display="none";
+    if(histBtn) histBtn.style.display="none";
+    $("#hMeta").innerHTML=`<span class="chip"><span class="chip-k">Today</span><b>${DASH.today}</b></span>
+      <span class="chip"><span class="chip-k">Location</span><b>Museum of Solutions</b></span>`;
+    return;
+  }
+  if(addBtn) addBtn.style.display="";
+  if(histBtn) histBtn.style.display="";
   $("#crumbGrp").textContent=GROUPS[m.g].name.replace(/^\d+ · /,"");
   $("#hTitle").textContent=m.n;
   $("#hDesc").textContent="";
@@ -2523,7 +2590,127 @@ const SUB = {
 };
 
 /* ---- top-level views ---- */
+/* Illustrative "today" + trend figures for the dashboard (the seed orders are few and past-dated).
+   Structural panels below are computed from real seed data; only these time-based numbers are sample. */
+const DASH = {
+  today:"24 Aug 2026", todayDate:"24 Aug 2026",
+  ordersToday:14, revenueToday:52400, visitorsToday:96,
+  days:["Mon","Tue","Wed","Thu","Fri","Sat","Sun"],
+  revenue7:[28600,31200,26800,38400,44100,61800,52400],   // last value = today
+  sources:{website:9, pos:5},          // today's orders: website vs POS walk-ins
+  adultsToday:61, childrenToday:35,     // visitor mix (sums to visitorsToday)
+  repeatVisitors:22, repeatPct:23,      // returning customers today
+  schoolsToday:2, schoolsMonth:9        // school group bookings
+};
+
 const VIEWS = {
+  dashboard(){
+    const pill=(cls,txt)=>`<span class="pill ${cls}"><i class="dot"></i>${txt}</span>`;
+    const availPill=(left,cap)=>{ const st=availState(left,cap); return st?`<span class="pill pill-${st.key==="ok"?"ok":"off"}">${st.key==="ok"?'<i class="dot"></i>':""}${st.label}</span>`:'<span class="muted">—</span>'; };
+    const allSlots=P.flatMap(p=>p.slots.map(s=>({p,s})));
+    const capSold=allSlots.reduce((a,x)=>a+(x.s.sold||0),0), capTot=allSlots.reduce((a,x)=>a+(x.s.cap||0),0);
+    const capPct=capTot?Math.round(capSold/capTot*100):0;
+    const activeDisc=DISCOUNTS.filter(d=>d.status==="Approved").length;
+    const progs=[...WORKSHOPS,...EVENTS];
+
+    // ---- KPI tiles (with icons) ----
+    const S=(p)=>`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${p}</svg>`;
+    const ICO={
+      orders:S('<path d="M3 8a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v2.5a1.5 1.5 0 0 0 0 3V16a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-2.5a1.5 1.5 0 0 0 0-3Z"/><path d="M9 6v12" stroke-dasharray="1.5 2"/>'),
+      revenue:S('<circle cx="9" cy="9" r="6"/><path d="M18.5 10.7A6 6 0 1 1 10.5 18.7"/><path d="M7.5 7h2v4"/>'),
+      capacity:S('<path d="M12 14 15.5 9"/><path d="M3.6 18a9 9 0 1 1 16.8 0"/>'),
+      discount:S('<path d="M12.5 2.5H5a2.5 2.5 0 0 0-2.5 2.5v7.5a2 2 0 0 0 .6 1.4l7.5 7.5a2 2 0 0 0 2.8 0l6.6-6.6a2 2 0 0 0 0-2.8L14.4 3.1a2 2 0 0 0-1.9-.6Z"/><circle cx="8" cy="8" r="1.4"/>'),
+      adult:S('<circle cx="12" cy="7" r="4"/><path d="M6 21v-1.5a4.5 4.5 0 0 1 4.5-4.5h3a4.5 4.5 0 0 1 4.5 4.5V21"/>'),
+      child:S('<circle cx="12" cy="6" r="3"/><path d="M9 21v-5l-1.5-2.5a4.5 4.5 0 0 1 9 0L15 16v5"/>'),
+      repeat:S('<path d="M17 3l3.5 3.5L17 10"/><path d="M4 11V9.5A3.5 3.5 0 0 1 7.5 6h13"/><path d="M7 21l-3.5-3.5L7 14"/><path d="M20 13v1.5a3.5 3.5 0 0 1-3.5 3.5h-13"/>'),
+      school:S('<path d="M12 4 2 9l10 5 10-5Z"/><path d="M6 11v5c0 1.1 2.7 2.5 6 2.5s6-1.4 6-2.5v-5"/><path d="M22 9v5.5"/>')
+    };
+    const kpi=(icon,color,label,sample,value,sub)=>`<div class="setcard"><div class="kpi-top"><span class="kpi-ico kpi-${color}">${ICO[icon]}</span><div class="set-k">${label}${sample?' <span class="kpi-sample">sample</span>':""}</div></div><div class="set-v pos">${value}</div><div class="kpi-sub">${sub}</div></div>`;
+    const mix=DASH.adultsToday+DASH.childrenToday;
+    const tiles=`<div class="set">
+      ${kpi("orders","blue","Orders today",1,DASH.ordersToday,`${DASH.visitorsToday} visitors expected`)}
+      ${kpi("revenue","teal","Revenue today",1,money(DASH.revenueToday),"across all channels")}
+      ${kpi("capacity","amber","Capacity in use",0,`${capPct}<span class="set-u">%</span>`,`${capSold} of ${capTot} seats today`)}
+      ${kpi("discount","blue","Active discounts",0,activeDisc,`of ${DISCOUNTS.length} configured`)}
+    </div>`;
+
+    // ---- audience stat strip (sample) ----
+    const strip=`<div class="set">
+      ${kpi("adult","blue","Adults today",1,DASH.adultsToday,`${Math.round(DASH.adultsToday/mix*100)}% of visitors`)}
+      ${kpi("child","teal","Children today",1,DASH.childrenToday,`${Math.round(DASH.childrenToday/mix*100)}% of visitors`)}
+      ${kpi("repeat","amber","Repeat visitors",1,DASH.repeatVisitors,`${DASH.repeatPct}% returning today`)}
+      ${kpi("school","blue","Schools booked",1,DASH.schoolsToday,`${DASH.schoolsMonth} this month`)}
+    </div>`;
+
+    // ---- booking sources: website vs POS walk-ins (sample) ----
+    const web=DASH.sources.website, pos=DASH.sources.pos, srcTot=web+pos||1;
+    const webPct=Math.round(web/srcTot*100), posPct=100-webPct;
+    const sources=`<div class="card"><div class="card-head"><span class="card-title">Booking sources</span><span class="card-note">sample · today</span></div>
+      <div class="card-body">
+        <div class="splitbar"><span style="width:${webPct}%;background:var(--blue)"></span><span style="width:${posPct}%;background:var(--teal)"></span></div>
+        <div class="legend"><span><i style="background:var(--blue)"></i>Website <b>${web}</b> · ${webPct}%</span><span><i style="background:var(--teal)"></i>POS walk-ins <b>${pos}</b> · ${posPct}%</span></div>
+      </div></div>`;
+
+    // ---- today vs best day this week (from the sample trend) ----
+    const bestVal=Math.max(...DASH.revenue7), bestIdx=DASH.revenue7.indexOf(bestVal), bestDay=DASH.days[bestIdx];
+    const todayVal=DASH.revenueToday, isBest=todayVal>=bestVal, delta=todayVal-bestVal;
+    const bestday=`<div class="card"><div class="card-head"><span class="card-title">Today vs best day this week</span><span class="card-note">sample</span></div>
+      <div class="card-body"><div class="cmp">
+        <div class="cmp-row"><span class="cmp-k">Today</span><div class="cmp-bar"><div class="cmp-fill" style="width:${Math.round(todayVal/bestVal*100)}%;background:var(--blue)"></div></div><span class="cmp-v">${money(todayVal)}</span></div>
+        <div class="cmp-row"><span class="cmp-k">Best (${bestDay})</span><div class="cmp-bar"><div class="cmp-fill" style="width:100%;background:var(--teal)"></div></div><span class="cmp-v">${money(bestVal)}</span></div>
+      </div>
+      <div class="kpi-sub" style="margin-top:12px">${isBest?"Today is the week's best day. 🎉":`${money(Math.abs(delta))} below the week's best — ${Math.round(todayVal/bestVal*100)}% of ${bestDay}.`}</div>
+      </div></div>`;
+
+    // ---- today's sessions (real product slots) ----
+    const sessionRows=allSlots.slice(0,9).map(({p,s})=>{ const left=slotLeft(s); return `<tr>
+      <td class="code">${s.t1}–${s.t2}</td>
+      <td><b style="font-weight:500">${p.n}</b><div class="sub">${s.n}</div></td>
+      <td class="code" style="text-align:center">${s.sold}/${s.cap}</td>
+      <td>${availPill(left,s.cap)}</td></tr>`; }).join("");
+    const sessions=`<div class="card"><div class="card-head"><span class="card-title">Today's sessions</span><span class="card-note">${allSlots.length} slots</span></div>
+      <div class="matrix-wrap" style="max-height:340px;overflow:auto"><table><thead><tr><th>Time</th><th>Product · slot</th><th class="ctr">Seats</th><th>Availability</th></tr></thead>
+      <tbody>${sessionRows}</tbody></table></div></div>`;
+
+    // ---- needs attention (real, derived) ----
+    const pendingDisc=DISCOUNTS.filter(d=>d.status!=="Approved").length;
+    const draftProgs=progs.filter(x=>x.listing&&x.listing.status==="Draft").length;
+    const progSlots=progs.flatMap(x=>(x.batches||[]).map(b=>({cap:b.cap,sold:b.sold})));
+    const tightSlots=[...allSlots.map(x=>x.s),...progSlots].filter(s=>{ const st=availState(slotLeft(s),s.cap); return st&&(st.key==="low"||st.key==="sold"); }).length;
+    const refDate=parseDMY(DASH.todayDate);
+    const upBlackouts=BLACKOUTS.filter(b=>{ const d=parseDMY(b); return d&&refDate&&d>=refDate; }).length;
+    const attnDefs=[
+      pendingDisc?["attn-warn",pendingDisc,`${pendingDisc} discount${pendingDisc>1?"s":""} awaiting approval`,"discounts"]:null,
+      draftProgs?["attn-warn",draftProgs,`${draftProgs} program${draftProgs>1?"s":""} still in draft`,"programs"]:null,
+      tightSlots?["attn-stop",tightSlots,`${tightSlots} slot${tightSlots>1?"s":""} sold out or filling fast`,"products"]:null,
+      upBlackouts?["attn-info",upBlackouts,`${upBlackouts} blackout date${upBlackouts>1?"s":""} coming up`,"blackout"]:null
+    ].filter(Boolean);
+    const attn=`<div class="card"><div class="card-head"><span class="card-title">Needs attention</span></div>
+      <div class="attn">${attnDefs.length?attnDefs.map(([cls,n,t,go])=>`<button class="attn-row ${cls}" data-goto="${go}"><span class="attn-n">${n}</span><span class="attn-t">${t}</span><span class="attn-go">›</span></button>`).join(""):'<div class="card-body muted" style="font-size:12.5px">All clear — nothing needs attention.</div>'}</div></div>`;
+
+    // ---- revenue last 7 days (sample bars) ----
+    const maxRev=Math.max(...DASH.revenue7);
+    const bars=`<div class="card"><div class="card-head"><span class="card-title">Revenue — last 7 days</span><span class="card-note">sample</span></div>
+      <div class="card-body"><div class="bars">${DASH.revenue7.map((v,i)=>{ const h=Math.round(v/maxRev*100),today=i===DASH.revenue7.length-1; return `<div class="bar${today?" today":""}"><span class="bar-v">${Math.round(v/1000)}k</span><div class="bar-track"><div class="bar-fill" style="height:${h}%"></div></div><span class="bar-x">${DASH.days[i]}</span></div>`; }).join("")}</div></div></div>`;
+
+    // ---- capacity by product (real meters) ----
+    const meterRows=P.map(p=>{ const sold=p.slots.reduce((a,s)=>a+(s.sold||0),0),cap=p.slots.reduce((a,s)=>a+(s.cap||0),0),pct=cap?Math.round(sold/cap*100):0; const st=availState(Math.max(0,cap-sold),cap)||{key:"ok"}; return `<div class="meterrow"><span class="mname">${p.n}</span><div class="meter"><div class="meter-fill ${st.key}" style="width:${pct}%"></div></div><span class="mnum">${sold}/${cap} · ${pct}%</span></div>`; }).join("");
+    const meters=`<div class="card"><div class="card-head"><span class="card-title">Capacity by product</span></div><div class="card-body" style="padding-top:4px">${meterRows}</div></div>`;
+
+    // ---- recent orders (real) ----
+    const orderRows=BOOKINGS.map(b=>`<tr>
+      <td class="code">${b.ref}</td>
+      <td><b style="font-weight:500">${b.customer}</b><div class="sub">${b.product}</div></td>
+      <td class="code" style="text-align:center">${b.heads}</td>
+      <td class="code">${money(b.total)}</td>
+      <td>${b.paymentMode||"—"}</td>
+      <td>${b.status==="Confirmed"?pill("pill-ok","Confirmed"):pill("pill-draft",b.status)}</td></tr>`).join("");
+    const orders=`<div class="card"><div class="card-head"><span class="card-title">Recent orders</span><span class="card-note">${BOOKINGS.length} shown</span></div>
+      <div class="matrix-wrap"><table class="reclist"><thead><tr><th>Ref</th><th>Customer · product</th><th class="ctr">Heads</th><th>Total</th><th>Payment</th><th>Status</th></tr></thead>
+      <tbody>${orderRows}</tbody></table></div></div>`;
+
+    return tiles + strip + `<div class="dash-row">${sessions}${attn}</div>` + `<div class="dash-row">${bars}${meters}</div>` + `<div class="dash-row">${sources}${bestday}</div>` + orders;
+  },
   products(){
     return `${toolbar("Search products & add-ons",P.length+" records")}
     <div class="card"><div class="matrix-wrap"><table class="reclist"><thead><tr>
@@ -3682,6 +3869,8 @@ function recalcBookingSummary(showMessage=false){
 document.addEventListener("click",e=>{
   const nav=e.target.closest(".mitem");
   if(nav){ current=nav.dataset.k; selP=0; selW=0; selB=0; selE=0; esub="details"; eventCats=new Set(); selBooking=0; tab="list"; sub="details"; csub="details"; editD=-1; selD=0; dsub="summary"; editCond=-1; condDraft=null; draftDiscount=null; addOpen=null; progKind="event"; progCat="Event"; render(); $(".stage").scrollTop=0; return; }
+  const goto=e.target.closest("[data-goto]");
+  if(goto){ current=goto.dataset.goto; selP=0; selW=0; selB=0; selE=0; selD=0; selBooking=0; tab="list"; sub="details"; csub="details"; dsub="summary"; addOpen=null; render(); $(".stage").scrollTop=0; return; }
   const t=e.target.closest("[data-tab]");
   if(t){ tab=t.dataset.tab; if(tab==="new"&&current==="bookings") resetBooking(); if(tab==="new"&&current==="programs"){progKind=progFormat(progCat)==="multi"?"camp":"event";eventCats=new Set();} if(tab==="new"&&current==="events") eventCats=new Set(); if(tab==="new"&&current==="discounts") draftDiscount=null; if(tab==="new"&&(current==="products"||current==="programs")) prodBuildingPool=false; addOpen=null; render(); $(".stage").scrollTop=0; return; }
   if(e.target.closest("#hAdd")){ tab="new"; if(current==="bookings") resetBooking(); if(current==="events") eventCats=new Set(); if(current==="discounts") draftDiscount=null; if(current==="products"||current==="programs") prodBuildingPool=false; addOpen=null; render(); $(".stage").scrollTop=0; return; }
