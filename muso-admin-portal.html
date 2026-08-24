@@ -184,6 +184,10 @@ tbody tr[aria-selected="true"] td:first-child{box-shadow:inset 2px 0 0 var(--blu
 .cmp-bar{height:13px;border-radius:7px;background:var(--rule);overflow:hidden}
 .cmp-fill{height:100%;border-radius:7px}
 .cmp-v{font-family:var(--mono);font-size:12px;color:var(--ink);text-align:right}
+.tier-silver{color:#5B6169;background:#EEF0F2;border-color:#D3D7DC}
+.tier-gold{color:#8A5A00;background:var(--amber-wash);border-color:var(--amber-line)}
+.tier-platinum{color:#4B3FA6;background:#ECEAFB;border-color:#CFC9F0}
+.tier-x{color:var(--ink2);background:var(--paper);border-color:var(--rule2)}
 .kpi-top{display:flex;align-items:center;gap:10px;margin-bottom:2px}
 .kpi-ico{width:34px;height:34px;flex:none;border-radius:9px;display:inline-flex;align-items:center;justify-content:center}
 .kpi-ico svg{width:18px;height:18px;display:block}
@@ -684,13 +688,15 @@ const GROUPS = [
   {name:"2 · Catalogue", color:"#0E7C6B"},
   {name:"3 · Calendar", color:"#C25B18"},
   {name:"4 · Offers", color:"#C2286E"},
-  {name:"5 · Checkout & site", color:"#6B3FC4"}
+  {name:"5 · Checkout & site", color:"#6B3FC4"},
+  {name:"6 · Membership", color:"#8A5A00"}
 ];
 const ORDER = ["categories","pools","tax","hsn","progcats","products","programs","blackout","bookings",
-               "discounts","affiliates","paymodes","sources","scripts"];
+               "discounts","affiliates","paymodes","sources","scripts","tiers","members"];
 const PHASE = {categories:0,pools:0,tax:0,hsn:0,progcats:0, products:1, programs:1, blackout:2,
                discounts:3,affiliates:3,
-               paymodes:4,sources:4,scripts:4,bookings:2};
+               paymodes:4,sources:4,scripts:4,bookings:2,
+               tiers:5,members:5};
 const PREREQ = {
   categories:[], pools:[], tax:[], hsn:[], paymodes:[], sources:[], scripts:[], progcats:[], bookings:["Products & add-ons"],
   products:["Visitor categories","Inventory pools","Tax rates","HSN / SAC codes"],
@@ -699,7 +705,8 @@ const PREREQ = {
   camps:["Program categories","Visitor categories","Tax rates","HSN / SAC codes"],
   blackout:["Products & add-ons"],
   discounts:["Products & add-ons"],
-  affiliates:["Discounts & offers"]
+  affiliates:["Discounts & offers"],
+  tiers:[], members:["Membership tiers"]
 };
 const SUBS = [
   ["details","Details"],["slots","Time slots"],["addons","Add-ons"],
@@ -1031,6 +1038,10 @@ const M = {
     d:"The options behind the optional “How did you hear about us?” question.",
     schema:[["Option shown|label","string","Shown in the dropdown."],["Offered|is_active","bool",""],["Position in the list|sort_order","int",""]]},
   bookings:{g:2,n:"Orders",owner:"Visitor Experience",perm:"order.manage",q:0,view:"bookings"},
+  tiers:{g:5,n:"Membership tiers",owner:"Hasmukh · Sales & Marketing",perm:"membership.manage",src:"Scope §10",q:1,
+    d:"The membership plans on sale — Silver, Gold, Platinum and any others. Each sets its visit count (limited or unlimited), validity, price and the discounts a member earns.",view:"tiers"},
+  members:{g:5,n:"Members",owner:"Hasmukh · Sales & Marketing",perm:"membership.manage",src:"Scope §10",q:0,
+    d:"Everyone holding a membership. A visit admits the registered adult + child pair; only that pair may redeem. View purchase and redemption history, renew, and record redemptions.",view:"members"},
   dashboard:{n:"Dashboard",owner:"Visitor Experience",perm:"dashboard.view",view:"dashboard"}
 };
 ORDER.forEach((k,i)=>{ M[k].g = PHASE[k]; M[k].step = i+1; });
@@ -1176,6 +1187,43 @@ const BOOKINGS = [
 
 /* Distinct customers, derived from past orders — powers phone-number lookup at the POS counter. */
 const CUSTOMERS = (()=>{ const seen=new Map(); BOOKINGS.forEach(b=>{ if(b.phone && !seen.has(b.phone)) seen.set(b.phone,{name:b.customer,phone:b.phone,email:b.email,member:b.member||null}); }); return [...seen.values()]; })();
+
+/* ---- Memberships (Scope §10) ---- */
+/* Plans have configurable names, visit counts (a number, or "Unlimited"), validity, price and
+   per-plan discounts. A visit = 1 adult + 1 child. Platinum is unlimited; Gold/Silver are limited. */
+const MEMBERSHIP_TIERS = [
+  {id:"silver",  name:"Silver",  price:2999, visits:6,           validity:"3 months", discounts:{birthday:5, events:5, workshops:10}, priority:false, status:"Active"},
+  {id:"gold",    name:"Gold",    price:5999, visits:12,          validity:"6 months", discounts:{birthday:10,events:10,workshops:15}, priority:true,  status:"Active"},
+  {id:"platinum",name:"Platinum",price:9999, visits:"Unlimited", validity:"Yearly",   discounts:{birthday:10,events:10,workshops:15}, priority:true,  status:"Active"}
+];
+const MEMBER_TODAY = "24 Aug 2026";   // reference "now" for expiry maths
+/* Each member registers ONE adult-child pair at purchase; only that pair may redeem.
+   A visit = 1 adult + 1 child; visitsUsed / visitsTotal count PAIRS (Platinum = Unlimited). */
+const MEMBERS = [
+  {id:"MEM-0421",tier:"Gold",phone:"1234567890",email:"aarav@example.com",adult:"Aarav Mehta",child:"Vihaan Mehta",
+   joined:"12 Apr 2026",expires:"12 Oct 2026",visitsTotal:12,visitsUsed:4,
+   purchases:[{date:"12 Apr 2026",item:"Gold membership",amount:5999,channel:"POS",inv:"INV-2041"}],
+   redemptions:[{date:"20 Jul 2026",visits:2,balanceAfter:10,channel:"POS",otp:true},
+                {date:"03 Aug 2026",visits:2,balanceAfter:8,channel:"Website",otp:true}]},
+  {id:"MEM-0388",tier:"Silver",phone:"9876543210",email:"nisha@example.com",adult:"Nisha Rao",child:"Anya Rao",
+   joined:"02 Jul 2026",expires:"02 Oct 2026",visitsTotal:6,visitsUsed:1,
+   purchases:[{date:"02 Jul 2026",item:"Silver membership",amount:2999,channel:"Website",inv:"INV-2103"}],
+   redemptions:[{date:"18 Jul 2026",visits:1,balanceAfter:5,channel:"POS",otp:true}]},
+  {id:"MEM-0500",tier:"Platinum",phone:"9930244556",email:"kabir@example.com",adult:"Kabir Shah",child:"Mira Shah",
+   joined:"01 Jun 2026",expires:"01 Jun 2027",visitsTotal:"Unlimited",visitsUsed:9,
+   purchases:[{date:"01 Jun 2026",item:"Platinum membership",amount:9999,channel:"POS",inv:"INV-1987"}],
+   redemptions:[{date:"10 Jun 2026",visits:1,balanceAfter:"Unlimited",channel:"POS",otp:true},
+                {date:"28 Jun 2026",visits:2,balanceAfter:"Unlimited",channel:"Website",otp:true},
+                {date:"15 Jul 2026",visits:1,balanceAfter:"Unlimited",channel:"POS",otp:true}]},
+  {id:"MEM-0356",tier:"Gold",phone:"9812233445",email:"farida@example.com",adult:"Farida Khan",child:"Zoya Khan",
+   joined:"10 Mar 2026",expires:"10 Sep 2026",visitsTotal:12,visitsUsed:11,
+   purchases:[{date:"10 Mar 2026",item:"Gold membership",amount:5999,channel:"POS",inv:"INV-1820"}],
+   redemptions:[{date:"12 Jul 2026",visits:3,balanceAfter:4,channel:"POS",otp:true}]},
+  {id:"MEM-0299",tier:"Silver",phone:"9700011223",email:"deepak@example.com",adult:"Deepak Iyer",child:"Aarohi Iyer",
+   joined:"15 Feb 2026",expires:"15 May 2026",visitsTotal:6,visitsUsed:6,
+   purchases:[{date:"15 Feb 2026",item:"Silver membership",amount:2999,channel:"Website",inv:"INV-1655"}],
+   redemptions:[{date:"20 Apr 2026",visits:2,balanceAfter:0,channel:"POS",otp:true}]}
+];
 
 /* Cut a product's slots into segments at every distinct start and end time. */
 function SEGMENTS(a){
@@ -2292,7 +2340,8 @@ let current = "dashboard", selP = 0, tab = "list", sub = "details", pType = "pro
     progKind = "event", progCat = "Event", prodBuildingPool = false,
     bookingProducts = new Map(), bookingAddons = new Map(), bookingPrograms = new Map(), bookingPay = "Cash", bookingTab = "products",
     bookingCustomer = {name:"",phone:"",email:"",member:null}, bookingCustomerLinked = -1, bookingStep = 1, bookingOpenItem = null, bookingCalMonth = null, bookingCancelConfirm = false, bookingDiscountTried = false,
-    selD = 0, dsub = "summary", editCond = -1, condDraft = null, draftDiscount = null, condStep = 0, condItemsOpen = false;
+    selD = 0, dsub = "summary", editCond = -1, condDraft = null, draftDiscount = null, condStep = 0, condItemsOpen = false,
+    selMember = 0, selTier = 0, msub = "summary", redeemStep = 1, redeemVisits = 1;
 
 /* Open items are counted from what each screen actually renders, so the
    sidebar cannot say a master has questions after they have been answered. */
@@ -2709,7 +2758,80 @@ const VIEWS = {
       <div class="matrix-wrap"><table class="reclist"><thead><tr><th>Ref</th><th>Customer · product</th><th class="ctr">Heads</th><th>Total</th><th>Payment</th><th>Status</th></tr></thead>
       <tbody>${orderRows}</tbody></table></div></div>`;
 
-    return tiles + strip + `<div class="dash-row">${sessions}${attn}</div>` + `<div class="dash-row">${bars}${meters}</div>` + `<div class="dash-row">${sources}${bestday}</div>` + orders;
+    // ---- membership (real, from MEMBERS / MEMBERSHIP_TIERS) ----
+    const memActive=MEMBERS.filter(x=>memberStatus(x).key==="ok").length;
+    const memSoon=MEMBERS.filter(x=>memberStatus(x).key==="soon").length;
+    const memExpired=MEMBERS.filter(x=>memberStatus(x).key==="expired").length;
+    const byTier=MEMBERSHIP_TIERS.map(t=>({name:t.name,count:MEMBERS.filter(x=>x.tier===t.name).length}));
+    const maxTier=Math.max(1,...byTier.map(t=>t.count));
+    const memMeters=byTier.map(t=>`<div class="meterrow"><span class="mname">${tierPill(t.name)}</span><div class="meter"><div class="meter-fill ok" style="width:${Math.round(t.count/maxTier*100)}%"></div></div><span class="mnum">${t.count}</span></div>`).join("");
+    const membership=`<div class="card"><div class="card-head"><span class="card-title">Membership</span><span class="card-note">${MEMBERS.length} members</span></div>
+      <div class="card-body" style="display:flex;gap:22px;flex-wrap:wrap;border-bottom:1px solid var(--rule)">
+        <span><span class="f-k">Active</span><br><b style="font-size:16px">${memActive}</b></span>
+        <span><span class="f-k">Expiring soon</span><br><b style="font-size:16px;color:var(--warn)">${memSoon}</b></span>
+        <span><span class="f-k">Expired</span><br><b style="font-size:16px;color:var(--stop)">${memExpired}</b></span></div>
+      <div class="card-body" style="padding-top:6px">${memMeters}</div></div>`;
+    // members expiring soon / expired — the attention list
+    const flagged=MEMBERS.map((m,i)=>({m,i,st:memberStatus(m)})).filter(x=>x.st.key!=="ok").sort((a,b)=>(a.st.daysLeft??0)-(b.st.daysLeft??0));
+    const expRows=flagged.length?flagged.map(({m,i,st})=>`<tr data-open="member:${i}">
+        <td class="code">${m.id}</td>
+        <td><b style="font-weight:500">${pairLabel(m)}</b></td>
+        <td>${tierPill(m.tier)}</td>
+        <td class="code">${m.expires}</td>
+        <td>${memberStatusPill(m)}</td></tr>`).join("")
+      :'<tr><td colspan="5" class="muted">No memberships need attention.</td></tr>';
+    const expiring=`<div class="card"><div class="card-head"><span class="card-title">Memberships needing attention</span><span class="card-note">expiring or expired</span></div>
+      <div class="matrix-wrap"><table class="reclist"><thead><tr><th>Member ID</th><th>Registered pair</th><th>Tier</th><th>Expires</th><th>Status</th></tr></thead>
+      <tbody>${expRows}</tbody></table></div></div>`;
+
+    return tiles + strip + `<div class="dash-row">${sessions}${attn}</div>` + `<div class="dash-row">${bars}${meters}</div>` + `<div class="dash-row">${sources}${bestday}</div>` + `<div class="dash-row">${membership}${expiring}</div>` + orders;
+  },
+  tiers(){
+    return `${toolbar("Search membership tiers",MEMBERSHIP_TIERS.length+" plans")}
+    <div class="card"><div class="matrix-wrap"><table class="reclist"><thead><tr>
+      <th>Plan</th><th>Price</th><th>Visits</th><th>Validity</th><th>Discounts (Birthday / Events / Workshops)</th><th>Status</th></tr></thead>
+    <tbody>${MEMBERSHIP_TIERS.map((t,i)=>`<tr data-open="tier:${i}">
+      <td>${tierPill(t.name)}</td>
+      <td class="code">${money(t.price)}</td>
+      <td class="code">${t.visits==="Unlimited"?'<b style="font-weight:600">Unlimited</b>':t.visits}</td>
+      <td>${t.validity}</td>
+      <td class="code">${t.discounts.birthday}% / ${t.discounts.events}% / ${t.discounts.workshops}%</td>
+      <td>${t.status==="Active"?'<span class="pill pill-ok"><i class="dot"></i>Active</span>':'<span class="pill pill-draft"><i class="dot"></i>'+t.status+'</span>'}</td></tr>`).join("")}
+      <tr><td colspan="6"><button class="rep-add" data-tab="new" style="border-radius:4px">+ New tier</button></td></tr>
+    </tbody></table></div></div>`;
+  },
+  members(){
+    const active=MEMBERS.filter(m=>memberStatus(m).key==="ok").length;
+    const soon=MEMBERS.filter(m=>memberStatus(m).key==="soon").length;
+    const redemMonth=MEMBERS.reduce((a,m)=>a+(m.redemptions||[]).filter(r=>/Aug 2026/.test(r.date)).reduce((s,r)=>s+(r.visits||0),0),0);
+    const S=(p)=>`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${p}</svg>`;
+    const kpi=(ico,color,label,value,sub)=>`<div class="setcard"><div class="kpi-top"><span class="kpi-ico kpi-${color}">${ico}</span><div class="set-k">${label}</div></div><div class="set-v pos">${value}</div><div class="kpi-sub">${sub}</div></div>`;
+    const tiles=`<div class="set">
+      ${kpi(S('<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/>'),"blue","Total members",MEMBERS.length,"across all tiers")}
+      ${kpi(S('<path d="M20 6 9 17l-5-5"/>'),"teal","Active",active,"currently valid")}
+      ${kpi(S('<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>'),"amber","Expiring soon",soon,"within 30 days")}
+      ${kpi(S('<path d="M3 3v18h18"/><path d="M7 14l3-3 3 3 5-6"/>'),"blue","Redemptions",redemMonth,"visits this month")}
+    </div>`;
+    const rows=MEMBERS.map((m,i)=>{ const st=memberStatus(m); const bal=visitsBalance(m);
+      const visCell=isUnlimited(m)?'<b style="font-weight:600">Unlimited</b>':`${m.visitsUsed||0} / ${m.visitsTotal||0} <span class="muted">(${bal} left)</span>`;
+      const hay=`${String(m.phone).replace(/\D/g,"")} ${m.adult} ${m.child} ${m.id}`.toLowerCase();
+      return `<tr data-open="member:${i}" data-member-row data-search="${escAttr(hay)}">
+      <td class="code">${m.id}</td>
+      <td><b style="font-weight:500">${pairLabel(m)}</b><div class="sub code">${m.phone}</div></td>
+      <td>${tierPill(m.tier)}</td>
+      <td>${m.expires}${st.daysLeft!=null?`<div class="sub">${st.daysLeft<0?"expired "+(-st.daysLeft)+"d ago":"in "+st.daysLeft+" days"}</div>`:""}</td>
+      <td class="code">${visCell}</td>
+      <td>${memberStatusPill(m)}</td>
+      <td><div style="display:flex;gap:8px"><button class="btn" data-open="member:${i}">View</button><button class="btn" data-open-renew="${i}">Renew</button></div></td></tr>`; }).join("");
+    const searchbar=`<div class="toolbar"><label class="search"><span>&#8981;</span><input data-member-search placeholder="Search members by mobile number, name or ID" aria-label="Search members" autocomplete="off"></label>
+      <span class="tool-note" id="memberCount">${MEMBERS.length} members</span></div>`;
+    return tiles+searchbar+
+    `<div class="card"><div class="matrix-wrap"><table class="reclist" id="membersTable"><thead><tr>
+      <th>Member ID</th><th>Registered pair</th><th>Tier</th><th>Validity</th><th>Visits</th><th>Status</th><th>Actions</th></tr></thead>
+    <tbody>${rows}
+      <tr data-member-addrow><td colspan="7"><button class="rep-add" data-tab="new" style="border-radius:4px">+ New member</button></td></tr>
+      <tr data-member-empty style="display:none"><td colspan="7" class="muted" style="text-align:center;padding:16px">No members match that search.</td></tr>
+    </tbody></table></div></div>`;
   },
   products(){
     return `${toolbar("Search products & add-ons",P.length+" records")}
@@ -3602,6 +3724,167 @@ function eventDetail(){
   const tabs=`<div class="subs">${EVENT_SUBS.map(([k,l])=>`<button class="sub-tab" data-esub="${k}" aria-selected="${esub===k}">${l}</button>`).join("")}</div>`;
   return `<div class="detailhead"><span class="tag tag-a">${e.cat}</span><h2 class="detailname">${e.n}</h2><span class="code">${e.c}</span></div>${tabs}<div class="sub-body">${VIEWS.eventDetailBody()}</div>`;
 }
+/* ---- membership tier detail ---- */
+function tierDetail(){
+  const t=MEMBERSHIP_TIERS[selTier]; const row=(k,v)=>`<tr><td><b style="font-weight:500">${k}</b></td><td style="font-size:12.5px">${v}</td></tr>`;
+  return `<div class="detailhead">${tierPill(t.name)}<h2 class="detailname">${t.name} membership</h2></div>
+    <div class="two">
+      <div>
+        <div class="card"><div class="matrix-wrap"><table><thead><tr><th style="width:40%">Field</th><th>Value</th></tr></thead><tbody>
+          ${row("Price",money(t.price))}
+          ${row("Visits included",t.visits==="Unlimited"?'<b style="font-weight:600">Unlimited</b> (1 visit = 1 adult + 1 child)':t.visits+" (1 visit = 1 adult + 1 child)")}
+          ${row("Validity",t.validity+" from purchase")}
+          ${row("Priority access",t.priority?"Yes":"No")}
+          ${row("Status",t.status)}
+        </tbody></table></div></div>
+        <div class="card"><div class="card-head"><span class="card-title">Member discounts</span><span class="card-note">configurable per plan</span></div>
+          <div class="matrix-wrap"><table><thead><tr><th>Applies to</th><th class="ctr">Discount</th></tr></thead><tbody>
+            <tr><td>Birthday parties at MuSo</td><td class="ctr code">${t.discounts.birthday}%</td></tr>
+            <tr><td>Events hosted at MuSo</td><td class="ctr code">${t.discounts.events}%</td></tr>
+            <tr><td>Workshops &amp; camps</td><td class="ctr code">${t.discounts.workshops}%</td></tr>
+          </tbody></table></div></div>
+      </div>
+      <div class="card"><div class="card-head"><span class="card-title">Terms</span></div>
+        <ul class="card-body" style="font-size:12.5px;line-height:1.6;color:var(--ink2);margin:0;padding:14px 16px 14px 30px">
+          <li>A museum-visitation membership only.</li>
+          <li>Each visit admits the <b style="color:var(--ink)">registered adult + child pair</b> — no other adult or child may use it.</li>
+          <li>Members do <b style="color:var(--ink)">not</b> get free admission to special workshops, events, activities, camps, birthdays or special exhibits — those carry the discounts above.</li>
+          <li>Blackout dates apply — check the calendar.</li>
+          <li>Non-refundable and non-transferable.</li>
+          <li>Valid ID proof required at entry.</li>
+        </ul></div>
+    </div>`;
+}
+/* ---- membership tier create / edit form ---- */
+function tierForm(editing){
+  const t=editing?MEMBERSHIP_TIERS[selTier]:{name:"",price:"",visits:"",validity:"6 months",priority:false,discounts:{},status:"Active"};
+  const d=t.discounts||{};
+  const sec=(title,body,note)=>`<section class="form-sec"><div class="form-sec-head"><span class="form-sec-title">${title}</span>${note?`<span class="card-note" style="margin-left:auto">${note}</span>`:""}</div><div class="form-sec-body">${body}</div></section>`;
+  const fld=(label,inner,hint,req,wide)=>`<div class="fld${wide?" wide":""}"><div class="lab"><span class="lab-n">${label}</span>${hint?tip(hint):""}<span class="lab-req">${req?"Required":"Optional"}</span></div>${inner}</div>`;
+  const numvis=t.visits==="Unlimited"?"":t.visits;
+  return `<div><div class="card">
+    <div class="card-head"><span class="card-title">${editing?"Edit "+t.name+" tier":"New membership tier"}</span></div>
+    <div class="form-body product-form">
+      ${sec("Basics",
+        fld("Plan name",`<input class="inp" value="${escAttr(t.name||"")}" placeholder="e.g. Silver, Gold, Platinum">`,"The plan name shown to customers.",true,true)
+        +fld("Price",`<div class="inp-suffix"><input class="inp mono" type="number" min="0" value="${escAttr(t.price||"")}" placeholder="0"><span>₹</span></div>`,"One-time price of the plan.",true)
+        +fld("Status",`<div class="selwrap"><select class="inp"><option${t.status==="Active"?" selected":""}>Active</option><option${t.status==="Draft"?" selected":""}>Draft</option></select></div>`,"Draft plans are not on sale yet.",false))}
+      ${sec("Visits & validity",
+        fld("Visits included",`<div class="inp-suffix"><input class="inp mono" type="number" min="0" step="1" value="${escAttr(numvis)}" placeholder="Leave blank for Unlimited"><span>visits</span></div>`,"Number of visits included. Leave blank to mean Unlimited. One visit admits 1 adult + 1 child.",false)
+        +fld("Validity",`<div class="selwrap"><select class="inp">${["3 months","6 months","Yearly"].map(o=>`<option${t.validity===o?" selected":""}>${o}</option>`).join("")}</select></div>`,"Membership auto-expires when the validity period ends.",true)
+        +fld("Priority access",`<button type="button" class="sw" data-on="${t.priority?1:0}"><i></i><span>${t.priority?"On":"Off"}</span></button>`,"Priority access to select activities.",false))}
+      ${sec("Member discounts",
+        fld("Birthday parties %",`<div class="inp-suffix"><input class="inp mono" type="number" min="0" max="100" value="${escAttr(d.birthday??"")}" placeholder="0"><span>%</span></div>`,"Discount on birthday parties at MuSo.",false)
+        +fld("Events %",`<div class="inp-suffix"><input class="inp mono" type="number" min="0" max="100" value="${escAttr(d.events??"")}" placeholder="0"><span>%</span></div>`,"Discount on events hosted at MuSo.",false)
+        +fld("Workshops & camps %",`<div class="inp-suffix"><input class="inp mono" type="number" min="0" max="100" value="${escAttr(d.workshops??"")}" placeholder="0"><span>%</span></div>`,"Discount on workshops & camps.",false),
+        "configurable per plan")}
+    </div>
+    <div class="form-foot"><button class="btn" data-tab="list">Cancel</button><button class="btn btn-primary" data-tab="list">${editing?"Save changes":"Create tier"}</button></div>
+  </div></div>`;
+}
+/* ---- member create form (registers the adult-child pair) ---- */
+function memberForm(editing){
+  const m=editing?MEMBERS[selMember]:{tier:"Gold",adult:"",child:"",phone:"",email:""};
+  const sec=(title,body)=>`<section class="form-sec"><div class="form-sec-head"><span class="form-sec-title">${title}</span></div><div class="form-sec-body">${body}</div></section>`;
+  const fld=(label,inner,hint,req,wide)=>`<div class="fld${wide?" wide":""}"><div class="lab"><span class="lab-n">${label}</span>${hint?tip(hint):""}<span class="lab-req">${req?"Required":"Optional"}</span></div>${inner}</div>`;
+  return `<div><div class="card">
+    <div class="card-head"><span class="card-title">${editing?"Edit member":"New member"}</span></div>
+    <div class="form-body product-form">
+      ${sec("Membership",fld("Plan",`<div class="selwrap"><select class="inp">${MEMBERSHIP_TIERS.map(x=>`<option${m.tier===x.name?" selected":""}>${x.name}</option>`).join("")}</select></div>`,"The plan being purchased.",true,true))}
+      ${sec("Registered pair",
+        fld("Adult name",`<input class="inp" value="${escAttr(m.adult||"")}" placeholder="Full name">`,"The registered adult — only this adult may redeem the membership.",true)
+        +fld("Child name",`<input class="inp" value="${escAttr(m.child||"")}" placeholder="Full name">`,"The registered child — only this child may redeem the membership.",true))}
+      ${sec("Contact",
+        fld("Phone",`<input class="inp mono" type="tel" inputmode="tel" value="${escAttr(m.phone||"")}" placeholder="10-digit mobile">`,"Used for OTP at redemption and for confirmations.",true)
+        +fld("Email",`<input class="inp" type="email" value="${escAttr(m.email||"")}" placeholder="name@example.com">`,"For confirmations and to view history on login.",true))}
+    </div>
+    <div class="form-foot"><span style="font-size:11.5px;color:var(--ink3)">A confirmation email &amp; SMS go to the member on purchase.</span><button class="btn" data-tab="list">Cancel</button><button class="btn btn-primary" data-tab="list">${editing?"Save changes":"Create member"}</button></div>
+  </div></div>`;
+}
+/* ---- member detail (Summary / Purchases / Redemptions) + actions ---- */
+function memberDetail(){
+  const m=MEMBERS[selMember]; const st=memberStatus(m); const t=tierOf(m.tier)||{discounts:{}};
+  const tabs=`<div class="subs">${MEMBER_SUBS.map(([k,l])=>`<button class="sub-tab" data-msub="${k}" aria-selected="${msub===k}">${l}</button>`).join("")}</div>`;
+  let body;
+  if(msub==="purchases"){
+    body=`<div class="card"><div class="card-head"><span class="card-title">Purchase history</span></div>
+      <div class="matrix-wrap"><table><thead><tr><th>Date</th><th>Item</th><th>Tier</th><th>Amount</th><th>Channel</th><th>Invoice</th></tr></thead>
+      <tbody>${(m.purchases||[]).map(p=>`<tr><td class="code">${p.date}</td><td>${p.item}</td><td>${tierPill(m.tier)}</td><td class="code">${money(p.amount)}</td><td>${p.channel}</td><td class="code muted">${p.inv}</td></tr>`).join("")}</tbody></table></div></div>`;
+  } else if(msub==="redemptions"){
+    body=`<div class="card"><div class="card-head"><span class="card-title">Redemptions &amp; visits</span><span class="card-note">a visit admits the registered adult + child</span></div>
+      <div class="matrix-wrap"><table><thead><tr><th>Date</th><th class="ctr">Visits</th><th>Balance after</th><th>Channel</th><th>OTP</th><th>Present</th></tr></thead>
+      <tbody>${(m.redemptions||[]).map(r=>`<tr><td class="code">${r.date}</td><td class="ctr code">${r.visits}</td><td class="code">${r.balanceAfter==="Unlimited"?"Unlimited":r.balanceAfter}</td><td>${r.channel}</td><td>${r.otp?'<span class="pill pill-ok"><i class="dot"></i>Verified</span>':'<span class="muted">—</span>'}</td><td class="sub">${pairLabel(m)}</td></tr>`).join("")||'<tr><td colspan="6" class="muted">No redemptions yet.</td></tr>'}</tbody></table></div></div>`;
+  } else {
+    const bal=visitsBalance(m), used=m.visitsUsed||0, tot=m.visitsTotal;
+    const visPct=isUnlimited(m)?100:(tot?Math.round(used/tot*100):0);
+    const dl=st.daysLeft, valPct=dl==null?100:Math.max(0,Math.min(100,Math.round(dl/365*100)));
+    const valColor=st.key==="expired"?"sold":st.key==="soon"?"low":"ok";
+    const row=(k,v)=>`<tr><td style="color:var(--ink3);white-space:nowrap;width:42%">${k}</td><td style="text-align:right;font-weight:500">${v}</td></tr>`;
+    body=`<div class="two">
+      <div>
+        <div class="card"><div class="card-body">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">${tierPill(m.tier)}${memberStatusPill(m)}</div>
+          <div style="font-size:11px;color:var(--ink3);font-family:var(--mono);letter-spacing:.05em;text-transform:uppercase;margin-bottom:4px">Registered pair — only this pair may redeem</div>
+          <div style="font-size:15px;font-weight:600;margin-bottom:12px">${pairLabel(m)}</div>
+          <div style="margin-bottom:6px"><div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px"><span>Visits</span><span class="code">${isUnlimited(m)?"Unlimited":used+" of "+tot+" used · "+bal+" left"}</span></div><div class="meter"><div class="meter-fill ${isUnlimited(m)?"ok":(bal<=0?"sold":bal<=2?"low":"ok")}" style="width:${visPct}%"></div></div></div>
+          <div style="margin-top:12px"><div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px"><span>Validity</span><span class="code">${dl==null?m.expires:(dl<0?"Expired":"in "+dl+" days")}</span></div><div class="meter"><div class="meter-fill ${valColor}" style="width:${valPct}%"></div></div></div>
+        </div></div>
+        <div class="card"><div class="matrix-wrap"><table><tbody>
+          ${row("Member ID",'<span class="code">'+m.id+'</span>')}
+          ${row("Phone",'<span class="code">'+m.phone+'</span>')}
+          ${row("Email",m.email)}
+          ${row("Joined",m.joined)}
+          ${row("Expires",m.expires)}
+          ${row("Birthday-party discount",t.discounts.birthday+"%")}
+          ${row("Events discount",t.discounts.events+"%")}
+          ${row("Workshops & camps discount",t.discounts.workshops+"%")}
+        </tbody></table></div></div>
+      </div>
+      <div class="card"><div class="card-head"><span class="card-title">Actions</span></div>
+        <div class="card-body" style="display:flex;flex-direction:column;gap:9px">
+          <button class="btn btn-primary" data-open-redeem="${selMember}"${(!isUnlimited(m)&&bal<=0)?" disabled":""}>Record redemption</button>
+          <button class="btn" data-open-renew="${selMember}">Renew membership</button>
+          ${(!isUnlimited(m)&&bal<=0)?'<div style="font-size:11.5px;color:var(--stop)">No visits left — renew to add more.</div>':""}
+        </div></div>
+    </div>`;
+  }
+  const flyout = addOpen==="redeem"?redeemFormCard(m) : addOpen==="renew"?renewFormCard(m) : "";
+  return `<div class="detailhead"><h2 class="detailname">${pairLabel(m)}</h2><span class="code">${m.id}</span>${memberStatusPill(m)}</div>${tabs}<div class="sub-body">${body}</div>${flyout}`;
+}
+function renewFormCard(m){
+  const t=tierOf(m.tier)||{price:0};
+  return afCard("Renew membership","Extends validity from today",
+    `<div class="form-body">
+      ${afFld("Member",`<input class="inp" value="${escAttr(pairLabel(m))}" readonly>`,"",true)}
+      ${afFld("Plan",`<div class="selwrap"><select class="inp" id="renewTier">${MEMBERSHIP_TIERS.map(x=>`<option${x.name===m.tier?" selected":""}>${x.name}</option>`).join("")}</select></div>`,"")}
+      ${afFld("Validity",`<input class="inp" value="${t.validity||""}" readonly>`,"")}
+      ${afFld("Amount",`<input class="inp mono" value="${money(t.price||0)}" readonly>`,"")}
+    </div>
+    <div class="form-foot"><span>A confirmation email &amp; SMS go to the member.</span>
+      <button class="btn" data-addcancel="1">Cancel</button>
+      <button class="btn btn-primary" data-renew-confirm="${selMember}">Confirm renewal</button></div>`);
+}
+function redeemFormCard(m){
+  const bal=visitsBalance(m), unl=isUnlimited(m);
+  if(redeemStep===2){
+    return afCard("Verify OTP","Sent to the member's phone & email",
+      `<div class="form-body">
+        <div class="fld wide" style="font-size:12.5px;color:var(--ink2)">Redeeming <b>${redeemVisits} visit${redeemVisits===1?"":"s"}</b> for <b>${pairLabel(m)}</b>. A 6-digit OTP has been sent to <b>${m.phone}</b>.</div>
+        ${afFld("OTP",`<input class="inp mono" id="redeemOtp" placeholder="6-digit code" maxlength="6" style="letter-spacing:.3em">`,"Wireframe — any value is accepted.",true)}
+      </div>
+      <div class="form-foot"><span>Each visit admits 1 adult + 1 child.</span>
+        <button class="btn" data-addcancel="1">Cancel</button>
+        <button class="btn btn-primary" data-redeem-confirm="${selMember}">Confirm redemption</button></div>`);
+  }
+  return afCard("Record redemption",unl?"Unlimited plan":`${bal} visit${bal===1?"":"s"} left`,
+    `<div class="form-body">
+      ${afFld("Registered pair",`<input class="inp" value="${escAttr(pairLabel(m))}" readonly>`,"Only the registered adult + child may redeem.",true)}
+      ${afFld("Visits to redeem",`<input class="inp mono" id="redeemQty" value="1" placeholder="1">`,unl?"Each visit admits 1 adult + 1 child.":`Up to ${bal}. Each visit = 1 adult + 1 child.`)}
+    </div>
+    <div class="form-foot"><span>An OTP will be sent to verify.</span>
+      <button class="btn" data-addcancel="1">Cancel</button>
+      <button class="btn btn-primary" data-redeem-next="${selMember}">Send OTP</button></div>`);
+}
 const offsetValues=s=>{const m=String(s||"").match(/(?:(\d+)\s*days?\s*)?(\d+)\s*hours?/i);return [m&&m[1]||"0",m&&m[2]||"0"];};
 function eventEditValues(e){ return {
   code:e.c,title:e.n,category_id:e.cat,min_age:e.ages,date:e.date,start_time:e.t1,
@@ -3668,7 +3951,8 @@ function programForm(){
       <div class="form-foot"><button class="btn" data-tab="list">Cancel</button><button class="btn btn-primary">Create program</button></div>
     </div></div>`;
 }
-const DETAIL = { products:productDetail, programs:campDetail, events:eventDetail, camps:campDetail, discounts:discountDetail };
+const MEMBER_SUBS = [["summary","Summary"],["purchases","Purchase history"],["redemptions","Redemptions & visits"]];
+const DETAIL = { products:productDetail, programs:campDetail, events:eventDetail, camps:campDetail, discounts:discountDetail, members:memberDetail, tiers:tierDetail };
 function render(){
   document.querySelector("body > .drawer-layer")?.remove();
   document.querySelector("body > .confirm-layer")?.remove();
@@ -3686,7 +3970,9 @@ function render(){
   const label=singular(current,m.n);
   const back=t=>`<button class="pageback" data-tab="list">&larr; ${t}</button>`;
   let body;
-  if(tab==="new") body = back("Back to "+m.n.toLowerCase()) + (current==="products" ? productForm() : current==="programs" ? createForm(PROGRAM_SCHEMA,"program","",{}) : current==="bookings" ? bookingForm() : current==="discounts" ? discountForm(false) : createForm(schema,label));
+  if(tab==="new") body = back("Back to "+m.n.toLowerCase()) + (current==="products" ? productForm() : current==="programs" ? createForm(PROGRAM_SCHEMA,"program","",{}) : current==="bookings" ? bookingForm() : current==="discounts" ? discountForm(false) : current==="tiers" ? tierForm(false) : current==="members" ? memberForm(false) : createForm(schema,label));
+  else if(tab==="edit" && current==="tiers") body = back("Back to membership tiers") + tierForm(true);
+  else if(tab==="edit" && current==="members") body = back("Back to members") + memberForm(true);
   else if(tab==="edit" && current==="products") body = back("Back to "+m.n.toLowerCase()) + productForm(true);
   else if(tab==="edit" && current==="discounts") body = back("Back to "+m.n.toLowerCase()) + discountForm(true);
   else if(tab==="edit" && current==="programs"){ const {arr,i}=curProgram(); body = back("Back to programs") + createForm(PROGRAM_SCHEMA,"program","",campEditValues(arr[i]),true); }
@@ -3775,6 +4061,22 @@ function availState(left,cap){
   return {key:"ok",label:"Available"};
 }
 function firstAvailableSlot(list){ return list.find(s=>slotLeft(s)>0) || list[0]; }
+/* ---- membership helpers ---- */
+function tierOf(name){ return MEMBERSHIP_TIERS.find(t=>t.name===name||t.id===name)||null; }
+function isUnlimited(m){ return m.visitsTotal==="Unlimited"; }
+function visitsBalance(m){ return isUnlimited(m)?Infinity:Math.max(0,(+m.visitsTotal||0)-(+m.visitsUsed||0)); }
+function visitsLabel(m){ return isUnlimited(m)?"Unlimited visits":`${m.visitsUsed||0} of ${m.visitsTotal||0} visits used`; }
+function pairLabel(m){ return `${m.adult} (adult) + ${m.child} (child)`; }
+function memberStatus(m){
+  const exp=parseDMY(m.expires), today=parseDMY(MEMBER_TODAY);
+  if(!exp||!today) return {key:"ok",label:"Active",daysLeft:null};
+  const daysLeft=Math.round((exp-today)/86400000);
+  if(daysLeft<0) return {key:"expired",label:"Expired",daysLeft};
+  if(daysLeft<=30) return {key:"soon",label:"Expiring soon",daysLeft};
+  return {key:"ok",label:"Active",daysLeft};
+}
+function memberStatusPill(m){ const s=memberStatus(m); const cls=s.key==="expired"?"pill-off":s.key==="soon"?"pill-draft":"pill-ok"; return `<span class="pill ${cls}">${s.key==="ok"?'<i class="dot"></i>':""}${s.label}</span>`; }
+function tierPill(name){ const t=tierOf(name), id=t?t.id:""; const cls=["silver","gold","platinum"].includes(id)?("tier-"+id):"tier-x"; return `<span class="pill ${cls}">${name}</span>`; }
 function primaryCatFor(kind,id){
   if(kind==="prod") return P[+id].cats[0];
   if(kind==="addon"){ const a=P.find(x=>x.c===id); return a?a.cats[0]:"Adult"; }
@@ -3973,7 +4275,7 @@ document.addEventListener("click",e=>{
   // ---- open a record's detail page ----
   const od=e.target.closest("[data-open]");
   if(od){ const [kind,i]=od.dataset.open.split(":"); const idx=+i;
-    if(kind==="prod") selP=idx; else if(kind==="camp"){ selW=idx; selB=0; progKind="camp"; } else if(kind==="event"){ selE=idx; progKind="event"; } else if(kind==="disc"){ selD=idx; dsub="summary"; }
+    if(kind==="prod") selP=idx; else if(kind==="camp"){ selW=idx; selB=0; progKind="camp"; } else if(kind==="event"){ selE=idx; progKind="event"; } else if(kind==="disc"){ selD=idx; dsub="summary"; } else if(kind==="member"){ selMember=idx; msub="summary"; } else if(kind==="tier"){ selTier=idx; }
     tab="detail"; sub="details"; esub="details"; csub="details"; addOpen=null; render(); $(".stage").scrollTop=0; return; }
   // ---- inline add forms (open / cancel / submit) ----
   const ao=e.target.closest("[data-addopen]");
@@ -3992,6 +4294,31 @@ document.addEventListener("click",e=>{
   if(dsb){ dsub=dsb.dataset.dsub; render(); return; }
   const cs=e.target.closest("[data-csub]");
   if(cs){ csub=cs.dataset.csub; addOpen=null; render(); return; }
+  const ms=e.target.closest("[data-msub]");
+  if(ms){ msub=ms.dataset.msub; addOpen=null; render(); return; }
+  const orenew=e.target.closest("[data-open-renew]");
+  if(orenew){ selMember=+orenew.dataset.openRenew; current="members"; tab="detail"; addOpen="renew"; render(); $(".stage").scrollTop=0; return; }
+  const oredeem=e.target.closest("[data-open-redeem]");
+  if(oredeem){ selMember=+oredeem.dataset.openRedeem; current="members"; tab="detail"; addOpen="redeem"; redeemStep=1; render(); return; }
+  const rnext=e.target.closest("[data-redeem-next]");
+  if(rnext){ const m=MEMBERS[+rnext.dataset.redeemNext]; const qEl=document.getElementById("redeemQty");
+    let q=Math.max(1,parseInt((qEl&&qEl.value)||"1",10)||1); if(!isUnlimited(m)) q=Math.min(q,visitsBalance(m)||1);
+    redeemVisits=q; redeemStep=2; render(); return; }
+  const rconf=e.target.closest("[data-redeem-confirm]");
+  if(rconf){ const m=MEMBERS[+rconf.dataset.redeemConfirm]; let q=redeemVisits||1;
+    if(!isUnlimited(m)){ q=Math.min(q,visitsBalance(m)); m.visitsUsed=(m.visitsUsed||0)+q; }
+    (m.redemptions=m.redemptions||[]).unshift({date:MEMBER_TODAY,visits:q,balanceAfter:isUnlimited(m)?"Unlimited":visitsBalance(m),channel:"POS",otp:true});
+    addOpen=null; redeemStep=1; redeemVisits=1; msub="redemptions"; render(); return; }
+  const rndone=e.target.closest("[data-renew-confirm]");
+  if(rndone){ const m=MEMBERS[+rndone.dataset.renewConfirm]; const sel=document.getElementById("renewTier");
+    const tierName=(sel&&sel.value)||m.tier; const t=tierOf(tierName)||{price:0,validity:m.expires,visits:m.visitsTotal};
+    m.tier=tierName; m.visitsTotal=t.visits; if(!isUnlimited(m)) m.visitsUsed=0;
+    const base=parseDMY(MEMBER_TODAY)||new Date(2026,7,24);
+    const months={"3 months":3,"6 months":6,"Yearly":12}[t.validity]||12;
+    const exp=new Date(base.getFullYear(),base.getMonth()+months,base.getDate());
+    m.expires=fmtDMY(exp);
+    (m.purchases=m.purchases||[]).unshift({date:MEMBER_TODAY,item:(t.name||tierName)+" renewal",amount:t.price||0,channel:"POS",inv:"INV-"+Math.floor(2100+selMember*7)});
+    addOpen=null; msub="purchases"; render(); return; }
   const es=e.target.closest("[data-esub]");
   if(es){ esub=es.dataset.esub; addOpen=null; render(); return; }
   const wp=e.target.closest("[data-w]");
@@ -4066,6 +4393,18 @@ document.addEventListener("input",e=>{
   if(e.target.classList&&e.target.classList.contains("msel-search")){
     const q=e.target.value.trim().toLowerCase(), wrap=e.target.closest(".msel");
     if(wrap) wrap.querySelectorAll(".msel-opt").forEach(o=>{ o.style.display=(!q||(o.dataset.label||"").includes(q))?"":"none"; });
+    return;
+  }
+  if(e.target.matches&&e.target.matches("[data-member-search]")){
+    const q=e.target.value.trim().toLowerCase(), qd=q.replace(/\D/g,"");
+    const tbl=document.getElementById("membersTable"); if(!tbl) return;
+    let shown=0;
+    tbl.querySelectorAll("[data-member-row]").forEach(r=>{ const hay=r.dataset.search||"";
+      const hit=!q||hay.includes(q)||(qd&&hay.replace(/\D/g,"").includes(qd));
+      r.style.display=hit?"":"none"; if(hit) shown++; });
+    const empty=tbl.querySelector("[data-member-empty]"); if(empty) empty.style.display=shown?"none":"";
+    const addrow=tbl.querySelector("[data-member-addrow]"); if(addrow) addrow.style.display=q?"none":"";
+    const cnt=document.getElementById("memberCount"); if(cnt) cnt.textContent=q?(shown+" of "+MEMBERS.length+" members"):(MEMBERS.length+" members");
     return;
   }
   if(e.target.matches&&e.target.matches("[data-utm]")){ captureUtmFlyout(); const el=document.getElementById("shareLinkPreview"); if(el) el.textContent=shareLink(curDiscount()); return; }
