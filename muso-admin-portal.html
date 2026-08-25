@@ -630,11 +630,16 @@ tbody tr[aria-selected="true"] td:first-child{box-shadow:inset 2px 0 0 var(--blu
 .cal-sw-selected{background:var(--ink)}
 .cal-slots-head{font-size:12.5px;font-weight:600;margin-bottom:9px}
 .cal-slots-head small{font-weight:400;color:var(--ink3);margin-left:6px}
+.cal-slots-count{font-weight:700;color:var(--blue);margin-left:6px}
 .cal-slot-row{display:flex;align-items:center;justify-content:space-between;gap:12px;width:100%;text-align:left;border:1.5px solid var(--rule2);border-radius:8px;padding:10px 13px;margin-bottom:8px;background:#fff;transition:border-color .12s,box-shadow .12s}
 .cal-slot-row:last-child{margin-bottom:0}
 .cal-slot-row:hover:not(:disabled){border-color:var(--ink3)}
 .cal-slot-row-selected{border-color:var(--blue);box-shadow:0 0 0 3px var(--blue-wash)}
 .cal-slot-row:disabled{opacity:.55;cursor:not-allowed}
+.cal-slot-left{display:flex;align-items:center;gap:10px;min-width:0}
+.cal-slot-check{flex:none;width:16px;height:16px;border-radius:4px;border:1.5px solid var(--rule2);background:#fff;position:relative;transition:background .12s,border-color .12s}
+.cal-slot-check-on{background:var(--blue);border-color:var(--blue)}
+.cal-slot-check-on::after{content:"";position:absolute;left:4px;top:1px;width:4px;height:8px;border:solid #fff;border-width:0 2px 2px 0;transform:rotate(45deg)}
 .cal-slot-time{font-family:var(--mono);font-weight:700;font-size:13.5px}
 .cal-slot-sub{font-size:10.5px;color:var(--ink3);margin-top:2px}
 .cal-slot-right{flex:none;text-align:right}
@@ -2857,23 +2862,16 @@ const VIEWS = {
   },
 
   bookings(){
-    const inside=BOOKINGS.filter(b=>(b.checkin||"none")==="in").reduce((a,b)=>a+(+b.heads||0),0);
-    const checkinCell=(b,i)=>{ const st=b.checkin||"none";
-      if(st==="in") return `<span class="pill pill-ok"><i class="dot"></i>Checked in</span> <button class="btn" data-book-checkout="${i}">Check out</button>`;
-      if(st==="out") return `<span class="pill pill-off">Checked out</span>`;
-      return `<button class="btn" data-book-checkin="${i}">Check in</button>`;
-    };
-    return `${toolbar("Search orders",`<b>Inside now: ${inside}</b> · ${BOOKINGS.length} orders`)}
+    return `${toolbar("Search orders",BOOKINGS.length+" orders")}
     <div class="card"><div class="matrix-wrap"><table class="reclist"><thead><tr>
-      <th>Order ID</th><th>Customer</th><th>Visit date</th><th class="ctr">Tickets</th><th>Total</th><th>Check-in</th><th>Actions</th></tr></thead>
+      <th>Order ID</th><th>Customer</th><th>Visit date</th><th class="ctr">Tickets</th><th>Total</th><th>Actions</th></tr></thead>
     <tbody>${BOOKINGS.map((b,i)=>`<tr>
       <td><b class="code" style="font-weight:600">${b.ref}</b></td>
       <td><b style="font-weight:500">${b.customer}</b><div class="sub">${b.email}</div></td>
       <td class="code">${b.date}</td>
       <td class="ctr code">${b.heads}</td><td class="code">${money(b.total)}</td>
-      <td><div style="display:flex;gap:8px;align-items:center">${checkinCell(b,i)}</div></td>
       <td><button class="btn" data-editbooking="${i}">Edit</button></td></tr>`).join("")}
-      <tr><td colspan="7"><button class="rep-add" data-tab="new" style="border-radius:4px">+ New order</button></td></tr>
+      <tr><td colspan="6"><button class="rep-add" data-tab="new" style="border-radius:4px">+ New order</button></td></tr>
     </tbody></table></div></div>`;
   },
 
@@ -3297,10 +3295,15 @@ function bookingForm(editing=false){
   const addonSlotOf=(code,cfg)=>{const a=P.find(x=>x.c===code);return a.slots.find(s=>s.n===cfg.slot)||a.slots[0];};
   const progRec=key=>{const [k,idx]=key.split(":");return k==="event"?EVENTS[+idx]:WORKSHOPS[+idx];};
   const progBatchOf=(key,cfg)=>{const r=progRec(key);return r.batches[cfg.batch||0]||r.batches[0]||{};};
-  const qtySum=cfg=>Object.values((cfg&&cfg.qty)||{}).reduce((a,n)=>a+ +n,0)+Object.values((cfg&&cfg.redeem)||{}).reduce((a,n)=>a+ +n,0);
-  // line totals
-  const prodLine=(i,cfg)=>{const p=P[i],s=slotOf(i,cfg);return p.cats.reduce((t,c)=>t+((cfg.qty&&cfg.qty[c])||0)*(s.price[c]||0),0);};
-  const addonLine=(code,cfg)=>{const a=P.find(x=>x.c===code),s=addonSlotOf(code,cfg);return a.cats.reduce((t,c)=>t+((cfg.qty&&cfg.qty[c])||0)*(s.price[c]||0),0);};
+  // products/add-ons carry qty per selected slot (cfg.slots); programs stay flat (cfg.qty) — sum either shape
+  const qtySum=cfg=>{
+    if(cfg&&cfg.slots) return Object.values(cfg.slots).reduce((a,sc)=>a+Object.values(sc.qty||{}).reduce((x,n)=>x+ +n,0)+Object.values(sc.redeem||{}).reduce((x,n)=>x+ +n,0),0);
+    return Object.values((cfg&&cfg.qty)||{}).reduce((a,n)=>a+ +n,0)+Object.values((cfg&&cfg.redeem)||{}).reduce((a,n)=>a+ +n,0);
+  };
+  // line totals — a product/add-on cart entry now holds a *set* of selected slots (each with its
+  // own qty/redeem), so these sum across every selected slot rather than a single one.
+  const prodLine=(i,cfg)=>{const p=P[i];return Object.entries(cfg.slots||{}).reduce((t,[sn,sc])=>{const s=p.slots.find(x=>x.n===sn)||p.slots[0];return t+p.cats.reduce((tt,c)=>tt+((sc.qty&&sc.qty[c])||0)*(s.price[c]||0),0);},0);};
+  const addonLine=(code,cfg)=>{const a=P.find(x=>x.c===code);return Object.entries(cfg.slots||{}).reduce((t,[sn,sc])=>{const s=a.slots.find(x=>x.n===sn)||a.slots[0];return t+a.cats.reduce((tt,c)=>tt+((sc.qty&&sc.qty[c])||0)*(s.price[c]||0),0);},0);};
   const progLine=(key,cfg)=>{const b=progBatchOf(key,cfg);return PCATS.reduce((t,c)=>t+((cfg.qty&&cfg.qty[c])||0)*(b.price||0),0);};
   // ---- membership: staff explicitly allocates each Product ticket to either "Redeem from
   // membership" (free, drawn from the shared pass pool) or "Pay for tickets" (full price) — no
@@ -3309,14 +3312,17 @@ function bookingForm(editing=false){
   // events. ----
   const member=bookingCustomer.member;
   const passesRemainingBefore=member?Math.max(0,member.passesTotal-member.passesUsed):0;
-  const productRedemption=new Map(); // "i|category" -> {redeemed,paid,amount}
+  const productRedemption=new Map(); // "i|slotName|category" -> {redeemed,paid,amount}
   let totalRedeemedThisOrder=0;
-  [...bookingProducts].forEach(([i,cfg])=>{const p=P[i],s=slotOf(i,cfg);
-    p.cats.forEach(c=>{
-      const paid=(cfg.qty&&cfg.qty[c])||0, redeemed=(cfg.redeem&&cfg.redeem[c])||0;
-      if(!paid&&!redeemed) return;
-      totalRedeemedThisOrder+=redeemed;
-      productRedemption.set(i+"|"+c,{redeemed,paid,amount:paid*(s.price[c]||0)});
+  [...bookingProducts].forEach(([i,cfg])=>{const p=P[i];
+    Object.entries(cfg.slots||{}).forEach(([sn,sc])=>{
+      const s=p.slots.find(x=>x.n===sn)||p.slots[0];
+      p.cats.forEach(c=>{
+        const paid=(sc.qty&&sc.qty[c])||0, redeemed=(sc.redeem&&sc.redeem[c])||0;
+        if(!paid&&!redeemed) return;
+        totalRedeemedThisOrder+=redeemed;
+        productRedemption.set(i+"|"+sn+"|"+c,{redeemed,paid,amount:paid*(s.price[c]||0)});
+      });
     });
   });
   const passesRemainingAfter=Math.max(0,passesRemainingBefore-totalRedeemedThisOrder);
@@ -3334,7 +3340,8 @@ function bookingForm(editing=false){
   const gst=Math.round((subtotal-discAmt-addonDiscountAmt)*0.18);
   const grand=subtotal-discAmt-addonDiscountAmt+gst;
   const section=(title,body)=>`<section class="form-sec"><div class="form-sec-head"><span class="form-sec-title">${title}</span></div><div class="form-sec-body">${body}</div></section>`;
-  const adultQty=[...bookingProducts].reduce((t,[,cf])=>t+((cf.qty&&cf.qty["Adult"])||0),0)+[...bookingAddons].reduce((t,[,cf])=>t+((cf.qty&&cf.qty["Adult"])||0),0);
+  const adultInCfg=cf=>cf&&cf.slots?Object.values(cf.slots).reduce((a,sc)=>a+((sc.qty&&sc.qty["Adult"])||0),0):((cf&&cf.qty&&cf.qty["Adult"])||0);
+  const adultQty=[...bookingProducts].reduce((t,[,cf])=>t+adultInCfg(cf),0)+[...bookingAddons].reduce((t,[,cf])=>t+adultInCfg(cf),0);
   const step=(pfx,cat,q)=>{ const cd=CATS.find(c=>c.name===cat); const needsAdult=cd&&cd.req==="Adult"; const warn=needsAdult&&q.n>0&&adultQty===0;
     return `<div class="pos-qty-row"><span class="n">${cat}</span><span class="p">${money(q.price)} each</span><span class="pos-step"><button data-book-qty="${pfx}|${escAttr(cat)}|-1" ${q.n===0?"disabled":""}>−</button><span>${q.n}</span><button data-book-qty="${pfx}|${escAttr(cat)}|1">+</button></span></div>${needsAdult?`<div class="child-req${warn?" child-req-warn":""}">${warn?"⚠ ":""}Purchase of an adult ticket is mandatory for this age group.</div>`:""}`; };
   const slotBadge=(s)=>{const left=slotLeft(s),st=availState(left,s.cap);if(!st)return"";const cls=st.key==="sold"?" slot-sold":st.key==="low"?" slot-low":"";return `<span class="slot-avail${cls}">${st.label} · ${left}/${s.cap}</span>`;};
@@ -3361,15 +3368,19 @@ function bookingForm(editing=false){
     const candidates=slotsForDate(list,selDate);
     const dOf=parseDMY(selDate);
     const dayLabel=dOf?`${WEEKDAYS[dayIndexMon0(dOf)]} ${dOf.getDate()} ${MONTHS[dOf.getMonth()]}`:selDate;
+    // multi-select: any number of that day's slots can be picked at once — each ticks on/off
+    // independently instead of swapping a single selection, so one product/add-on can hold several
+    // time slots in the same order (each gets its own tickets section below).
     const rows=candidates.length?candidates.map(s=>{
-      const left=slotLeft(s),sold=left<=0,cur=s.n===cfg.slot,st=availState(left,s.cap)||{key:"ok",label:"Available"};
+      const left=slotLeft(s),sold=left<=0,checked=!!(cfg.slots&&cfg.slots[s.n]),st=availState(left,s.cap)||{key:"ok",label:"Available"};
       const pill=st.key==="sold"?["cal-pill-off",st.label]:st.key==="low"?["cal-pill-low",st.label]:["cal-pill-ok",st.label];
-      return `<button class="cal-slot-row${cur?" cal-slot-row-selected":""}" data-book-slot="${pfx}|${escAttr(s.n)}" ${sold&&!cur?"disabled":""}>
-        <div class="cal-slot-main"><div class="cal-slot-time">${s.t1}–${s.t2}</div><div class="cal-slot-sub">${s.n}</div></div>
+      return `<button class="cal-slot-row${checked?" cal-slot-row-selected":""}" data-book-slot="${pfx}|${escAttr(s.n)}" role="checkbox" aria-checked="${checked}" ${sold&&!checked?"disabled":""}>
+        <div class="cal-slot-left"><span class="cal-slot-check${checked?" cal-slot-check-on":""}"></span><div class="cal-slot-main"><div class="cal-slot-time">${s.t1}–${s.t2}</div><div class="cal-slot-sub">${s.n}</div></div></div>
         <div class="cal-slot-right"><span class="cal-pill ${pill[0]}">${pill[1]}</span><div class="cal-slot-price">${money(s.price.Adult||0)} / ticket</div>${s.cap!=null?`<div class="cal-slot-remaining">${left}/${s.cap}</div>`:""}</div>
       </button>`;
     }).join(""):`<div class="pos-empty">${isBlackout(selDate)?"Closed — blackout date.":"No slots run on this day."}</div>`;
-    const list2=`<div class="cal-slots"><div class="cal-slots-head">Available Slots <small>${dayLabel}</small></div>${rows}</div>`;
+    const selCount=Object.keys(cfg.slots||{}).length;
+    const list2=`<div class="cal-slots"><div class="cal-slots-head">Available Slots <small>${dayLabel} · tap to select one or more</small>${selCount?`<span class="cal-slots-count">${selCount} selected</span>`:""}</div>${rows}</div>`;
     return `<div class="slot-group"><div class="cal-layout">${cal}${list2}</div></div>`;
   };
   const itemCard=(key,open,badgeQty,name,meta,disabled)=>`<div class="item-card${open?" item-card-open":""}${disabled?" item-card-disabled":""}">
@@ -3389,20 +3400,28 @@ function bookingForm(editing=false){
     return itemCard(key,open,totalQty,p.n,meta);
   }).join("");
   const redeemStep=(pfx,cat,price,n,disablePlus)=>`<div class="pos-qty-row pos-qty-row-redeem"><span class="n">${cat}</span><span class="p"><s>${money(price)}</s></span><span class="pos-step"><button data-book-redeem="${pfx}|${escAttr(cat)}|-1" ${n===0?"disabled":""}>−</button><span>${n}</span><button data-book-redeem="${pfx}|${escAttr(cat)}|1" ${disablePlus?"disabled":""}>+</button></span></div>`;
+  // the "tour" ticket section — same qty steppers as before, just repeated once per selected slot,
+  // each independently addressable via a "prod|i|slotName" prefix so its counts stay separate.
   const productDetails=[...bookingProducts].filter(([i])=>bookingOpenItem==="prod|"+i).map(([i,cfg])=>{
     const p=P[i],s=slotOf(i,cfg);
     const remaining=globalPassesRemaining();
-    const redeemSection=member?`<div class="redeem-block">
-      <div class="redeem-head">
-        <div><div class="pos-lbl" style="margin:0">Redeem from your membership</div><div class="redeem-sub">Included visits, free of charge — mix any ticket types, up to what your membership covers.</div></div>
-        <div class="redeem-stat"><span class="redeem-stat-used">${redeemedTillDate} of ${member.passesTotal} used</span><span class="redeem-stat-left">${remaining} remaining</span></div>
-      </div>
-      ${p.cats.map(c=>redeemStep("prod|"+i,c,s.price[c]||0,(cfg.redeem&&cfg.redeem[c])||0,remaining<=0)).join("")}
-    </div>`:"";
-    const payLbl=member?`<div class="pos-lbl" style="margin:0 0 11px;display:block"><div>Pay for tickets</div><div class="redeem-sub">For anyone in the group who isn't using the membership — priced for the ${s.t1}–${s.t2} slot.</div></div>`:`<div class="pos-lbl">${p.n} · tickets</div>`;
-    const payBlock=`<div class="pay-block">${payLbl}${p.cats.map(c=>step("prod|"+i,c,{price:s.price[c]||0,n:(cfg.qty&&cfg.qty[c])||0})).join("")}</div>`;
-    const ticketSections=member?`<div class="ticket-cols">${redeemSection}${payBlock}</div>`:payBlock;
-    return `<div class="pos-item"><div class="pos-item-head"><span class="pos-item-name">${p.n}</span></div>${slotBar("prod|"+i,p.slots,cfg)}${ticketSections}</div>`;
+    const selNames=Object.keys(cfg.slots||{});
+    const slotBlocks=selNames.map(sn=>{
+      const s=p.slots.find(x=>x.n===sn)||p.slots[0], sc=cfg.slots[sn], pfx="prod|"+i+"|"+sn;
+      const redeemSection=member?`<div class="redeem-block">
+        <div class="redeem-head">
+          <div><div class="pos-lbl" style="margin:0">Redeem from your membership</div><div class="redeem-sub">Included visits, free of charge — mix any ticket types, up to what your membership covers.</div></div>
+          <div class="redeem-stat"><span class="redeem-stat-used">${redeemedTillDate} of ${member.passesTotal} used</span><span class="redeem-stat-left">${remaining} remaining</span></div>
+        </div>
+        ${p.cats.map(c=>redeemStep(pfx,c,s.price[c]||0,(sc.redeem&&sc.redeem[c])||0,remaining<=0)).join("")}
+      </div>`:"";
+      const payLbl=member?`<div class="pos-lbl" style="margin:0 0 11px;display:block"><div>Pay for tickets</div><div class="redeem-sub">For anyone in the group who isn't using the membership — priced for the ${s.t1}–${s.t2} slot.</div></div>`:`<div class="pos-lbl">${p.n} · tickets</div>`;
+      const payBlock=`<div class="pay-block">${payLbl}${p.cats.map(c=>step(pfx,c,{price:s.price[c]||0,n:(sc.qty&&sc.qty[c])||0})).join("")}</div>`;
+      const ticketSections=member?`<div class="ticket-cols">${redeemSection}${payBlock}</div>`:payBlock;
+      return `<div class="pos-item-head" style="margin-top:16px"><span class="pos-item-name">${s.t1}–${s.t2} · ${s.n}</span><button class="pos-item-remove" data-book-slot="prod|${i}|${escAttr(sn)}">Remove slot</button></div>${ticketSections}`;
+    }).join("");
+    const empty=selNames.length?"":`<div class="pos-empty">Select one or more slots above to add tickets.</div>`;
+    return `<div class="pos-item"><div class="pos-item-head"><span class="pos-item-name">${p.n}</span></div>${slotBar("prod|"+i,p.slots,cfg)}${slotBlocks}${empty}</div>`;
   }).join("");
   const productsTab=`<div class="item-cards">${productCards}</div>${productDetails}`;
 
@@ -3416,8 +3435,14 @@ function bookingForm(editing=false){
     return itemCard(key,open,totalQty,a.n,meta,!productInCart);
   }).join("");
   const addonDetails=[...bookingAddons].filter(([code])=>bookingOpenItem==="addon|"+code).map(([code,cfg])=>{
-    const a=P.find(x=>x.c===code);if(!a)return"";const s=addonSlotOf(code,cfg);
-    return `<div class="pos-item"><div class="pos-item-head"><span class="pos-item-name">${a.n}</span></div>${slotBar("addon|"+code,a.slots,cfg)}<div class="pos-lbl">${a.n} · tickets</div>${a.cats.map(c=>step("addon|"+code,c,{price:s.price[c]||0,n:(cfg.qty&&cfg.qty[c])||0})).join("")}</div>`;
+    const a=P.find(x=>x.c===code);if(!a)return"";
+    const selNames=Object.keys(cfg.slots||{});
+    const slotBlocks=selNames.map(sn=>{
+      const s=a.slots.find(x=>x.n===sn)||a.slots[0], sc=cfg.slots[sn], pfx="addon|"+code+"|"+sn;
+      return `<div class="pos-item-head" style="margin-top:16px"><span class="pos-item-name">${s.t1}–${s.t2} · ${s.n}</span><button class="pos-item-remove" data-book-slot="addon|${escAttr(code)}|${escAttr(sn)}">Remove slot</button></div><div class="pos-lbl">${a.n} · tickets</div>${a.cats.map(c=>step(pfx,c,{price:s.price[c]||0,n:(sc.qty&&sc.qty[c])||0})).join("")}`;
+    }).join("");
+    const empty=selNames.length?"":`<div class="pos-empty">Select one or more slots above to add tickets.</div>`;
+    return `<div class="pos-item"><div class="pos-item-head"><span class="pos-item-name">${a.n}</span></div>${slotBar("addon|"+code,a.slots,cfg)}${slotBlocks}${empty}</div>`;
   }).join("");
   const addonsTab=`${productInCart?"":'<div class="pos-lbl"><small>— add a product to the order first</small></div>'}<div class="item-cards">${addonCards}</div>${addonDetails}`;
 
@@ -3439,11 +3464,19 @@ function bookingForm(editing=false){
   const programsTab=`<div class="item-cards">${programCards}</div>${programDetails}`;
 
   // ---- attendees (one per ticket) — step 3 ----
+  // Products/add-ons are keyed by slot, so each selected slot gets its own labeled attendee rows —
+  // that's what lets staff put the same visitors on every slot, or different visitors per slot.
   const heads=[];
-  const collect=(items,recFn,catsFn)=>items.forEach(([id,cfg])=>{const nm=recFn(id);catsFn(id).forEach(c=>{const total=((cfg.qty&&cfg.qty[c])||0)+((cfg.redeem&&cfg.redeem[c])||0);for(let n=0;n<total;n++)heads.push({label:nm+" · "+c+" "+(n+1), cat:c});});});
-  collect([...bookingProducts],i=>P[i].n,i=>P[i].cats);
-  collect([...bookingAddons],code=>(P.find(x=>x.c===code)||{}).n,code=>(P.find(x=>x.c===code)||{cats:[]}).cats);
-  collect([...bookingPrograms],key=>progRec(key).n,()=>PCATS);
+  const collectSlotted=(items,recFor,slotsFor)=>items.forEach(([id,cfg])=>{
+    const rec=recFor(id); if(!rec) return; const slist=slotsFor(id);
+    Object.entries(cfg.slots||{}).forEach(([sn,sc])=>{
+      const s=slist.find(x=>x.n===sn), slotLbl=s?`${s.t1}–${s.t2}`:sn;
+      rec.cats.forEach(c=>{const total=((sc.qty&&sc.qty[c])||0)+((sc.redeem&&sc.redeem[c])||0);for(let n=0;n<total;n++)heads.push({label:`${rec.n} — ${slotLbl} · ${c} ${n+1}`, cat:c});});
+    });
+  });
+  collectSlotted([...bookingProducts],i=>P[i],i=>P[i].slots);
+  collectSlotted([...bookingAddons],code=>P.find(x=>x.c===code),code=>(P.find(x=>x.c===code)||{slots:[]}).slots);
+  [...bookingPrograms].forEach(([key,cfg])=>{const nm=progRec(key).n;PCATS.forEach(c=>{const total=(cfg.qty&&cfg.qty[c])||0;for(let n=0;n<total;n++)heads.push({label:nm+" · "+c+" "+(n+1), cat:c});});});
   const attendeesTab = heads.length ? `<div class="pos-lbl">Attendee details <small>one per ticket</small></div><div class="attendee-list">${heads.map((h,idx)=>{const child=/child/i.test(h.cat||"");const req=child?'<span class="lab-req">Required</span>':'';const rq=child?" required aria-required=\"true\"":"";return `<div class="attendee-row"><div class="attendee-kind">${h.label}</div><div class="fld"><div class="lab"><span class="lab-n">Name</span>${req}</div><input class="inp"${rq} placeholder="Full name"></div><div class="fld"><div class="lab"><span class="lab-n">Date of birth</span></div><input class="inp mono" data-dob="${idx}" placeholder="DD/MM/YYYY"></div><div class="fld"><div class="lab"><span class="lab-n">Age</span>${req}</div><input class="inp mono" id="age_${idx}"${rq} placeholder="Years" aria-live="polite"></div></div>`;}).join("")}</div>` : `<div class="pos-empty">Add tickets first — attendees appear here.</div>`;
 
   // ---- step 2 sub-tabs, each labelled with how many tickets are already in it ----
@@ -3469,17 +3502,25 @@ function bookingForm(editing=false){
     ${linesHtml}
   </div>`;
   const cartRows=[];
-  [...bookingProducts].forEach(([i,cfg])=>{const p=P[i],s=slotOf(i,cfg);
-    const lines=p.cats.flatMap(c=>{const r=productRedemption.get(i+"|"+c); if(!r) return [];
-      const out=[];
-      if(r.redeemed>0) out.push(cartCatLine("prod|"+i,c,r.redeemed,0,0,"Covered by membership",true));
-      if(r.paid>0) out.push(cartCatLine("prod|"+i,c,r.paid,s.price[c]||0,r.amount,""));
-      return out;
-    }).join("");
-    if(lines) cartRows.push(cartGroup(p.n,cfg.date?`${cfg.date} · ${s.t1}–${s.t2}`:s.n,lines));});
-  [...bookingAddons].forEach(([code,cfg])=>{const a=P.find(x=>x.c===code);if(!a)return;const s=addonSlotOf(code,cfg);
-    const lines=a.cats.map(c=>{const q=(cfg.qty&&cfg.qty[c])||0;return q?cartCatLine("addon|"+code,c,q,s.price[c]||0):"";}).filter(Boolean).join("");
-    if(lines) cartRows.push(cartGroup(a.n,cfg.date?`${cfg.date} · ${s.t1}–${s.t2}`:s.n,lines));});
+  // one cart group per *selected slot* of each product/add-on — a product booked across two time
+  // slots shows up as two separate, independently editable/removable lines in the order summary.
+  [...bookingProducts].forEach(([i,cfg])=>{const p=P[i];
+    Object.entries(cfg.slots||{}).forEach(([sn,sc])=>{
+      const s=p.slots.find(x=>x.n===sn)||p.slots[0], pfx="prod|"+i+"|"+sn;
+      const lines=p.cats.flatMap(c=>{const r=productRedemption.get(i+"|"+sn+"|"+c); if(!r) return [];
+        const out=[];
+        if(r.redeemed>0) out.push(cartCatLine(pfx,c,r.redeemed,0,0,"Covered by membership",true));
+        if(r.paid>0) out.push(cartCatLine(pfx,c,r.paid,s.price[c]||0,r.amount,""));
+        return out;
+      }).join("");
+      if(lines) cartRows.push(cartGroup(p.n,cfg.date?`${cfg.date} · ${s.t1}–${s.t2}`:s.n,lines));
+    });});
+  [...bookingAddons].forEach(([code,cfg])=>{const a=P.find(x=>x.c===code);if(!a)return;
+    Object.entries(cfg.slots||{}).forEach(([sn,sc])=>{
+      const s=a.slots.find(x=>x.n===sn)||a.slots[0], pfx="addon|"+code+"|"+sn;
+      const lines=a.cats.map(c=>{const q=(sc.qty&&sc.qty[c])||0;return q?cartCatLine(pfx,c,q,s.price[c]||0):"";}).filter(Boolean).join("");
+      if(lines) cartRows.push(cartGroup(a.n,cfg.date?`${cfg.date} · ${s.t1}–${s.t2}`:s.n,lines));
+    });});
   [...bookingPrograms].forEach(([key,cfg])=>{const r=progRec(key),b=progBatchOf(key,cfg);
     const lines=PCATS.map(c=>{const q=(cfg.qty&&cfg.qty[c])||0;return q?cartCatLine("prog|"+key,c,q,b.price||0):"";}).filter(Boolean).join("");
     if(lines) cartRows.push(cartGroup(r.n,b.n||r.cat,lines));});
@@ -4144,23 +4185,28 @@ function currentCalBaseDate(){
 }
 
 function ensureCartEntry(kind,id){
-  if(kind==="prod"){ const i=+id; if(!bookingProducts.has(i)){ const slots=P[i].slots,d=defaultDateFor(slots); const s=slotsForDate(slots,d).find(x=>slotLeft(x)>0)||slotsForDate(slots,d)[0]||firstAvailableSlot(slots); bookingProducts.set(i,{slot:s.n,date:d,qty:{},redeem:{}}); } }
-  else if(kind==="addon"){ if(!bookingAddons.has(id)){ const a=P.find(x=>x.c===id); const slots=a?a.slots:[]; const d=defaultDateFor(slots); const s=slotsForDate(slots,d).find(x=>slotLeft(x)>0)||slotsForDate(slots,d)[0]||firstAvailableSlot(slots); bookingAddons.set(id,{slot:s?s.n:"",date:d,qty:{}}); } }
+  // Products & add-ons: one cart entry per item, holding a single date plus a *set* of selected
+  // slots for that date — each selected slot carries its own qty/redeem so a visitor can book
+  // several time slots of the same product/add-on, for the same or different people, in one order.
+  if(kind==="prod"){ const i=+id; if(!bookingProducts.has(i)){ const slots=P[i].slots,d=defaultDateFor(slots); const s=slotsForDate(slots,d).find(x=>slotLeft(x)>0)||slotsForDate(slots,d)[0]||firstAvailableSlot(slots); bookingProducts.set(i,{date:d,slots:s?{[s.n]:{qty:{},redeem:{}}}:{}}); } }
+  else if(kind==="addon"){ if(!bookingAddons.has(id)){ const a=P.find(x=>x.c===id); const slots=a?a.slots:[]; const d=defaultDateFor(slots); const s=slotsForDate(slots,d).find(x=>slotLeft(x)>0)||slotsForDate(slots,d)[0]||firstAvailableSlot(slots); bookingAddons.set(id,{date:d,slots:s?{[s.n]:{qty:{}}}:{}}); } }
   else if(kind==="prog"){ if(!bookingPrograms.has(id)){ const rec=progRecFor(id); const batches=(rec&&rec.batches)||[]; let bi=batches.findIndex(b=>slotLeft(b)>0); if(bi<0) bi=0; bookingPrograms.set(id,{batch:bi,qty:{}}); } }
 }
 function progRecFor(id){ const [k,idx]=id.split(":"); return k==="event"?EVENTS[+idx]:WORKSHOPS[+idx]; }
 function getCartCfg(kind,id){ return kind==="prod"?bookingProducts.get(+id):kind==="addon"?bookingAddons.get(id):bookingPrograms.get(id); }
 function removeCartEntry(kind,id){ if(kind==="prod") bookingProducts.delete(+id); else if(kind==="addon") bookingAddons.delete(id); else bookingPrograms.delete(id); }
 function hasBookingItems(){
-  const sum=cfg=>Object.values((cfg&&cfg.qty)||{}).reduce((a,n)=>a+ +n,0)+Object.values((cfg&&cfg.redeem)||{}).reduce((a,n)=>a+ +n,0);
-  return [...bookingProducts.values()].some(c=>sum(c)>0)||[...bookingAddons.values()].some(c=>sum(c)>0)||[...bookingPrograms.values()].some(c=>sum(c)>0);
+  const sumSlotted=cfg=>Object.values((cfg&&cfg.slots)||{}).reduce((a,sc)=>a+Object.values(sc.qty||{}).reduce((x,n)=>x+ +n,0)+Object.values(sc.redeem||{}).reduce((x,n)=>x+ +n,0),0);
+  const sumFlat=cfg=>Object.values((cfg&&cfg.qty)||{}).reduce((a,n)=>a+ +n,0);
+  return [...bookingProducts.values()].some(c=>sumSlotted(c)>0)||[...bookingAddons.values()].some(c=>sumSlotted(c)>0)||[...bookingPrograms.values()].some(c=>sumFlat(c)>0);
 }
 /* how many general-admission passes the matched member has left right now, across every
-   product's explicit redeem allocation in the current cart — shared/global, not per-product */
+   product's explicit redeem allocation in the current cart (every selected slot of every
+   product) — shared/global, not per-product or per-slot */
 function globalPassesRemaining(){
   const member=bookingCustomer.member; if(!member) return 0;
   const base=Math.max(0,member.passesTotal-member.passesUsed);
-  const used=[...bookingProducts.values()].reduce((t,cfg)=>t+Object.values(cfg.redeem||{}).reduce((tt,n)=>tt+ +n,0),0);
+  const used=[...bookingProducts.values()].reduce((t,cfg)=>t+Object.values(cfg.slots||{}).reduce((tt,sc)=>tt+Object.values(sc.redeem||{}).reduce((ttt,n)=>ttt+ +n,0),0),0);
   return Math.max(0,base-used);
 }
 
@@ -4236,17 +4282,13 @@ document.addEventListener("click",e=>{
   }
   const editw=e.target.closest("[data-editw]");
   if(editw){ selW=+editw.dataset.editw; selB=0; progKind="camp"; if(current!=="camps") current="programs"; tab="edit"; addOpen=null; render(); $(".stage").scrollTop=0; return; }
-  const bkCheckin=e.target.closest("[data-book-checkin]");
-  if(bkCheckin){ const b=BOOKINGS[+bkCheckin.dataset.bookCheckin]; if(b) b.checkin="in"; render(); return; }
-  const bkCheckout=e.target.closest("[data-book-checkout]");
-  if(bkCheckout){ const b=BOOKINGS[+bkCheckout.dataset.bookCheckout]; if(b) b.checkin="out"; render(); return; }
   const editbooking=e.target.closest("[data-editbooking]");
   if(editbooking){ selBooking=+editbooking.dataset.editbooking; const b=BOOKINGS[selBooking];
     resetBooking();
     bookingCustomer={name:b.customer||"",phone:b.phone||"",email:b.email||"",member:b.member||null,location:b.location||""};
     bookingCustomerLinked=CUSTOMERS.findIndex(c=>c.phone===b.phone);
     const pi=P.findIndex(p=>p.n===b.product);
-    if(pi>=0){ const qty={}; (b.ticketRows||[]).forEach(r=>{ qty[r[0]]=+r[1]||0; }); bookingProducts.set(pi,{slot:b.slot||P[pi].slots[0].n,qty}); }
+    if(pi>=0){ const qty={}; (b.ticketRows||[]).forEach(r=>{ qty[r[0]]=+r[1]||0; }); const sn=b.slot||P[pi].slots[0].n; bookingProducts.set(pi,{date:b.date||defaultDateFor(P[pi].slots),slots:{[sn]:{qty,redeem:{}}}}); }
     bookingPay=b.paymentMode||"Cash";
     tab="edit"; addOpen=null; render(); $(".stage").scrollTop=0; return; }
   // ---- POS order flow: 3-step wizard (Customer / Booking / Attendees), payment docked in the summary ----
@@ -4264,21 +4306,36 @@ document.addEventListener("click",e=>{
   if(bkQuick){ const [kind,id,d]=bkQuick.dataset.bookQuick.split("|"); ensureCartEntry(kind,id); const cfg=getCartCfg(kind,id); const cat=primaryCatFor(kind,id); cfg.qty=cfg.qty||{}; cfg.qty[cat]=Math.max(0,(cfg.qty[cat]||0)+ +d); render(); return; }
   const bkRemove=e.target.closest("[data-book-remove]");
   if(bkRemove){ const [kind,id]=bkRemove.dataset.bookRemove.split("|"); removeCartEntry(kind,id); if(bookingOpenItem===kind+"|"+id) bookingOpenItem=null; render(); return; }
+  // toggles one slot on/off in the product/add-on's selected-slots set (multi-select — several
+  // slots can be checked at once); the same control also serves as each slot block's "Remove slot"
   const bkSlot=e.target.closest("[data-book-slot]");
-  if(bkSlot){ const [kind,id,sn]=bkSlot.dataset.bookSlot.split("|"); const cfg=kind==="prod"?bookingProducts.get(+id):bookingAddons.get(id); if(cfg) cfg.slot=sn; render(); return; }
+  if(bkSlot){ const [kind,id,sn]=bkSlot.dataset.bookSlot.split("|"); const cfg=kind==="prod"?bookingProducts.get(+id):bookingAddons.get(id);
+    if(cfg){ cfg.slots=cfg.slots||{}; if(cfg.slots[sn]) delete cfg.slots[sn]; else cfg.slots[sn]={qty:{},redeem:{}}; }
+    render(); return; }
   const calNav=e.target.closest("[data-book-cal-nav]");
   if(calNav){ const d=currentCalBaseDate(); bookingCalMonth=new Date(d.getFullYear(),d.getMonth()+(+calNav.dataset.bookCalNav),1); render(); return; }
   const calDate=e.target.closest("[data-book-cal-date]");
   if(calDate){ const [kind,id,dateStr]=calDate.dataset.bookCalDate.split("|"); const cfg=kind==="prod"?bookingProducts.get(+id):bookingAddons.get(id);
-    if(cfg){ cfg.date=dateStr; const slots=kind==="prod"?P[+id].slots:(P.find(x=>x.c===id)||{slots:[]}).slots; const candidates=slotsForDate(slots,dateStr); const pick=candidates.find(x=>slotLeft(x)>0)||candidates[0]; if(pick) cfg.slot=pick.n; }
+    if(cfg){ cfg.date=dateStr; const slots=kind==="prod"?P[+id].slots:(P.find(x=>x.c===id)||{slots:[]}).slots; const candidates=slotsForDate(slots,dateStr); const candNames=new Set(candidates.map(x=>x.n));
+      // slots selected on the old date only carry over if they still run on the new one — anything
+      // else is dropped, and if nothing survives we auto-pick the first available slot so the panel isn't empty
+      const kept={}; Object.keys(cfg.slots||{}).forEach(sn=>{ if(candNames.has(sn)) kept[sn]=cfg.slots[sn]; });
+      if(!Object.keys(kept).length){ const pick=candidates.find(x=>slotLeft(x)>0)||candidates[0]; if(pick) kept[pick.n]={qty:{},redeem:{}}; }
+      cfg.slots=kept; }
     render(); return; }
   const bkBatch=e.target.closest("[data-book-batch]");
   if(bkBatch){ const [k,bi]=bkBatch.dataset.bookBatch.split("|"); const cfg=bookingPrograms.get(k); if(cfg) cfg.batch=+bi; render(); return; }
+  // pfx is "kind|id|category|delta" for programs (flat qty) or "kind|id|slotName|category|delta"
+  // for products/add-ons (qty lives per selected slot) — peel delta/category off the end first
   const bkQty=e.target.closest("[data-book-qty]");
-  if(bkQty){ const [kind,id,cat,d]=bkQty.dataset.bookQty.split("|"); const cfg=kind==="prod"?bookingProducts.get(+id):kind==="addon"?bookingAddons.get(id):bookingPrograms.get(id); if(cfg){ cfg.qty=cfg.qty||{}; cfg.qty[cat]=Math.max(0,(cfg.qty[cat]||0)+ +d); } render(); return; }
+  if(bkQty){ const parts=bkQty.dataset.bookQty.split("|"); const d=+parts.pop(), cat=parts.pop(), kind=parts[0], id=parts[1], sn=parts[2];
+    if(kind==="prog"){ const cfg=bookingPrograms.get(id); if(cfg){ cfg.qty=cfg.qty||{}; cfg.qty[cat]=Math.max(0,(cfg.qty[cat]||0)+d); } }
+    else{ const cfg=kind==="prod"?bookingProducts.get(+id):bookingAddons.get(id); const sc=cfg&&cfg.slots&&cfg.slots[sn]; if(sc){ sc.qty=sc.qty||{}; sc.qty[cat]=Math.max(0,(sc.qty[cat]||0)+d); } }
+    render(); return; }
   const bkRedeem=e.target.closest("[data-book-redeem]");
-  if(bkRedeem){ const [kind,id,cat,d]=bkRedeem.dataset.bookRedeem.split("|"); const cfg=kind==="prod"?bookingProducts.get(+id):null; const delta=+d;
-    if(cfg){ cfg.redeem=cfg.redeem||{}; if(delta>0&&globalPassesRemaining()<=0){ /* at cap, no-op */ } else cfg.redeem[cat]=Math.max(0,(cfg.redeem[cat]||0)+delta); }
+  if(bkRedeem){ const parts=bkRedeem.dataset.bookRedeem.split("|"); const delta=+parts.pop(), cat=parts.pop(), id=parts[1], sn=parts[2];
+    const cfg=bookingProducts.get(+id); const sc=cfg&&cfg.slots&&cfg.slots[sn];
+    if(sc){ sc.redeem=sc.redeem||{}; if(delta>0&&globalPassesRemaining()<=0){ /* at cap, no-op */ } else sc.redeem[cat]=Math.max(0,(sc.redeem[cat]||0)+delta); }
     render(); return; }
   const bkPay=e.target.closest("[data-book-pay]");
   if(bkPay){ bookingPay=bkPay.dataset.bookPay; render(); return; }
