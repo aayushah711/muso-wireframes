@@ -3791,14 +3791,19 @@ function memberForm(editing){
     <div class="card-head"><span class="card-title">${editing?"Edit member":"New member"}</span></div>
     <div class="form-body product-form">
       ${sec("Membership",fld("Plan",`<div class="selwrap"><select class="inp">${MEMBERSHIP_TIERS.map(x=>`<option${m.tier===x.name?" selected":""}>${x.name}</option>`).join("")}</select></div>`,"The plan being purchased.",true,true))}
-      ${sec("Registered pair",
+      ${sec("Registered adult",
         fld("Adult name",`<input class="inp" value="${escAttr(m.adult||"")}" placeholder="Full name">`,"The registered adult — only this adult may redeem the membership.",true)
-        +fld("Child name",`<input class="inp" value="${escAttr(m.child||"")}" placeholder="Full name">`,"The registered child — only this child may redeem the membership.",true))}
+        +fld("Date of birth",`<input class="inp mono" data-dob="madult" value="${escAttr(m.adultDob||"")}" placeholder="DD/MM/YYYY">`,"Optional — used to auto-fill the age.",false)
+        +fld("Age",`<input class="inp mono" id="age_madult" value="${escAttr(m.adultDob?ageLabel(m.adultDob):(m.adultAge||""))}" placeholder="Years" aria-live="polite">`,"Auto-filled from date of birth; you can also type it. Optional for the adult.",false))}
+      ${sec("Registered child",
+        fld("Child name",`<input class="inp" value="${escAttr(m.child||"")}" placeholder="Full name">`,"The registered child — only this child may redeem the membership.",true)
+        +fld("Date of birth",`<input class="inp mono" data-dob="mchild" value="${escAttr(m.childDob||"")}" placeholder="DD/MM/YYYY">`,"Optional — used to auto-fill the age.",false)
+        +fld("Age",`<input class="inp mono" id="age_mchild" required aria-required="true" value="${escAttr(m.childDob?ageLabel(m.childDob):(m.childAge||""))}" placeholder="Years" aria-live="polite">`,"Required. Auto-filled from date of birth; you can also type it.",true))}
       ${sec("Contact",
         fld("Phone",`<input class="inp mono" type="tel" inputmode="tel" value="${escAttr(m.phone||"")}" placeholder="10-digit mobile">`,"Used for OTP at redemption and for confirmations.",true)
         +fld("Email",`<input class="inp" type="email" value="${escAttr(m.email||"")}" placeholder="name@example.com">`,"For confirmations and to view history on login.",true))}
     </div>
-    <div class="form-foot"><span style="font-size:11.5px;color:var(--ink3)">A confirmation email &amp; SMS go to the member on purchase.</span><button class="btn" data-tab="list">Cancel</button><button class="btn btn-primary" data-tab="list">${editing?"Save changes":"Create member"}</button></div>
+    <div class="form-foot"><span></span><button class="btn" data-tab="list">Cancel</button><button class="btn btn-primary" data-tab="list">${editing?"Save changes":"Create member"}</button></div>
   </div></div>`;
 }
 /* ---- member detail (Summary / Purchases / Redemptions) + actions ---- */
