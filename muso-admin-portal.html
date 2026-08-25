@@ -377,6 +377,8 @@ tbody tr[aria-selected="true"] td:first-child{box-shadow:inset 2px 0 0 var(--blu
 .booking-discount-msg{min-height:16px;padding-top:5px;font-size:10.5px;color:var(--ink3)}
 .booking-discount-msg.ok{color:var(--ok);font-weight:600}
 .booking-discount-msg.bad{color:var(--stop)}
+.child-req{font-size:10.5px;color:var(--ink3);padding:0 0 6px 2px;line-height:1.4}
+.child-req-warn{color:var(--stop);font-weight:600}
 .attendee-list{grid-column:1/-1;display:grid;gap:10px}
 .attendee-row{display:grid;grid-template-columns:150px minmax(0,1fr) minmax(140px,.7fr) 92px;gap:12px;align-items:end;padding:11px 12px;border:1px solid var(--rule);border-radius:6px}
 .attendee-kind{align-self:center;font-size:12px;font-weight:600;color:var(--ink2)}
@@ -390,6 +392,7 @@ tbody tr[aria-selected="true"] td:first-child{box-shadow:inset 2px 0 0 var(--blu
 .lab-n{font-size:12.5px;font-weight:600;letter-spacing:-.005em}
 .lab-t{font-size:9.5px;font-weight:500;letter-spacing:.04em;text-transform:uppercase;color:var(--blue);background:var(--blue-wash);border-radius:3px;padding:1px 6px}
 .lab-req{font-size:9px;font-family:var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--ink3);margin-left:auto}
+.fld-miss .inp{border-color:var(--stop);background:#FEF7F7}
 .inp{border:1px solid var(--rule2);border-radius:5px;padding:7px 10px;font:inherit;font-size:12.5px;background:#fff;width:100%;transition:border-color .12s}
 .inp:hover{border-color:var(--ink3)}
 .inp[readonly]{background:#F4F5F2;color:var(--ink2);cursor:default}
@@ -2339,7 +2342,7 @@ let current = "dashboard", selP = 0, tab = "list", sub = "details", pType = "pro
     selW = 0, selB = 0, selE = 0, esub = "details", eventCats = new Set(), selBooking = 0, bookingProduct = 0, bookingSlot = "", bookingDiscountCode = "", csub = "details", copyFrom = 0, copyTo = new Set(), copyWhat = new Set(["price","seats"]), editD = -1,
     progKind = "event", progCat = "Event", prodBuildingPool = false,
     bookingProducts = new Map(), bookingAddons = new Map(), bookingPrograms = new Map(), bookingPay = "Cash", bookingTab = "products",
-    bookingCustomer = {name:"",phone:"",email:"",member:null}, bookingCustomerLinked = -1, bookingStep = 1, bookingOpenItem = null, bookingCalMonth = null, bookingCancelConfirm = false, bookingDiscountTried = false,
+    bookingCustomer = {name:"",phone:"",email:"",member:null,location:""}, bookingCustomerLinked = -1, bookingStep = 1, bookingOpenItem = null, bookingCalMonth = null, bookingCancelConfirm = false, bookingDiscountTried = false, bookingStep1Tried = false,
     selD = 0, dsub = "summary", editCond = -1, condDraft = null, draftDiscount = null, condStep = 0, condItemsOpen = false,
     selMember = 0, selTier = 0, msub = "summary", redeemStep = 1, redeemVisits = 1;
 
@@ -2854,16 +2857,23 @@ const VIEWS = {
   },
 
   bookings(){
-    return `${toolbar("Search orders",BOOKINGS.length+" orders")}
+    const inside=BOOKINGS.filter(b=>(b.checkin||"none")==="in").reduce((a,b)=>a+(+b.heads||0),0);
+    const checkinCell=(b,i)=>{ const st=b.checkin||"none";
+      if(st==="in") return `<span class="pill pill-ok"><i class="dot"></i>Checked in</span> <button class="btn" data-book-checkout="${i}">Check out</button>`;
+      if(st==="out") return `<span class="pill pill-off">Checked out</span>`;
+      return `<button class="btn" data-book-checkin="${i}">Check in</button>`;
+    };
+    return `${toolbar("Search orders",`<b>Inside now: ${inside}</b> · ${BOOKINGS.length} orders`)}
     <div class="card"><div class="matrix-wrap"><table class="reclist"><thead><tr>
-      <th>Order ID</th><th>Customer</th><th>Visit date</th><th class="ctr">Tickets</th><th>Total</th><th>Actions</th></tr></thead>
+      <th>Order ID</th><th>Customer</th><th>Visit date</th><th class="ctr">Tickets</th><th>Total</th><th>Check-in</th><th>Actions</th></tr></thead>
     <tbody>${BOOKINGS.map((b,i)=>`<tr>
       <td><b class="code" style="font-weight:600">${b.ref}</b></td>
       <td><b style="font-weight:500">${b.customer}</b><div class="sub">${b.email}</div></td>
       <td class="code">${b.date}</td>
       <td class="ctr code">${b.heads}</td><td class="code">${money(b.total)}</td>
+      <td><div style="display:flex;gap:8px;align-items:center">${checkinCell(b,i)}</div></td>
       <td><button class="btn" data-editbooking="${i}">Edit</button></td></tr>`).join("")}
-      <tr><td colspan="6"><button class="rep-add" data-tab="new" style="border-radius:4px">+ New order</button></td></tr>
+      <tr><td colspan="7"><button class="rep-add" data-tab="new" style="border-radius:4px">+ New order</button></td></tr>
     </tbody></table></div></div>`;
   },
 
@@ -3324,7 +3334,9 @@ function bookingForm(editing=false){
   const gst=Math.round((subtotal-discAmt-addonDiscountAmt)*0.18);
   const grand=subtotal-discAmt-addonDiscountAmt+gst;
   const section=(title,body)=>`<section class="form-sec"><div class="form-sec-head"><span class="form-sec-title">${title}</span></div><div class="form-sec-body">${body}</div></section>`;
-  const step=(pfx,cat,q)=>`<div class="pos-qty-row"><span class="n">${cat}</span><span class="p">${money(q.price)} each</span><span class="pos-step"><button data-book-qty="${pfx}|${escAttr(cat)}|-1" ${q.n===0?"disabled":""}>−</button><span>${q.n}</span><button data-book-qty="${pfx}|${escAttr(cat)}|1">+</button></span></div>`;
+  const adultQty=[...bookingProducts].reduce((t,[,cf])=>t+((cf.qty&&cf.qty["Adult"])||0),0)+[...bookingAddons].reduce((t,[,cf])=>t+((cf.qty&&cf.qty["Adult"])||0),0);
+  const step=(pfx,cat,q)=>{ const cd=CATS.find(c=>c.name===cat); const needsAdult=cd&&cd.req==="Adult"; const warn=needsAdult&&q.n>0&&adultQty===0;
+    return `<div class="pos-qty-row"><span class="n">${cat}</span><span class="p">${money(q.price)} each</span><span class="pos-step"><button data-book-qty="${pfx}|${escAttr(cat)}|-1" ${q.n===0?"disabled":""}>−</button><span>${q.n}</span><button data-book-qty="${pfx}|${escAttr(cat)}|1">+</button></span></div>${needsAdult?`<div class="child-req${warn?" child-req-warn":""}">${warn?"⚠ ":""}Purchase of an adult ticket is mandatory for this age group.</div>`:""}`; };
   const slotBadge=(s)=>{const left=slotLeft(s),st=availState(left,s.cap);if(!st)return"";const cls=st.key==="sold"?" slot-sold":st.key==="low"?" slot-low":"";return `<span class="slot-avail${cls}">${st.label} · ${left}/${s.cap}</span>`;};
   // ---- date-driven slot picker: calendar on the left, that day's slots on the right ----
   const slotBar=(pfx,list,cfg)=>{
@@ -3490,10 +3502,14 @@ function bookingForm(editing=false){
 
   // ---- customer — phone-first lookup against past orders, not just blank entry — step 1 ----
   const custMatch=bookingCustomerLinked>=0?CUSTOMERS[bookingCustomerLinked]:null;
+  const miss=f=>bookingStep1Tried&&!String((bookingCustomer[f]||"")).trim();
+  const reqMark=f=>miss(f)?'<span class="lab-req" style="color:var(--stop)">Required</span>':'<span class="lab-req">Required</span>';
   const customerSection=section("Customer",`
-    <div class="fld"><div class="lab"><span class="lab-n">Phone</span></div><div class="inp-wrap"><input class="inp mono${custMatch?" inp-matched":""}" id="bookCustPhone" type="tel" inputmode="tel" autocomplete="off" placeholder="10-digit mobile number" value="${escAttr(bookingCustomer.phone)}">${custMatch?`<button type="button" class="cust-match-tab${bookingCustomer.member?" cust-match-tab-member":""}" data-unlink-customer="1" title="Matched ${escAttr(custMatch.name)}${bookingCustomer.member?` — ${escAttr(bookingCustomer.member.tier)} member, ${Math.max(0,bookingCustomer.member.passesTotal-bookingCustomer.member.passesUsed)} passes remaining`:""} — click to remove">${bookingCustomer.member?bookingCustomer.member.tier:"Existing"}</button>`:""}<div class="cust-suggest" id="custSuggest"></div></div></div>
-    <div class="fld"><div class="lab"><span class="lab-n">Customer name</span></div><input class="inp" id="bookCustName" placeholder="Full name" value="${escAttr(bookingCustomer.name)}"></div>
+    <div class="fld${miss("phone")?" fld-miss":""}"><div class="lab"><span class="lab-n">Phone</span>${reqMark("phone")}</div><div class="inp-wrap"><input class="inp mono${custMatch?" inp-matched":""}" id="bookCustPhone" type="tel" inputmode="tel" autocomplete="off" placeholder="10-digit mobile number" value="${escAttr(bookingCustomer.phone)}">${custMatch?`<button type="button" class="cust-match-tab${bookingCustomer.member?" cust-match-tab-member":""}" data-unlink-customer="1" title="Matched ${escAttr(custMatch.name)}${bookingCustomer.member?` — ${escAttr(bookingCustomer.member.tier)} member, ${Math.max(0,bookingCustomer.member.passesTotal-bookingCustomer.member.passesUsed)} passes remaining`:""} — click to remove">${bookingCustomer.member?bookingCustomer.member.tier:"Existing"}</button>`:""}<div class="cust-suggest" id="custSuggest"></div></div></div>
+    <div class="fld${miss("name")?" fld-miss":""}"><div class="lab"><span class="lab-n">Name</span>${reqMark("name")}</div><input class="inp" id="bookCustName" placeholder="Full name" value="${escAttr(bookingCustomer.name)}"></div>
     <div class="fld"><div class="lab"><span class="lab-n">Email</span><span class="lab-req">Optional</span></div><input class="inp" id="bookCustEmail" type="email" placeholder="name@example.com" value="${escAttr(bookingCustomer.email)}"></div>
+    <div class="fld${miss("location")?" fld-miss":""}"><div class="lab"><span class="lab-n">Location</span>${reqMark("location")}</div><input class="inp" id="bookCustLocation" placeholder="Customer's city or area" value="${escAttr(bookingCustomer.location||"")}"></div>
+    ${bookingStep1Tried&&(miss("phone")||miss("name")||miss("location"))?`<div class="fld" style="grid-column:1/-1;color:var(--stop);font-size:12px">Fill the required fields to continue.</div>`:""}
   `);
 
   // ---- 3-step wizard: Customer → Booking → Attendees. Payment lives in the summary, not a step. ----
@@ -4054,7 +4070,7 @@ function addSubmit(){
   addOpen=null; render(); $(".stage").scrollTop=0;
 }
 
-function resetBooking(){ bookingProducts=new Map(); bookingAddons=new Map(); bookingPrograms=new Map(); bookingPay="Cash"; bookingDiscountCode=""; bookingDiscountTried=false; bookingTab="products"; bookingCustomer={name:"",phone:"",email:"",member:null}; bookingCustomerLinked=-1; bookingStep=1; bookingOpenItem=null; bookingCalMonth=null; bookingCancelConfirm=false; }
+function resetBooking(){ bookingProducts=new Map(); bookingAddons=new Map(); bookingPrograms=new Map(); bookingPay="Cash"; bookingDiscountCode=""; bookingDiscountTried=false; bookingStep1Tried=false; bookingTab="products"; bookingCustomer={name:"",phone:"",email:"",member:null,location:""}; bookingCustomerLinked=-1; bookingStep=1; bookingOpenItem=null; bookingCalMonth=null; bookingCancelConfirm=false; }
 
 /* ---- POS cart helpers — shared by bookingForm() (display) and the click handlers (state changes) ---- */
 function slotLeft(s){ if(!s||s.cap==null) return Infinity; return Math.max(0,(s.cap||0)-(s.sold||0)); }
@@ -4220,10 +4236,14 @@ document.addEventListener("click",e=>{
   }
   const editw=e.target.closest("[data-editw]");
   if(editw){ selW=+editw.dataset.editw; selB=0; progKind="camp"; if(current!=="camps") current="programs"; tab="edit"; addOpen=null; render(); $(".stage").scrollTop=0; return; }
+  const bkCheckin=e.target.closest("[data-book-checkin]");
+  if(bkCheckin){ const b=BOOKINGS[+bkCheckin.dataset.bookCheckin]; if(b) b.checkin="in"; render(); return; }
+  const bkCheckout=e.target.closest("[data-book-checkout]");
+  if(bkCheckout){ const b=BOOKINGS[+bkCheckout.dataset.bookCheckout]; if(b) b.checkin="out"; render(); return; }
   const editbooking=e.target.closest("[data-editbooking]");
   if(editbooking){ selBooking=+editbooking.dataset.editbooking; const b=BOOKINGS[selBooking];
     resetBooking();
-    bookingCustomer={name:b.customer||"",phone:b.phone||"",email:b.email||"",member:b.member||null};
+    bookingCustomer={name:b.customer||"",phone:b.phone||"",email:b.email||"",member:b.member||null,location:b.location||""};
     bookingCustomerLinked=CUSTOMERS.findIndex(c=>c.phone===b.phone);
     const pi=P.findIndex(p=>p.n===b.product);
     if(pi>=0){ const qty={}; (b.ticketRows||[]).forEach(r=>{ qty[r[0]]=+r[1]||0; }); bookingProducts.set(pi,{slot:b.slot||P[pi].slots[0].n,qty}); }
@@ -4233,7 +4253,7 @@ document.addEventListener("click",e=>{
   const stepBtn=e.target.closest("[data-book-step]");
   if(stepBtn){ const n=+stepBtn.dataset.bookStep; if(n<=bookingStep) bookingStep=n; render(); $(".stage").scrollTop=0; return; }
   const nextBtn=e.target.closest("[data-book-next]");
-  if(nextBtn){ if(bookingStep===1) bookingStep=2; else if(bookingStep===2 && hasBookingItems()) bookingStep=3; render(); $(".stage").scrollTop=0; return; }
+  if(nextBtn){ if(bookingStep===1){ const c=bookingCustomer; if(!String(c.phone||"").trim()||!String(c.name||"").trim()||!String(c.location||"").trim()){ bookingStep1Tried=true; render(); return; } bookingStep1Tried=false; bookingStep=2; } else if(bookingStep===2 && hasBookingItems()) bookingStep=3; render(); $(".stage").scrollTop=0; return; }
   const backBtn=e.target.closest("[data-book-back]");
   if(backBtn){ bookingStep=Math.max(1,bookingStep-1); render(); $(".stage").scrollTop=0; return; }
   const bkTab=e.target.closest("[data-book-tab]");
@@ -4271,7 +4291,7 @@ document.addEventListener("click",e=>{
   const bkCancelConfirm=e.target.closest("[data-book-cancel-confirm]");
   if(bkCancelConfirm){ tab="list"; resetBooking(); render(); $(".stage").scrollTop=0; return; }
   const pickCust=e.target.closest("[data-pick-customer]");
-  if(pickCust){ const c=CUSTOMERS.find(x=>x.phone===pickCust.dataset.pickCustomer); if(c){ bookingCustomer={name:c.name,phone:c.phone,email:c.email,member:c.member||null}; bookingCustomerLinked=CUSTOMERS.indexOf(c); } render(); return; }
+  if(pickCust){ const c=CUSTOMERS.find(x=>x.phone===pickCust.dataset.pickCustomer); if(c){ bookingCustomer={name:c.name,phone:c.phone,email:c.email,member:c.member||null,location:c.location||bookingCustomer.location||""}; bookingCustomerLinked=CUSTOMERS.indexOf(c); } render(); return; }
   const unlinkCust=e.target.closest("[data-unlink-customer]");
   if(unlinkCust){ bookingCustomerLinked=-1; bookingCustomer.member=null; render(); return; }
   // ---- activate / deactivate a product from the listing ----
@@ -4426,6 +4446,7 @@ document.addEventListener("input",e=>{
 });
 document.addEventListener("input",e=>{
   if(e.target.id==="bookCustName"){ bookingCustomer.name=e.target.value; return; }
+  if(e.target.id==="bookCustLocation"){ bookingCustomer.location=e.target.value; return; }
   if(e.target.id==="bookCustEmail"){ bookingCustomer.email=e.target.value; return; }
   if(e.target.id==="bookCustPhone"){
     bookingCustomer.phone=e.target.value; bookingCustomerLinked=-1; bookingCustomer.member=null;
