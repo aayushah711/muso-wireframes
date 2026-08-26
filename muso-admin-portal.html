@@ -1188,13 +1188,13 @@ const P = [
 ];
 
 const BOOKINGS = [
-  {ref:"BK-1048",customer:"Aarav Mehta",email:"aarav@example.com",phone:"1234567890",member:{tier:"Gold",passesTotal:10,passesUsed:4,addonDiscountPct:10},product:"MuSo Tour",date:"15 Aug 2026",slot:"Three-hour morning",tickets:"2 Adult · 1 Child 3–11",ticketRows:[["Adult","2","1500"],["Child 3–11","1","900"]],attendees:[{category:"Adult",index:0,name:"Aarav Mehta",dob:""},{category:"Adult",index:1,name:"Riya Mehta",dob:""},{category:"Child 3–11",index:0,name:"Vihaan Mehta",dob:"12/06/2018"}],heads:3,total:3900,status:"Confirmed",payment:"Paid",paymentMode:"Card"},
-  {ref:"BK-1049",customer:"Nisha Rao",email:"nisha@example.com",phone:"9876543210",product:"Mini Golf",date:"16 Aug 2026",slot:"Golf midday",tickets:"1 Adult · 2 Child 3–11",ticketRows:[["Adult","1","400"],["Child 3–11","2","250"]],attendees:[{category:"Adult",index:0,name:"Nisha Rao",dob:""},{category:"Child 3–11",index:0,name:"Anya Rao",dob:"03/09/2017"},{category:"Child 3–11",index:1,name:"Neel Rao",dob:""}],heads:3,total:900,status:"Confirmed",payment:"Paid",paymentMode:"Card"},
-  {ref:"BK-1050",customer:"Kabir Shah",email:"kabir@example.com",phone:"99302 44556",product:"Lost Code of Play",date:"18 Aug 2026",slot:"LCOP afternoon",tickets:"2 Child 12–17",ticketRows:[["Child 12–17","2","400"]],attendees:[{category:"Child 12–17",index:0,name:"Kabir Shah",dob:"14/02/2012"},{category:"Child 12–17",index:1,name:"Mira Shah",dob:""}],heads:2,total:800,status:"Pending",payment:"Pending",paymentMode:"Cash"}
+  {ref:"BK-1048",customer:"Aarav Mehta",email:"aarav@example.com",phone:"1234567890",location:"Lower Parel, Mumbai",member:{tier:"Gold",passesTotal:10,passesUsed:4,addonDiscountPct:10},product:"MuSo Tour",date:"15 Aug 2026",slot:"Three-hour morning",tickets:"2 Adult · 1 Child 3–11",ticketRows:[["Adult","2","1500"],["Child 3–11","1","900"]],attendees:[{category:"Adult",index:0,name:"Aarav Mehta",dob:""},{category:"Adult",index:1,name:"Riya Mehta",dob:""},{category:"Child 3–11",index:0,name:"Vihaan Mehta",dob:"12/06/2018"}],heads:3,total:3900,status:"Confirmed",payment:"Paid",paymentMode:"Card"},
+  {ref:"BK-1049",customer:"Nisha Rao",email:"nisha@example.com",phone:"9876543210",location:"Andheri West, Mumbai",product:"Mini Golf",date:"16 Aug 2026",slot:"Golf midday",tickets:"1 Adult · 2 Child 3–11",ticketRows:[["Adult","1","400"],["Child 3–11","2","250"]],attendees:[{category:"Adult",index:0,name:"Nisha Rao",dob:""},{category:"Child 3–11",index:0,name:"Anya Rao",dob:"03/09/2017"},{category:"Child 3–11",index:1,name:"Neel Rao",dob:""}],heads:3,total:900,status:"Confirmed",payment:"Paid",paymentMode:"Card"},
+  {ref:"BK-1050",customer:"Kabir Shah",email:"kabir@example.com",phone:"99302 44556",location:"Thane West, Thane",product:"Lost Code of Play",date:"18 Aug 2026",slot:"LCOP afternoon",tickets:"2 Child 12–17",ticketRows:[["Child 12–17","2","400"]],attendees:[{category:"Child 12–17",index:0,name:"Kabir Shah",dob:"14/02/2012"},{category:"Child 12–17",index:1,name:"Mira Shah",dob:""}],heads:2,total:800,status:"Pending",payment:"Pending",paymentMode:"Cash"}
 ];
 
 /* Distinct customers, derived from past orders — powers phone-number lookup at the POS counter. */
-const CUSTOMERS = (()=>{ const seen=new Map(); BOOKINGS.forEach(b=>{ if(b.phone && !seen.has(b.phone)) seen.set(b.phone,{name:b.customer,phone:b.phone,email:b.email,member:b.member||null}); }); return [...seen.values()]; })();
+const CUSTOMERS = (()=>{ const seen=new Map(); BOOKINGS.forEach(b=>{ if(b.phone && !seen.has(b.phone)) seen.set(b.phone,{name:b.customer,phone:b.phone,email:b.email,location:b.location||"",member:b.member||null}); }); return [...seen.values()]; })();
 
 /* ---- Memberships (Scope §10) ---- */
 /* Plans have configurable names, visit counts (a number, or "Unlimited"), validity, price and
@@ -3333,12 +3333,35 @@ function bookingForm(editing=false){
   const subtotal=productPaidTotal+addonRawTotal+progTotal;
   const productInCart=[...bookingProducts.values()].some(cfg=>qtySum(cfg)>0);
   const hasItems=productInCart||[...bookingAddons.values()].some(cfg=>qtySum(cfg)>0)||[...bookingPrograms.values()].some(cfg=>qtySum(cfg)>0);
-  const discount=DISCOUNTS.find(d=>d.status==="Approved"&&(d.cond||[]).some(c=>String(c.code||"").toUpperCase()===bookingDiscountCode.toUpperCase()));
-  const discAmt=discount?(String(discount.v).includes("%")?subtotal*(parseFloat(discount.v)||0)/100:Math.min(subtotal,parseFloat(String(discount.v).replace(/[^0-9.]/g,""))||0)):0;
+  // ---- discounts: a typed code (any code, not just IND50) + auto-applied ones by cart condition ----
+  // per-category qty across a cart entry (products/add-ons store qty per selected slot; programs are flat)
+  const catQtys=cf=>{ const out={}; if(cf&&cf.slots){ Object.values(cf.slots).forEach(sc=>{ Object.entries(sc.qty||{}).forEach(([c,n])=>{ out[c]=(out[c]||0)+(+n||0); }); }); } else if(cf&&cf.qty){ Object.entries(cf.qty).forEach(([c,n])=>{ out[c]=(out[c]||0)+(+n||0); }); } return out; };
+  const anyQty=cf=>Object.values(catQtys(cf)).reduce((a,n)=>a+n,0)>0;
+  const hasProduct=[...bookingProducts.values()].some(anyQty);
+  const hasAddon=[...bookingAddons.values()].some(anyQty);
+  const hasProgram=[...bookingPrograms.values()].some(cf=>Object.values((cf&&cf.qty)||{}).reduce((a,n)=>a+(+n||0),0)>0);
+  let maxCatQty=0; [...bookingProducts.values(),...bookingAddons.values()].forEach(cf=>{ Object.values(catQtys(cf)).forEach(n=>{ if(n>maxCatQty) maxCatQty=n; }); });
+  const pctOf=(v,base)=>String(v).includes("%")?base*(parseFloat(v)||0)/100:Math.min(base,parseFloat(String(v).replace(/[^0-9.]/g,""))||0);
+  // typed code — match any Approved code-based discount by d.n, cond code, or series voucher
+  const codeUP=String(bookingDiscountCode||"").trim().toUpperCase();
+  const seriesHit=d=>{ if(!isSeries(d)) return false; const s=d.series; if(!codeUP.startsWith(String(s.prefix||"").toUpperCase())) return false; const n=parseInt(codeUP.replace(/\D/g,""),10); return !isNaN(n)&&n>=+s.from&&n<=+s.to; };
+  const discount=codeUP?DISCOUNTS.find(d=>d.status==="Approved"&&!applyInfo(d).auto&&(String(d.n||"").toUpperCase()===codeUP||(d.cond||[]).some(c=>String(c.code||"").toUpperCase()===codeUP)||seriesHit(d))):null;
+  const codeDiscAmt=discount?pctOf(discount.v,subtotal):0;
+  // auto-applied — evaluate each Approved automatic discount against the cart (simplified conditions)
+  const autoDiscs=[]; let bundlingDone=false;
+  DISCOUNTS.filter(d=>d.status==="Approved"&&applyInfo(d).auto).forEach(d=>{
+    const kinds=(d.cond||[]).map(c=>c.k);
+    if(kinds.includes("Customer holds a membership")){ if(member) autoDiscs.push({label:"Membership",v:d.v,amount:pctOf(d.v,subtotal)}); return; }
+    if(applyInfo(d).memberOnly){ if(member&&hasProgram) autoDiscs.push({label:d.n,v:d.v,amount:pctOf(d.v,progTotal)}); return; }
+    if(/Add-on bundling/i.test(d.n||"")){ if(!bundlingDone&&hasProduct&&hasAddon){ bundlingDone=true; autoDiscs.push({label:"Add-on bundling",v:d.v,amount:pctOf(d.v,addonRawTotal)}); } return; }
+    if(d.tiers&&d.tiers.length){ if(maxCatQty>=+d.tiers[0][0]){ const tier=[...d.tiers].reverse().find(t=>maxCatQty>=+t[0])||d.tiers[0]; autoDiscs.push({label:"Quantity break",v:tier[1]+"%",amount:subtotal*(parseFloat(tier[1])||0)/100}); } return; }
+  });
+  const autoDiscAmt=autoDiscs.reduce((t,x)=>t+x.amount,0);
+  const discAmt=Math.min(subtotal,codeDiscAmt+autoDiscAmt);
   const addonDiscountPct=member?(member.addonDiscountPct||0):0;
   const addonDiscountAmt=addonRawTotal*addonDiscountPct/100;
-  const gst=Math.round((subtotal-discAmt-addonDiscountAmt)*0.18);
-  const grand=subtotal-discAmt-addonDiscountAmt+gst;
+  const gst=Math.round(Math.max(0,subtotal-discAmt-addonDiscountAmt)*0.18);
+  const grand=Math.max(0,subtotal-discAmt-addonDiscountAmt)+gst;
   const section=(title,body)=>`<section class="form-sec"><div class="form-sec-head"><span class="form-sec-title">${title}</span></div><div class="form-sec-body">${body}</div></section>`;
   const adultInCfg=cf=>cf&&cf.slots?Object.values(cf.slots).reduce((a,sc)=>a+((sc.qty&&sc.qty["Adult"])||0),0):((cf&&cf.qty&&cf.qty["Adult"])||0);
   const adultQty=[...bookingProducts].reduce((t,[,cf])=>t+adultInCfg(cf),0)+[...bookingAddons].reduce((t,[,cf])=>t+adultInCfg(cf),0);
@@ -3532,11 +3555,12 @@ function bookingForm(editing=false){
   const summary=`<aside class="booking-summary"><div class="booking-summary-head">Order summary${cartRows.length?` <span class="booking-summary-count">${cartRows.length} item${cartRows.length===1?"":"s"}</span>`:""}</div><div class="booking-summary-body">
     ${cartRows.length?cartRows.join(""):`<div class="pos-empty">Nothing added yet.<br>Pick a product or program to begin.</div>`}
     <div class="booking-discount"><input class="inp mono" id="bookingDiscountCode" placeholder="Discount code" value="${escAttr(bookingDiscountCode)}"><button class="btn" data-apply-book-discount="1">Apply</button></div>
-    ${bookingDiscountTried?`<div class="booking-discount-msg${discount?" ok":" bad"}">${discount?`✓ ${discount.n} applied — ${discount.v} off`:"Code not recognised or expired."}</div>`:""}
+    ${bookingDiscountTried?`<div class="booking-discount-msg${discount?" ok":" bad"}">${discount?`✓ ${codeLabel(discount)} applied — ${discount.v} off`:"Code not recognised or expired."}</div>`:""}
     <div class="booking-summary-row"><span>Subtotal</span><span>${money(subtotal)}</span></div>
-    ${discAmt?`<div class="booking-summary-row" style="color:var(--ok)"><span>${discount.v} discount applied</span><span>− ${money(discAmt)}</span></div>`:""}
+    ${autoDiscs.map(x=>`<div class="booking-summary-row" style="color:var(--ok)"><span>${x.label} <span class="q" style="margin-left:2px">auto</span> · ${x.v}</span><span>− ${money(x.amount)}</span></div>`).join("")}
+    ${discount?`<div class="booking-summary-row" style="color:var(--ok)"><span>${codeLabel(discount)} · ${discount.v} off</span><span>− ${money(codeDiscAmt)}</span></div>`:""}
     ${addonDiscountAmt?`<div class="booking-summary-row" style="color:var(--amber)"><span>★ ${member.tier} Add-on Discount (${addonDiscountPct}%)</span><span>− ${money(addonDiscountAmt)}</span></div>`:""}
-    ${(discAmt||addonDiscountAmt)?`<div class="booking-summary-row" style="font-weight:600"><span>Net amount</span><span>${money(subtotal-discAmt-addonDiscountAmt)}</span></div>`:""}
+    ${(discAmt||addonDiscountAmt)?`<div class="booking-summary-row" style="font-weight:600"><span>Net amount</span><span>${money(Math.max(0,subtotal-discAmt-addonDiscountAmt))}</span></div>`:""}
     <div class="booking-summary-row"><span>GST 18%</span><span>${money(gst)}</span></div>
     <div class="booking-summary-total"><span>Total due</span><span>${money(grand)}</span></div>
   </div>${summaryPay}</aside>`;
@@ -4225,7 +4249,7 @@ function recalcBookingSummary(showMessage=false){
   const inputs=[...document.querySelectorAll("[data-bookqty]")];
   const subtotal=inputs.reduce((sum,input)=>sum+(bookingQtyValue(input)*(+input.dataset.unit||0)),0);
   const code=bookingDiscountCode.trim().toUpperCase();
-  const discount=DISCOUNTS.find(d=>d.status==="Approved"&&(d.cond||[]).some(c=>String(c.code||"").toUpperCase()===code));
+  const discount=code?DISCOUNTS.find(d=>d.status==="Approved"&&!applyInfo(d).auto&&(String(d.n||"").toUpperCase()===code||(d.cond||[]).some(c=>String(c.code||"").toUpperCase()===code)||(isSeries(d)&&code.startsWith(String(d.series.prefix||"").toUpperCase())&&(()=>{const n=parseInt(code.replace(/\D/g,""),10);return !isNaN(n)&&n>=+d.series.from&&n<=+d.series.to;})()))):null;
   let amount=0;
   if(discount){ amount=String(discount.v).includes("%")?subtotal*(parseFloat(discount.v)||0)/100:Math.min(subtotal,parseFloat(String(discount.v).replace(/[^0-9.]/g,""))||0); }
   const subtotalEl=document.getElementById("bookingSubtotal"), discountEl=document.getElementById("bookingDiscountAmount"), totalEl=document.getElementById("bookingTotal"), msg=document.getElementById("bookingDiscountMessage");
