@@ -659,6 +659,65 @@ tbody tr[aria-selected="true"] td:first-child{box-shadow:inset 2px 0 0 var(--blu
 .confirm-actions{display:flex;justify-content:flex-end;gap:8px}
 .btn-danger{border:1px solid #E8C4C9;background:#FBEFF1;color:var(--stop)}
 .btn-danger:hover{background:#F7D9DD;border-color:#E8C4C9}
+
+/* ---- reception check-in / out ---- */
+.scan-stage{display:grid;grid-template-columns:minmax(0,400px) minmax(0,1fr);gap:18px;align-items:start}
+@media (max-width:900px){.scan-stage{grid-template-columns:minmax(0,1fr)}}
+.scanner{background:#16191B;border:1px solid #2C3134;border-radius:10px;padding:16px}
+.scanner-view{position:relative;aspect-ratio:1/1;border-radius:8px;background:radial-gradient(130% 130% at 50% 0%,#20262c,#0e1114);overflow:hidden;display:flex;align-items:center;justify-content:center}
+.scan-brackets{position:absolute;inset:22px}
+.scan-brackets::before,.scan-brackets::after{content:"";position:absolute;width:36px;height:36px;border:3px solid rgba(120,190,255,.85)}
+.scan-brackets::before{left:0;top:0;border-right:0;border-bottom:0;border-radius:6px 0 0 0}
+.scan-brackets::after{right:0;bottom:0;border-left:0;border-top:0;border-radius:0 0 6px 0}
+.scanline{position:absolute;left:22px;right:22px;top:24px;height:2px;background:linear-gradient(90deg,transparent,#6cc0ff,transparent);box-shadow:0 0 12px 2px rgba(108,192,255,.55);animation:scanmove 2.4s ease-in-out infinite}
+@keyframes scanmove{0%{top:24px}50%{top:calc(100% - 24px)}100%{top:24px}}
+.scan-hint{position:relative;z-index:2;max-width:190px;text-align:center;font-size:12px;color:#9fb4c4;line-height:1.5}
+.scanner-status{display:flex;align-items:center;gap:8px;margin-top:12px;font-size:11px;font-family:var(--mono);color:#9aa6ad}
+.dot-live{width:8px;height:8px;border-radius:50%;background:#3fd07a;flex:none;animation:livepulse 1.6s infinite}
+@keyframes livepulse{0%{box-shadow:0 0 0 0 rgba(63,208,122,.5)}70%{box-shadow:0 0 0 7px rgba(63,208,122,0)}100%{box-shadow:0 0 0 0 rgba(63,208,122,0)}}
+@media (prefers-reduced-motion:reduce){.scanline{animation:none;top:50%}.dot-live{animation:none}}
+.ci-chips{display:flex;flex-direction:column;gap:8px;padding:14px 16px}
+.ci-chip{display:flex;align-items:center;gap:12px;padding:9px 12px;border:1px solid var(--rule);border-radius:8px;background:#fff;text-align:left;width:100%;transition:border-color .12s,background .12s}
+.ci-chip:hover{border-color:var(--blue-line);background:#FAFBFF}
+.ci-chip-info{display:flex;flex-direction:column;gap:1px;min-width:0}
+.ci-chip-info b{font-size:13px}
+.ci-chip-info .mono{font-family:var(--mono);font-size:10.5px;color:var(--ink2)}
+.ci-chip-info .muted{font-size:11px}
+.ci-chip .pill{margin-left:auto;flex:none}
+.qr{width:40px;height:40px;flex:none;color:var(--ink);background:#fff;border:1px solid var(--rule);border-radius:5px;padding:3px;box-sizing:border-box}
+.qr rect{fill:currentColor}
+.qr-sm{width:26px;height:26px;padding:2px}
+.qr-lg{width:76px;height:76px;padding:5px;border-radius:8px}
+.pill-warn{color:var(--warn);border-color:var(--amber-line);background:var(--amber-wash)}
+.pill-off{color:var(--ink3);border-color:var(--rule2);background:#F4F5F2}
+.ci-scanned{display:grid;grid-template-columns:minmax(0,1fr) 288px;gap:18px;align-items:start}
+@media (max-width:900px){.ci-scanned{grid-template-columns:minmax(0,1fr)}}
+.ci-banner{display:flex;align-items:center;gap:12px;padding:10px 14px;border-radius:8px;margin-bottom:16px;font-size:13px;font-weight:500;border:1px solid}
+.ci-banner .qr{border:0;background:transparent;padding:0}
+.ci-banner .mono{font-family:var(--mono);font-size:12px;font-weight:400}
+.ci-banner-ok{background:var(--teal-wash);border-color:var(--teal-line);color:var(--ok)}
+.ci-banner-off{background:#F4F5F2;border-color:var(--rule2);color:var(--ink2)}
+.ci-visitor{display:flex;align-items:center;gap:14px}
+.ci-visitor h2{font-size:19px;margin:0;letter-spacing:-.01em}
+.ci-visitor .muted{font-size:12.5px}
+.ci-kv{display:grid;grid-template-columns:118px minmax(0,1fr);gap:7px 14px;font-size:12.5px;padding:14px 16px;align-items:center}
+.ci-kv .k{color:var(--ink3)}
+.ci-kv .v{color:var(--ink);font-weight:500}
+.ci-kv .mono{font-family:var(--mono)}
+.ci-att{padding:2px 16px 12px}
+.ci-att-row{display:flex;align-items:center;gap:10px;font-size:12.5px;padding:8px 0;border-top:1px solid var(--rule)}
+.ci-att-row:first-child{border-top:0}
+.ci-att-cat{font-family:var(--mono);font-size:10.5px;color:var(--ink2);margin-left:auto;text-align:right}
+.ci-action{display:flex;flex-direction:column;gap:8px}
+.ci-action .btn{display:flex;align-items:center;justify-content:center;width:100%;font-size:14px}
+.btn-lg{padding:11px;font-size:14px;font-weight:600}
+.btn-out{background:var(--warn);border-color:var(--warn);color:#fff}
+.btn-out:hover{background:#9c5a0c;border-color:#9c5a0c}
+.ci-status-big{text-align:center;padding:6px 8px 10px}
+.ci-status-big b{font-size:15px}
+.ci-tick{width:52px;height:52px;margin:0 auto 10px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:var(--teal-wash);color:var(--ok)}
+.ci-tick svg{width:26px;height:26px}
+.ci-time{font-family:var(--mono);font-size:11.5px;color:var(--ink2);margin-top:3px}
 </style>
 </head>
 <body>
@@ -699,14 +758,14 @@ const GROUPS = [
   {name:"5 · Checkout & site", color:"#6B3FC4"},
   {name:"6 · Membership", color:"#8A5A00"}
 ];
-const ORDER = ["categories","pools","tax","hsn","progcats","products","programs","blackout","bookings",
+const ORDER = ["categories","pools","tax","hsn","progcats","products","programs","blackout","bookings","checkin",
                "discounts","affiliates","paymodes","sources","scripts","tiers","members"];
 const PHASE = {categories:0,pools:0,tax:0,hsn:0,progcats:0, products:1, programs:1, blackout:2,
                discounts:3,affiliates:3,
-               paymodes:4,sources:4,scripts:4,bookings:2,
+               paymodes:4,sources:4,scripts:4,bookings:2,checkin:2,
                tiers:5,members:5};
 const PREREQ = {
-  categories:[], pools:[], tax:[], hsn:[], paymodes:[], sources:[], scripts:[], progcats:[], bookings:["Products & add-ons"],
+  categories:[], pools:[], tax:[], hsn:[], paymodes:[], sources:[], scripts:[], progcats:[], bookings:["Products & add-ons"], checkin:["Products & add-ons"],
   products:["Visitor categories","Inventory pools","Tax rates","HSN / SAC codes"],
   programs:["Program categories","Visitor categories","Tax rates","HSN / SAC codes"],
   events:["Program categories","Visitor categories","Tax rates","HSN / SAC codes"],
@@ -1050,7 +1109,8 @@ const M = {
     d:"The membership plans on sale — Silver, Gold, Platinum and any others. Each sets its visit count (limited or unlimited), validity, price and the discounts a member earns.",view:"tiers"},
   members:{g:5,n:"Members",owner:"Hasmukh · Sales & Marketing",perm:"membership.manage",src:"Scope §10",q:0,
     d:"Everyone holding a membership. A visit admits the registered adult + child pair; only that pair may redeem. View purchase and redemption history, renew, and record redemptions.",view:"members"},
-  dashboard:{n:"Dashboard",owner:"Visitor Experience",perm:"dashboard.view",view:"dashboard"}
+  dashboard:{n:"Dashboard",owner:"Visitor Experience",perm:"dashboard.view",view:"dashboard"},
+  checkin:{n:"Check-in / out",owner:"Reception",perm:"reception.checkin",view:"checkin"}
 };
 ORDER.forEach((k,i)=>{ M[k].g = PHASE[k]; M[k].step = i+1; });
 
@@ -2349,7 +2409,11 @@ let current = "dashboard", selP = 0, tab = "list", sub = "details", pType = "pro
     bookingProducts = new Map(), bookingAddons = new Map(), bookingPrograms = new Map(), bookingPay = "Cash", bookingTab = "products",
     bookingCustomer = {name:"",phone:"",email:"",member:null,location:""}, bookingCustomerLinked = -1, bookingStep = 1, bookingOpenItem = null, bookingCalMonth = null, bookingCancelConfirm = false, bookingDiscountTried = false, bookingStep1Tried = false,
     selD = 0, dsub = "summary", editCond = -1, condDraft = null, draftDiscount = null, condStep = 0, condItemsOpen = false,
-    selMember = 0, selTier = 0, msub = "summary", redeemStep = 1, redeemVisits = 1;
+    selMember = 0, selTier = 0, msub = "summary", redeemStep = 1, redeemVisits = 1,
+    checkinRef = null;   // reception: booking ref currently on the scanner (null = waiting for a scan)
+/* Check-in / check-out log, keyed by booking ref → {inTime, outTime}. Persists across renders so
+   re-scanning a ticket reflects its real state (expected → checked in → checked out). In-memory only. */
+const CHECKINS = {};
 
 /* Open items are counted from what each screen actually renders, so the
    sidebar cannot say a master has questions after they have been answered. */
@@ -2378,6 +2442,16 @@ function head(){
     if(histBtn) histBtn.style.display="none";
     $("#hMeta").innerHTML=`<span class="chip"><span class="chip-k">Today</span><b>${DASH.today}</b></span>
       <span class="chip"><span class="chip-k">Location</span><b>Museum of Solutions</b></span>`;
+    return;
+  }
+  if(current==="checkin"){
+    $("#crumbGrp").textContent="Calendar";
+    $("#hTitle").textContent="Check-in / out";
+    $("#hDesc").textContent="";
+    if(addBtn) addBtn.style.display="none";
+    if(histBtn) histBtn.style.display="none";
+    $("#hMeta").innerHTML=`<span class="chip"><span class="chip-k">Scanner</span><b>Reception desk</b></span>
+      <span class="chip"><span class="chip-k">Today</span><b>${DASH.today}</b></span>`;
     return;
   }
   if(addBtn) addBtn.style.display="";
@@ -2660,7 +2734,92 @@ const DASH = {
   schoolsToday:2, schoolsMonth:9        // school group bookings
 };
 
+/* Reception check-in helpers. Real Date() is fine in the page runtime. */
+function nowTime(){ return new Date().toLocaleTimeString([], {hour:"2-digit", minute:"2-digit"}); }
+/* Decorative QR-like glyph — a deterministic pattern from the ticket ref (not a real scannable QR). */
+function fauxQR(seed, cls){
+  seed=String(seed); let h=0; for(let i=0;i<seed.length;i++) h=((h*31)+seed.charCodeAt(i))>>>0;
+  const N=7; let rects="";
+  for(let i=0;i<N*N;i++){ h=(h*1103515245+12345)>>>0; const x=i%N, y=(i/N|0);
+    const finder=(x<2&&y<2)||(x>N-3&&y<2)||(x<2&&y>N-3);   // solid squares in three corners, like a real QR
+    if(finder||((h>>>16)&1)) rects+=`<rect x="${x}" y="${y}" width="1" height="1"/>`; }
+  return `<svg class="qr${cls?" "+cls:""}" viewBox="0 0 ${N} ${N}" shape-rendering="crispEdges" aria-hidden="true">${rects}</svg>`;
+}
+
 const VIEWS = {
+  checkin(){
+    const TICK='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>';
+    const b = checkinRef ? BOOKINGS.find(x=>x.ref===checkinRef) : null;
+    const stOf = ref => { const r=CHECKINS[ref]; return r&&r.outTime ? "out" : r&&r.inTime ? "in" : "new"; };
+
+    // ---- WAITING: live scanner + tappable expected bookings (simulates a scan) ----
+    if(!b){
+      const cards = BOOKINGS.map(x=>{
+        const s=stOf(x.ref);
+        const pill = s==="in" ? '<span class="pill pill-ok"><i class="dot"></i>Checked in</span>'
+                   : s==="out" ? '<span class="pill pill-off">Checked out</span>'
+                   : '<span class="pill pill-warn">Expected</span>';
+        return `<button class="ci-chip" data-scan="${escAttr(x.ref)}">${fauxQR(x.ref)}
+          <span class="ci-chip-info"><b>${x.customer}</b><span class="mono">${x.ref}</span><span class="muted">${x.product} · ${x.date}</span></span>
+          ${pill}</button>`;
+      }).join("");
+      return `<div class="scan-stage">
+        <div class="scanner">
+          <div class="scanner-view"><div class="scan-brackets"></div><div class="scanline"></div>
+            <div class="scan-hint">Point the visitor's QR code at the scanner</div></div>
+          <div class="scanner-status"><span class="dot-live"></span> Scanner connected · Reception desk · waiting for a ticket…</div>
+        </div>
+        <div class="card">
+          <div class="card-head"><span class="card-title">Expected visitors</span><span class="card-note">Wireframe demo — tap a ticket to simulate a scan</span></div>
+          <div class="ci-chips">${cards}</div>
+        </div>
+      </div>`;
+    }
+
+    // ---- SCANNED: ticket details + reception action ----
+    const rec = CHECKINS[b.ref]||{};
+    const phase = rec.outTime ? "out" : rec.inTime ? "in" : "ready";
+    const kv = (k,v)=>v?`<span class="k">${k}</span><span class="v">${v}</span>`:"";
+    const booked = `<div class="ci-kv">
+        ${kv("Booked",`<b>${b.product}</b>`)}${kv("Date",b.date)}${kv("Time slot",b.slot)}
+        ${kv("Tickets",b.tickets)}${kv("Party size",`${b.heads} ${b.heads===1?"person":"people"}`)}
+        ${kv("Total",money(b.total))}
+        ${kv("Payment",`<span class="pill pill-ok"><i class="dot"></i>Paid${b.paymentMode?" · "+b.paymentMode:""}</span>`)}
+      </div>`;
+    const visitor = `<div class="ci-kv">
+        ${kv("Booking ref",`<span class="mono">${b.ref}</span>`)}${kv("Phone",`<span class="mono">${b.phone||"—"}</span>`)}
+        ${kv("Email",b.email||"")}${kv("Location",b.location||"")}
+      </div>`;
+    const att = (b.attendees||[]).map(a=>`<div class="ci-att-row"><span>${a.name||'<span class="muted">Unnamed</span>'}</span><span class="ci-att-cat">${a.category}${a.dob?" · DOB "+a.dob:""}</span></div>`).join("");
+
+    let action;
+    if(phase==="ready"){
+      action = `<button class="btn btn-primary btn-lg" data-checkin>Check in ${b.heads} ${b.heads===1?"visitor":"visitors"}</button>
+        <button class="btn" data-scan-reset>Scan another ticket</button>`;
+    } else if(phase==="in"){
+      action = `<div class="ci-status-big"><div class="ci-tick">${TICK}</div><b>Checked in</b><div class="ci-time">at ${rec.inTime}</div></div>
+        <button class="btn btn-out btn-lg" data-checkout>Check out</button>
+        <button class="btn" data-scan-reset>Scan another ticket</button>`;
+    } else {
+      action = `<div class="ci-status-big"><div class="ci-tick">${TICK}</div><b>Visit complete</b><div class="ci-time">In ${rec.inTime} · Out ${rec.outTime}</div></div>
+        <button class="btn btn-primary btn-lg" data-scan-reset>Scan next ticket</button>`;
+    }
+
+    const banner = phase==="ready" ? ["ci-banner-ok","Ticket scanned — verify the visitor, then check in"]
+                 : phase==="in" ? ["ci-banner-ok","Visitor checked in"]
+                 : ["ci-banner-off","Visit completed"];
+
+    return `<div class="ci-banner ${banner[0]}">${fauxQR(b.ref,"qr-sm")}<span>${banner[1]}</span><span class="mono" style="margin-left:auto">${b.ref}</span></div>
+      <div class="ci-scanned">
+        <div>
+          <div class="ci-visitor">${fauxQR(b.ref,"qr-lg")}<div><h2>${b.customer}</h2><div class="muted">${b.tickets}</div></div></div>
+          <div class="card" style="margin-top:14px"><div class="card-head"><span class="card-title">Booking</span></div>${booked}</div>
+          <div class="card"><div class="card-head"><span class="card-title">Visitor</span></div>${visitor}</div>
+          <div class="card"><div class="card-head"><span class="card-title">Attendees</span><span class="card-note">${b.heads} in party</span></div><div class="ci-att">${att||'<div class="muted" style="padding:8px 0">No attendee names on file</div>'}</div></div>
+        </div>
+        <div class="card"><div class="card-head"><span class="card-title">Reception</span></div><div class="card-body ci-action">${action}</div></div>
+      </div>`;
+  },
   dashboard(){
     const pill=(cls,txt)=>`<span class="pill ${cls}"><i class="dot"></i>${txt}</span>`;
     const availPill=(left,cap)=>{ const st=availState(left,cap); return st?`<span class="pill pill-${st.key==="ok"?"ok":"off"}">${st.key==="ok"?'<i class="dot"></i>':""}${st.label}</span>`:'<span class="muted">—</span>'; };
@@ -4267,6 +4426,12 @@ document.addEventListener("click",e=>{
   const t=e.target.closest("[data-tab]");
   if(t){ tab=t.dataset.tab; if(tab==="new"&&current==="bookings") resetBooking(); if(tab==="new"&&current==="programs"){progKind=progFormat(progCat)==="multi"?"camp":"event";eventCats=new Set();} if(tab==="new"&&current==="events") eventCats=new Set(); if(tab==="new"&&current==="discounts") draftDiscount=null; if(tab==="new"&&(current==="products"||current==="programs")) prodBuildingPool=false; addOpen=null; render(); $(".stage").scrollTop=0; return; }
   if(e.target.closest("#hAdd")){ tab="new"; if(current==="bookings") resetBooking(); if(current==="events") eventCats=new Set(); if(current==="discounts") draftDiscount=null; if(current==="products"||current==="programs") prodBuildingPool=false; addOpen=null; render(); $(".stage").scrollTop=0; return; }
+  // ---- reception check-in / out ----
+  const scan=e.target.closest("[data-scan]");
+  if(scan){ checkinRef=scan.dataset.scan; render(); $(".stage").scrollTop=0; return; }
+  if(e.target.closest("[data-scan-reset]")){ checkinRef=null; render(); $(".stage").scrollTop=0; return; }
+  if(e.target.closest("[data-checkin]")){ if(checkinRef){ CHECKINS[checkinRef]={inTime:nowTime(),outTime:null}; } render(); return; }
+  if(e.target.closest("[data-checkout]")){ if(checkinRef&&CHECKINS[checkinRef]){ CHECKINS[checkinRef].outTime=nowTime(); } render(); return; }
   if(e.target.closest("[data-savediscount]")){ saveDiscount(); return; }
   const ctype=e.target.closest&&e.target.closest("[data-codetype]");
   if(ctype){ syncDiscountForm(); curDiscount().codeType=ctype.dataset.codetype; render(); return; }
