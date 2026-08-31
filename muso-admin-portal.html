@@ -4066,7 +4066,8 @@ function memberForm(editing){
         +fld("Age",`<input class="inp mono" id="age_mchild" required aria-required="true" value="${escAttr(m.childDob?ageLabel(m.childDob):(m.childAge||""))}" placeholder="Years" aria-live="polite">`,"Required. Auto-filled from date of birth; you can also type it.",true))}
       ${sec("Contact",
         fld("Phone",`<input class="inp mono" type="tel" inputmode="tel" value="${escAttr(m.phone||"")}" placeholder="10-digit mobile">`,"Used for OTP at redemption and for confirmations.",true)
-        +fld("Email",`<input class="inp" type="email" value="${escAttr(m.email||"")}" placeholder="name@example.com">`,"For confirmations and to view history on login.",true))}
+        +fld("Email",`<input class="inp" type="email" value="${escAttr(m.email||"")}" placeholder="name@example.com">`,"For confirmations and to view history on login.",true)
+        +fld("Location",`<input class="inp" value="${escAttr(m.location||"")}" placeholder="City / area — e.g. Andheri West, Mumbai">`,"The member's home city or area.",false,true))}
     </div>
     <div class="form-foot"><span></span><button class="btn" data-tab="list">Cancel</button><button class="btn btn-primary" data-tab="list">${editing?"Save changes":"Create member"}</button></div>
   </div></div>`;
