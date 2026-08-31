@@ -723,6 +723,13 @@ tbody tr[aria-selected="true"] td:first-child{box-shadow:inset 2px 0 0 var(--blu
 .ci-tick{width:52px;height:52px;margin:0 auto 10px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:var(--teal-wash);color:var(--ok)}
 .ci-tick svg{width:26px;height:26px}
 .ci-time{font-family:var(--mono);font-size:11.5px;color:var(--ink2);margin-top:3px}
+
+/* booking: one combination (date + one time-slot + tickets) per row; "Add Ticket" appends another */
+.combo-block{border:1px solid var(--rule2);border-radius:9px;padding:12px 13px;margin:0 0 10px;background:#fff}
+.combo-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.combo-title{font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--blue)}
+.pos-item>.rep-add{margin-top:2px}
+.cal-slot-radio{border-radius:50%}
 </style>
 </head>
 <body>
@@ -3455,20 +3462,19 @@ function bookingForm(editing=false){
   const programs=PROGRAMS();
   const PCATS=CATS.map(c=>c.name); // programs are priced per seat; ask by the same visitor categories
   // resolvers
-  const slotOf=(idx,cfg)=>{const p=P[idx];return p.slots.find(s=>s.n===cfg.slot)||p.slots[0];};
-  const addonSlotOf=(code,cfg)=>{const a=P.find(x=>x.c===code);return a.slots.find(s=>s.n===cfg.slot)||a.slots[0];};
+  // Each cart entry now holds an array of independent combinations (`cfg.combos`). A product/add-on
+  // combo is {date, slot, qty, redeem}; a program combo is {batch, qty}. These helpers iterate combos.
+  const combosOf=cfg=>(cfg&&cfg.combos)||[];
+  const slotFor=(list,combo)=>(list||[]).find(s=>s.n===combo.slot)||(list||[])[0]||{};
+  const priceIn=(s,c)=>(s&&s.price&&s.price[c])||0;
   const progRec=key=>{const [k,idx]=key.split(":");return k==="event"?EVENTS[+idx]:WORKSHOPS[+idx];};
-  const progBatchOf=(key,cfg)=>{const r=progRec(key);return r.batches[cfg.batch||0]||r.batches[0]||{};};
-  // products/add-ons carry qty per selected slot (cfg.slots); programs stay flat (cfg.qty) — sum either shape
-  const qtySum=cfg=>{
-    if(cfg&&cfg.slots) return Object.values(cfg.slots).reduce((a,sc)=>a+Object.values(sc.qty||{}).reduce((x,n)=>x+ +n,0)+Object.values(sc.redeem||{}).reduce((x,n)=>x+ +n,0),0);
-    return Object.values((cfg&&cfg.qty)||{}).reduce((a,n)=>a+ +n,0)+Object.values((cfg&&cfg.redeem)||{}).reduce((a,n)=>a+ +n,0);
-  };
-  // line totals — a product/add-on cart entry now holds a *set* of selected slots (each with its
-  // own qty/redeem), so these sum across every selected slot rather than a single one.
-  const prodLine=(i,cfg)=>{const p=P[i];return Object.entries(cfg.slots||{}).reduce((t,[sn,sc])=>{const s=p.slots.find(x=>x.n===sn)||p.slots[0];return t+p.cats.reduce((tt,c)=>tt+((sc.qty&&sc.qty[c])||0)*(s.price[c]||0),0);},0);};
-  const addonLine=(code,cfg)=>{const a=P.find(x=>x.c===code);return Object.entries(cfg.slots||{}).reduce((t,[sn,sc])=>{const s=a.slots.find(x=>x.n===sn)||a.slots[0];return t+a.cats.reduce((tt,c)=>tt+((sc.qty&&sc.qty[c])||0)*(s.price[c]||0),0);},0);};
-  const progLine=(key,cfg)=>{const b=progBatchOf(key,cfg);return PCATS.reduce((t,c)=>t+((cfg.qty&&cfg.qty[c])||0)*(b.price||0),0);};
+  const batchFor=(key,combo)=>{const r=progRec(key),bs=(r&&r.batches)||[];return bs[combo.batch||0]||bs[0]||{};};
+  const comboSum=combo=>Object.values(combo.qty||{}).reduce((x,n)=>x+ +n,0)+Object.values(combo.redeem||{}).reduce((x,n)=>x+ +n,0);
+  const qtySum=cfg=>combosOf(cfg).reduce((a,c)=>a+comboSum(c),0);
+  // line totals — sum across every combination of the entry
+  const prodLine=(i,cfg)=>{const p=P[i];return combosOf(cfg).reduce((t,combo)=>{const s=slotFor(p.slots,combo);return t+p.cats.reduce((tt,c)=>tt+((combo.qty&&combo.qty[c])||0)*priceIn(s,c),0);},0);};
+  const addonLine=(code,cfg)=>{const a=P.find(x=>x.c===code);return combosOf(cfg).reduce((t,combo)=>{const s=slotFor(a.slots,combo);return t+a.cats.reduce((tt,c)=>tt+((combo.qty&&combo.qty[c])||0)*priceIn(s,c),0);},0);};
+  const progLine=(key,cfg)=>combosOf(cfg).reduce((t,combo)=>{const b=batchFor(key,combo);return t+PCATS.reduce((tt,c)=>tt+((combo.qty&&combo.qty[c])||0)*(b.price||0),0);},0);
   // ---- membership: staff explicitly allocates each Product ticket to either "Redeem from
   // membership" (free, drawn from the shared pass pool) or "Pay for tickets" (full price) — no
   // automatic first-come allocation. Add-ons stay paid but get the member's add-on discount rate
@@ -3482,14 +3488,14 @@ function bookingForm(editing=false){
   const redeemVisit=!!(member&&hasTour&&bookingRedeemVisit);
   const redeemAdult=!!(redeemVisit&&bookingRedeemAdult);
   const passesRemainingBefore=member?Math.max(0,member.passesTotal-member.passesUsed):0;
-  const productRedemption=new Map(); // "i|slotName|category" -> {paid,amount}
+  const productRedemption=new Map(); // "i|comboIdx|category" -> {paid,amount}
   [...bookingProducts].forEach(([i,cfg])=>{const p=P[i];
-    Object.entries(cfg.slots||{}).forEach(([sn,sc])=>{
-      const s=p.slots.find(x=>x.n===sn)||p.slots[0];
+    combosOf(cfg).forEach((combo,ci)=>{
+      const s=slotFor(p.slots,combo);
       p.cats.forEach(c=>{
-        const paid=(sc.qty&&sc.qty[c])||0;
+        const paid=(combo.qty&&combo.qty[c])||0;
         if(!paid) return;
-        productRedemption.set(i+"|"+sn+"|"+c,{paid,amount:paid*(s.price[c]||0)});
+        productRedemption.set(i+"|"+ci+"|"+c,{paid,amount:paid*priceIn(s,c)});
       });
     });
   });
@@ -3506,11 +3512,11 @@ function bookingForm(editing=false){
   const hasItems=productInCart||[...bookingAddons.values()].some(cfg=>qtySum(cfg)>0)||[...bookingPrograms.values()].some(cfg=>qtySum(cfg)>0);
   // ---- discounts: a typed code (any code, not just IND50) + auto-applied ones by cart condition ----
   // per-category qty across a cart entry (products/add-ons store qty per selected slot; programs are flat)
-  const catQtys=cf=>{ const out={}; if(cf&&cf.slots){ Object.values(cf.slots).forEach(sc=>{ Object.entries(sc.qty||{}).forEach(([c,n])=>{ out[c]=(out[c]||0)+(+n||0); }); }); } else if(cf&&cf.qty){ Object.entries(cf.qty).forEach(([c,n])=>{ out[c]=(out[c]||0)+(+n||0); }); } return out; };
+  const catQtys=cf=>{ const out={}; combosOf(cf).forEach(combo=>{ Object.entries(combo.qty||{}).forEach(([c,n])=>{ out[c]=(out[c]||0)+(+n||0); }); }); return out; };
   const anyQty=cf=>Object.values(catQtys(cf)).reduce((a,n)=>a+n,0)>0;
   const hasProduct=[...bookingProducts.values()].some(anyQty);
   const hasAddon=[...bookingAddons.values()].some(anyQty);
-  const hasProgram=[...bookingPrograms.values()].some(cf=>Object.values((cf&&cf.qty)||{}).reduce((a,n)=>a+(+n||0),0)>0);
+  const hasProgram=[...bookingPrograms.values()].some(anyQty);
   let maxCatQty=0; [...bookingProducts.values(),...bookingAddons.values()].forEach(cf=>{ Object.values(catQtys(cf)).forEach(n=>{ if(n>maxCatQty) maxCatQty=n; }); });
   const pctOf=(v,base)=>String(v).includes("%")?base*(parseFloat(v)||0)/100:Math.min(base,parseFloat(String(v).replace(/[^0-9.]/g,""))||0);
   // typed code — match any Approved code-based discount by d.n, cond code, or series voucher
@@ -3534,16 +3540,18 @@ function bookingForm(editing=false){
   const gst=Math.round(Math.max(0,subtotal-discAmt-addonDiscountAmt)*0.18);
   const grand=Math.max(0,subtotal-discAmt-addonDiscountAmt)+gst;
   const section=(title,body)=>`<section class="form-sec"><div class="form-sec-head"><span class="form-sec-title">${title}</span></div><div class="form-sec-body">${body}</div></section>`;
-  const adultInCfg=cf=>cf&&cf.slots?Object.values(cf.slots).reduce((a,sc)=>a+((sc.qty&&sc.qty["Adult"])||0),0):((cf&&cf.qty&&cf.qty["Adult"])||0);
+  const adultInCfg=cf=>combosOf(cf).reduce((a,combo)=>a+((combo.qty&&combo.qty["Adult"])||0),0);
   const adultQty=[...bookingProducts].reduce((t,[,cf])=>t+adultInCfg(cf),0)+[...bookingAddons].reduce((t,[,cf])=>t+adultInCfg(cf),0)+(redeemAdult?1:0);
   const step=(pfx,cat,q)=>{ const cd=CATS.find(c=>c.name===cat); const needsAdult=cd&&cd.req==="Adult"; const warn=needsAdult&&q.n>0&&adultQty===0;
     return `<div class="pos-qty-row"><span class="n">${cat}</span><span class="p">${money(q.price)} each</span><span class="pos-step"><button data-book-qty="${pfx}|${escAttr(cat)}|-1" ${q.n===0?"disabled":""}>−</button><span>${q.n}</span><button data-book-qty="${pfx}|${escAttr(cat)}|1">+</button></span></div>${needsAdult?`<div class="child-req${warn?" child-req-warn":""}">${warn?"⚠ ":""}Purchase of an adult ticket is mandatory for this age group.</div>`:""}`; };
   const slotBadge=(s)=>{const left=slotLeft(s),st=availState(left,s.cap);if(!st)return"";const cls=st.key==="sold"?" slot-sold":st.key==="low"?" slot-low":"";return `<span class="slot-avail${cls}">${st.label} · ${left}/${s.cap}</span>`;};
   // ---- date-driven slot picker: calendar on the left, that day's slots on the right ----
-  const slotBar=(pfx,list,cfg)=>{
-    const selDate=cfg.date||defaultDateFor(list);
-    const base=currentCalBaseDate(); // slotBar only renders for the currently-open item
-    const y=base.getFullYear(),m=base.getMonth();
+  // one combination's date + time-slot picker: calendar on the left, that day's slots (RADIO — pick
+  // one) on the right. pfx = "kind|id|comboIdx"; each combo tracks its own visible month (combo.calMonth).
+  const comboPicker=(pfx,list,combo)=>{
+    const selDate=combo.date||defaultDateFor(list);
+    const anchor=combo.calMonth||parseDMY(selDate)||new Date();
+    const y=anchor.getFullYear(),m=anchor.getMonth();
     const first=new Date(y,m,1),startBlank=dayIndexMon0(first),daysInMonth=new Date(y,m+1,0).getDate();
     const cells=[]; for(let i=0;i<startBlank;i++) cells.push(null); for(let d=1;d<=daysInMonth;d++) cells.push(new Date(y,m,d));
     const calBody=cells.map(d=>{
@@ -3555,26 +3563,23 @@ function bookingForm(editing=false){
         : `<span class="${cls}">${d.getDate()}</span>`;
     }).join("");
     const cal=`<div class="cal-cal">
-      <div class="cal-head"><button class="cal-nav" data-book-cal-nav="-1" aria-label="Previous month">‹</button><span>${MONTHS[m]} ${y}</span><button class="cal-nav" data-book-cal-nav="1" aria-label="Next month">›</button></div>
+      <div class="cal-head"><button class="cal-nav" data-book-cal-nav="${pfx}|-1" aria-label="Previous month">‹</button><span>${MONTHS[m]} ${y}</span><button class="cal-nav" data-book-cal-nav="${pfx}|1" aria-label="Next month">›</button></div>
       <div class="cal-grid">${WEEKDAYS.map(w=>`<span class="cal-dow">${w}</span>`).join("")}${calBody}</div>
       <div class="cal-legend"><span><i class="cal-sw-blackout"></i>Blackout / Public Holiday</span><span><i class="cal-sw-selected"></i>Selected</span></div>
     </div>`;
     const candidates=slotsForDate(list,selDate);
     const dOf=parseDMY(selDate);
     const dayLabel=dOf?`${WEEKDAYS[dayIndexMon0(dOf)]} ${dOf.getDate()} ${MONTHS[dOf.getMonth()]}`:selDate;
-    // multi-select: any number of that day's slots can be picked at once — each ticks on/off
-    // independently instead of swapping a single selection, so one product/add-on can hold several
-    // time slots in the same order (each gets its own tickets section below).
+    // radio: exactly one slot per combination — picking a slot replaces the previous choice.
     const rows=candidates.length?candidates.map(s=>{
-      const left=slotLeft(s),sold=left<=0,checked=!!(cfg.slots&&cfg.slots[s.n]),st=availState(left,s.cap)||{key:"ok",label:"Available"};
+      const left=slotLeft(s),sold=left<=0,checked=combo.slot===s.n,st=availState(left,s.cap)||{key:"ok",label:"Available"};
       const pill=st.key==="sold"?["cal-pill-off",st.label]:st.key==="low"?["cal-pill-low",st.label]:["cal-pill-ok",st.label];
-      return `<button class="cal-slot-row${checked?" cal-slot-row-selected":""}" data-book-slot="${pfx}|${escAttr(s.n)}" role="checkbox" aria-checked="${checked}" ${sold&&!checked?"disabled":""}>
-        <div class="cal-slot-left"><span class="cal-slot-check${checked?" cal-slot-check-on":""}"></span><div class="cal-slot-main"><div class="cal-slot-time">${s.t1}–${s.t2}</div><div class="cal-slot-sub">${s.n}</div></div></div>
-        <div class="cal-slot-right"><span class="cal-pill ${pill[0]}">${pill[1]}</span><div class="cal-slot-price">${money(s.price.Adult||0)} / ticket</div>${s.cap!=null?`<div class="cal-slot-remaining">${left}/${s.cap}</div>`:""}</div>
+      return `<button class="cal-slot-row${checked?" cal-slot-row-selected":""}" data-book-slot="${pfx}|${escAttr(s.n)}" role="radio" aria-checked="${checked}" ${sold&&!checked?"disabled":""}>
+        <div class="cal-slot-left"><span class="cal-slot-check cal-slot-radio${checked?" cal-slot-check-on":""}"></span><div class="cal-slot-main"><div class="cal-slot-time">${s.t1}–${s.t2}</div><div class="cal-slot-sub">${s.n}</div></div></div>
+        <div class="cal-slot-right"><span class="cal-pill ${pill[0]}">${pill[1]}</span><div class="cal-slot-price">${money((s.price&&s.price.Adult)||0)} / ticket</div>${s.cap!=null?`<div class="cal-slot-remaining">${left}/${s.cap}</div>`:""}</div>
       </button>`;
     }).join(""):`<div class="pos-empty">${isBlackout(selDate)?"Closed — blackout date.":"No slots run on this day."}</div>`;
-    const selCount=Object.keys(cfg.slots||{}).length;
-    const list2=`<div class="cal-slots"><div class="cal-slots-head">Available Slots <small>${dayLabel} · tap to select one or more</small>${selCount?`<span class="cal-slots-count">${selCount} selected</span>`:""}</div>${rows}</div>`;
+    const list2=`<div class="cal-slots"><div class="cal-slots-head">Available Slots <small>${dayLabel} · pick one</small></div>${rows}</div>`;
     return `<div class="slot-group"><div class="cal-layout">${cal}${list2}</div></div>`;
   };
   const itemCard=(key,open,badgeQty,name,meta,disabled)=>`<div class="item-card${open?" item-card-open":""}${disabled?" item-card-disabled":""}">
@@ -3587,10 +3592,9 @@ function bookingForm(editing=false){
   // ---- PRODUCTS tab ----
   const productCards=products.map(p=>{
     const i=P.indexOf(p),key="prod|"+i,cfg=bookingProducts.get(i),open=bookingOpenItem===key;
-    const cat0=p.cats[0],curSlot=cfg?slotOf(i,cfg):firstAvailableSlot(p.slots);
-    const qtyNow=(cfg&&cfg.qty&&cfg.qty[cat0])||0,totalQty=cfg?qtySum(cfg):0;
-    const from=Math.min(...p.slots.map(s=>s.price.Adult||Infinity));
-    const meta=`${p.type==="Add-on"?"Add-on · ":""}${p.slots.length} slot${p.slots.length===1?"":"s"} · from ${money(from)}`;
+    const totalQty=cfg?qtySum(cfg):0;
+    const from=Math.min(...p.slots.map(s=>(s.price&&s.price.Adult)||Infinity));
+    const meta=`${p.type==="Add-on"?"Add-on · ":""}${p.slots.length} slot${p.slots.length===1?"":"s"} · from ${money(isFinite(from)?from:0)}`;
     return itemCard(key,open,totalQty,p.n,meta);
   }).join("");
   // A membership visit (1 Adult + 1 Child, one per day) is redeemed via the full-width checkbox box
@@ -3599,17 +3603,15 @@ function bookingForm(editing=false){
   // the "tour" ticket section — same qty steppers as before, just repeated once per selected slot,
   // each independently addressable via a "prod|i|slotName" prefix so its counts stay separate.
   const productDetails=[...bookingProducts].filter(([i])=>bookingOpenItem==="prod|"+i).map(([i,cfg])=>{
-    const p=P[i],s=slotOf(i,cfg);
-    const remaining=globalPassesRemaining();
-    const selNames=Object.keys(cfg.slots||{});
-    const slotBlocks=selNames.map(sn=>{
-      const s=p.slots.find(x=>x.n===sn)||p.slots[0], sc=cfg.slots[sn], pfx="prod|"+i+"|"+sn;
-      const payLbl=member?`<div class="pos-lbl" style="margin:0 0 11px;display:block"><div>Pay for tickets</div><div class="redeem-sub">For anyone in the group who isn't using the membership — priced for the ${s.t1}–${s.t2} slot.</div></div>`:`<div class="pos-lbl">${p.n} · tickets</div>`;
-      const payBlock=`<div class="pay-block">${payLbl}${p.cats.map(c=>step(pfx,c,{price:s.price[c]||0,n:(sc.qty&&sc.qty[c])||0})).join("")}</div>`;
-      return `<div class="pos-item-head" style="margin-top:16px"><span class="pos-item-name">${s.t1}–${s.t2} · ${s.n}</span><button class="pos-item-remove" data-book-slot="prod|${i}|${escAttr(sn)}">Remove slot</button></div>${payBlock}`;
+    const p=P[i], combos=combosOf(cfg);
+    const blocks=combos.map((combo,ci)=>{
+      const s=slotFor(p.slots,combo), pfx="prod|"+i+"|"+ci;
+      const head=`<div class="combo-head"><span class="combo-title">Ticket ${ci+1}</span>${combos.length>1?`<button class="pos-item-remove" data-book-remove-combo="prod|${i}|${ci}">Remove</button>`:""}</div>`;
+      const payLbl=member?`<div class="pos-lbl" style="margin:0 0 11px;display:block"><div>Pay for tickets</div><div class="redeem-sub">For anyone in the group who isn't using the membership — priced for the ${s.t1||""}–${s.t2||""} slot.</div></div>`:`<div class="pos-lbl">${p.n} · tickets</div>`;
+      const payBlock=`<div class="pay-block">${payLbl}${p.cats.map(c=>step(pfx,c,{price:priceIn(s,c),n:(combo.qty&&combo.qty[c])||0})).join("")}</div>`;
+      return `<div class="combo-block">${head}${comboPicker(pfx,p.slots,combo)}${payBlock}</div>`;
     }).join("");
-    const empty=selNames.length?"":`<div class="pos-empty">Select one or more slots above to add tickets.</div>`;
-    return `<div class="pos-item"><div class="pos-item-head"><span class="pos-item-name">${p.n}</span></div>${slotBar("prod|"+i,p.slots,cfg)}${slotBlocks}${empty}</div>`;
+    return `<div class="pos-item"><div class="pos-item-head"><span class="pos-item-name">${p.n}</span></div>${blocks}<button class="rep-add" data-book-add-combo="prod|${i}">+ Add Ticket</button></div>`;
   }).join("");
   // ---- membership visit box (full-width, two checkboxes) — one visit = 1 Adult + 1 Child, 1 per day ----
   const passesLeftNow=member?Math.max(0,member.passesTotal-member.passesUsed):0;
@@ -3636,20 +3638,20 @@ function bookingForm(editing=false){
   const bookableAddons=P.filter(p=>p.type==="Add-on" && p.standalone && !bookingProducts.has(P.indexOf(p)));
   const addonCards=bookableAddons.map(a=>{
     const key="addon|"+a.c,cfg=bookingAddons.get(a.c),open=bookingOpenItem===key;
-    const cat0=a.cats[0],curSlot=cfg?addonSlotOf(a.c,cfg):firstAvailableSlot(a.slots);
-    const qtyNow=(cfg&&cfg.qty&&cfg.qty[cat0])||0,totalQty=cfg?qtySum(cfg):0;
-    const meta=`Add-on · from ${money(a.slots[0].price.Adult||0)}`;
+    const totalQty=cfg?qtySum(cfg):0;
+    const meta=`Add-on · from ${money((a.slots[0]&&a.slots[0].price&&a.slots[0].price.Adult)||0)}`;
     return itemCard(key,open,totalQty,a.n,meta,!productInCart);
   }).join("");
   const addonDetails=[...bookingAddons].filter(([code])=>bookingOpenItem==="addon|"+code).map(([code,cfg])=>{
     const a=P.find(x=>x.c===code);if(!a)return"";
-    const selNames=Object.keys(cfg.slots||{});
-    const slotBlocks=selNames.map(sn=>{
-      const s=a.slots.find(x=>x.n===sn)||a.slots[0], sc=cfg.slots[sn], pfx="addon|"+code+"|"+sn;
-      return `<div class="pos-item-head" style="margin-top:16px"><span class="pos-item-name">${s.t1}–${s.t2} · ${s.n}</span><button class="pos-item-remove" data-book-slot="addon|${escAttr(code)}|${escAttr(sn)}">Remove slot</button></div><div class="pos-lbl">${a.n} · tickets</div>${a.cats.map(c=>step(pfx,c,{price:s.price[c]||0,n:(sc.qty&&sc.qty[c])||0})).join("")}`;
+    const combos=combosOf(cfg);
+    const blocks=combos.map((combo,ci)=>{
+      const s=slotFor(a.slots,combo), pfx="addon|"+code+"|"+ci;
+      const head=`<div class="combo-head"><span class="combo-title">Ticket ${ci+1}</span>${combos.length>1?`<button class="pos-item-remove" data-book-remove-combo="addon|${escAttr(code)}|${ci}">Remove</button>`:""}</div>`;
+      const payBlock=`<div class="pay-block"><div class="pos-lbl">${a.n} · tickets</div>${a.cats.map(c=>step(pfx,c,{price:priceIn(s,c),n:(combo.qty&&combo.qty[c])||0})).join("")}</div>`;
+      return `<div class="combo-block">${head}${comboPicker(pfx,a.slots,combo)}${payBlock}</div>`;
     }).join("");
-    const empty=selNames.length?"":`<div class="pos-empty">Select one or more slots above to add tickets.</div>`;
-    return `<div class="pos-item"><div class="pos-item-head"><span class="pos-item-name">${a.n}</span></div>${slotBar("addon|"+code,a.slots,cfg)}${slotBlocks}${empty}</div>`;
+    return `<div class="pos-item"><div class="pos-item-head"><span class="pos-item-name">${a.n}</span></div>${blocks}<button class="rep-add" data-book-add-combo="addon|${escAttr(code)}">+ Add Ticket</button></div>`;
   }).join("");
   const addonsTab=`${productInCart?"":'<div class="pos-lbl"><small>— add a product to the order first</small></div>'}<div class="item-cards">${addonCards}</div>${addonDetails}`;
 
@@ -3657,16 +3659,22 @@ function bookingForm(editing=false){
   const programCards=programs.map(p=>{
     const progKey=p.kind+":"+p.idx,key="prog|"+progKey,cfg=bookingPrograms.get(progKey),open=bookingOpenItem===key;
     const r=p.rec,batches=r.batches||[];
-    const bIdx=cfg?(cfg.batch||0):Math.max(0,batches.findIndex(b=>slotLeft(b)>0));
-    const curBatch=batches[bIdx]||{};
-    const qtyNow=(cfg&&cfg.qty&&cfg.qty[PCATS[0]])||0,totalQty=cfg?qtySum(cfg):0;
-    const meta=`${r.cat} · ${money(curBatch.price||0)}`;
+    const totalQty=cfg?qtySum(cfg):0;
+    const from=Math.min(...batches.map(b=>b.price||Infinity));
+    const meta=`${r.cat} · from ${money(isFinite(from)?from:0)}`;
     return itemCard(key,open,totalQty,r.n,meta);
   }).join("");
   const programDetails=programs.filter(p=>bookingOpenItem==="prog|"+p.kind+":"+p.idx).map(p=>{
     const progKey=p.kind+":"+p.idx,cfg=bookingPrograms.get(progKey);if(!cfg)return"";
-    const r=p.rec,b=progBatchOf(progKey,cfg);
-    return `<div class="pos-item"><div class="pos-item-head"><span class="pos-item-name">${r.n}</span></div><div class="pos-lbl">${r.n} · batch</div><div class="pos-grid">${(r.batches||[]).map((bb,bi)=>{const soldOut=slotLeft(bb)<=0,cur=(cfg.batch||0)===bi;return `<button class="pos-btn" data-book-batch="${progKey}|${bi}" aria-pressed="${cur}" ${soldOut&&!cur?"disabled":""}><div class="pos-btn-n">${bb.n}</div><div class="pos-btn-d">${bb.from}${bb.to&&bb.to!==bb.from?" – "+bb.to:""}</div><div class="pos-btn-p">${money(bb.price)}</div>${slotBadge(bb)}</button>`;}).join("")}</div><div class="pos-lbl">${r.n} · seats</div>${PCATS.map(c=>step("prog|"+progKey,c,{price:b.price||0,n:(cfg.qty&&cfg.qty[c])||0})).join("")}</div>`;
+    const r=p.rec,batches=r.batches||[],combos=combosOf(cfg);
+    const blocks=combos.map((combo,ci)=>{
+      const pfx="prog|"+progKey+"|"+ci, b=batchFor(progKey,combo);
+      const head=`<div class="combo-head"><span class="combo-title">Ticket ${ci+1}</span>${combos.length>1?`<button class="pos-item-remove" data-book-remove-combo="prog|${progKey}|${ci}">Remove</button>`:""}</div>`;
+      const grid=`<div class="pos-lbl">${r.n} · batch</div><div class="pos-grid">${batches.map((bb,bi)=>{const soldOut=slotLeft(bb)<=0,cur=(combo.batch||0)===bi;return `<button class="pos-btn" data-book-batch="prog|${progKey}|${ci}|${bi}" aria-pressed="${cur}" ${soldOut&&!cur?"disabled":""}><div class="pos-btn-n">${bb.n}</div><div class="pos-btn-d">${bb.from}${bb.to&&bb.to!==bb.from?" – "+bb.to:""}</div><div class="pos-btn-p">${money(bb.price)}</div>${slotBadge(bb)}</button>`;}).join("")}</div>`;
+      const seats=`<div class="pos-lbl">${r.n} · seats</div>${PCATS.map(c=>step(pfx,c,{price:b.price||0,n:(combo.qty&&combo.qty[c])||0})).join("")}`;
+      return `<div class="combo-block">${head}${grid}${seats}</div>`;
+    }).join("");
+    return `<div class="pos-item"><div class="pos-item-head"><span class="pos-item-name">${r.n}</span></div>${blocks}<button class="rep-add" data-book-add-combo="prog|${progKey}">+ Add Ticket</button></div>`;
   }).join("");
   const programsTab=`<div class="item-cards">${programCards}</div>${programDetails}`;
 
@@ -3674,16 +3682,16 @@ function bookingForm(editing=false){
   // Products/add-ons are keyed by slot, so each selected slot gets its own labeled attendee rows —
   // that's what lets staff put the same visitors on every slot, or different visitors per slot.
   const heads=[];
-  const collectSlotted=(items,recFor,slotsFor)=>items.forEach(([id,cfg])=>{
+  const collectCombos=(items,recFor,slotsFor)=>items.forEach(([id,cfg])=>{
     const rec=recFor(id); if(!rec) return; const slist=slotsFor(id);
-    Object.entries(cfg.slots||{}).forEach(([sn,sc])=>{
-      const s=slist.find(x=>x.n===sn), slotLbl=s?`${s.t1}–${s.t2}`:sn;
-      rec.cats.forEach(c=>{const total=((sc.qty&&sc.qty[c])||0)+((sc.redeem&&sc.redeem[c])||0);for(let n=0;n<total;n++)heads.push({label:`${rec.n} — ${slotLbl} · ${c} ${n+1}`, cat:c});});
+    combosOf(cfg).forEach(combo=>{
+      const s=slotFor(slist,combo), slotLbl=`${combo.date||""}${s.t1?" "+s.t1+"–"+s.t2:(combo.slot?" "+combo.slot:"")}`.trim();
+      rec.cats.forEach(c=>{const total=((combo.qty&&combo.qty[c])||0)+((combo.redeem&&combo.redeem[c])||0);for(let n=0;n<total;n++)heads.push({label:`${rec.n} — ${slotLbl} · ${c} ${n+1}`, cat:c});});
     });
   });
-  collectSlotted([...bookingProducts],i=>P[i],i=>P[i].slots);
-  collectSlotted([...bookingAddons],code=>P.find(x=>x.c===code),code=>(P.find(x=>x.c===code)||{slots:[]}).slots);
-  [...bookingPrograms].forEach(([key,cfg])=>{const nm=progRec(key).n;PCATS.forEach(c=>{const total=(cfg.qty&&cfg.qty[c])||0;for(let n=0;n<total;n++)heads.push({label:nm+" · "+c+" "+(n+1), cat:c});});});
+  collectCombos([...bookingProducts],i=>P[i],i=>P[i].slots);
+  collectCombos([...bookingAddons],code=>P.find(x=>x.c===code),code=>(P.find(x=>x.c===code)||{slots:[]}).slots);
+  [...bookingPrograms].forEach(([key,cfg])=>{const nm=progRec(key).n;combosOf(cfg).forEach(combo=>{const b=batchFor(key,combo);PCATS.forEach(c=>{const total=(combo.qty&&combo.qty[c])||0;for(let n=0;n<total;n++)heads.push({label:nm+(b.n?" · "+b.n:"")+" · "+c+" "+(n+1), cat:c});});});});
   // the free heads covered by a redeemed membership visit — 1 Child always, +1 Adult if joining (age band set here)
   if(redeemVisit){ heads.push({label:"Membership visit · Child", cat:"Child"}); if(redeemAdult) heads.push({label:"Membership visit · Adult", cat:"Adult"}); }
   const attendeesTab = heads.length ? `<div class="pos-lbl">Attendee details <small>one per ticket</small></div><div class="attendee-list">${heads.map((h,idx)=>{const child=/child/i.test(h.cat||"");const req=child?'<span class="lab-req">Required</span>':'';const rq=child?" required aria-required=\"true\"":"";return `<div class="attendee-row"><div class="attendee-kind">${h.label}</div><div class="fld"><div class="lab"><span class="lab-n">Name</span>${req}</div><input class="inp"${rq} placeholder="Full name"></div><div class="fld"><div class="lab"><span class="lab-n">Date of birth</span></div><input class="inp mono" data-dob="${idx}" placeholder="DD/MM/YYYY"></div><div class="fld"><div class="lab"><span class="lab-n">Age</span>${req}</div><input class="inp mono" id="age_${idx}"${rq} placeholder="Years" aria-live="polite"></div></div>`;}).join("")}</div>` : `<div class="pos-empty">Add tickets first — attendees appear here.</div>`;
@@ -3711,25 +3719,27 @@ function bookingForm(editing=false){
     ${linesHtml}
   </div>`;
   const cartRows=[];
-  // one cart group per *selected slot* of each product/add-on — a product booked across two time
-  // slots shows up as two separate, independently editable/removable lines in the order summary.
+  // one cart group per *combination* — the same item booked across two date/time combos shows up as
+  // two separate, independently editable/removable groups in the order summary.
+  const comboSub=(date,s)=>`${date||""}${s&&s.t1?" · "+s.t1+"–"+s.t2:""}`||(s&&s.n)||"";
   [...bookingProducts].forEach(([i,cfg])=>{const p=P[i];
-    Object.entries(cfg.slots||{}).forEach(([sn,sc])=>{
-      const s=p.slots.find(x=>x.n===sn)||p.slots[0], pfx="prod|"+i+"|"+sn;
-      const lines=p.cats.flatMap(c=>{const r=productRedemption.get(i+"|"+sn+"|"+c); if(!r||!(r.paid>0)) return [];
-        return [cartCatLine(pfx,c,r.paid,s.price[c]||0,r.amount,"")];
+    combosOf(cfg).forEach((combo,ci)=>{
+      const s=slotFor(p.slots,combo), pfx="prod|"+i+"|"+ci;
+      const lines=p.cats.flatMap(c=>{const r=productRedemption.get(i+"|"+ci+"|"+c); if(!r||!(r.paid>0)) return [];
+        return [cartCatLine(pfx,c,r.paid,priceIn(s,c),r.amount,"")];
       }).join("");
-      if(lines) cartRows.push(cartGroup(p.n,cfg.date?`${cfg.date} · ${s.t1}–${s.t2}`:s.n,lines));
+      if(lines) cartRows.push(cartGroup(p.n,comboSub(combo.date,s),lines));
     });});
   [...bookingAddons].forEach(([code,cfg])=>{const a=P.find(x=>x.c===code);if(!a)return;
-    Object.entries(cfg.slots||{}).forEach(([sn,sc])=>{
-      const s=a.slots.find(x=>x.n===sn)||a.slots[0], pfx="addon|"+code+"|"+sn;
-      const lines=a.cats.map(c=>{const q=(sc.qty&&sc.qty[c])||0;return q?cartCatLine(pfx,c,q,s.price[c]||0):"";}).filter(Boolean).join("");
-      if(lines) cartRows.push(cartGroup(a.n,cfg.date?`${cfg.date} · ${s.t1}–${s.t2}`:s.n,lines));
+    combosOf(cfg).forEach((combo,ci)=>{
+      const s=slotFor(a.slots,combo), pfx="addon|"+code+"|"+ci;
+      const lines=a.cats.map(c=>{const q=(combo.qty&&combo.qty[c])||0;return q?cartCatLine(pfx,c,q,priceIn(s,c)):"";}).filter(Boolean).join("");
+      if(lines) cartRows.push(cartGroup(a.n,comboSub(combo.date,s),lines));
     });});
-  [...bookingPrograms].forEach(([key,cfg])=>{const r=progRec(key),b=progBatchOf(key,cfg);
-    const lines=PCATS.map(c=>{const q=(cfg.qty&&cfg.qty[c])||0;return q?cartCatLine("prog|"+key,c,q,b.price||0):"";}).filter(Boolean).join("");
-    if(lines) cartRows.push(cartGroup(r.n,b.n||r.cat,lines));});
+  [...bookingPrograms].forEach(([key,cfg])=>{const r=progRec(key);
+    combosOf(cfg).forEach((combo,ci)=>{const b=batchFor(key,combo);
+      const lines=PCATS.map(c=>{const q=(combo.qty&&combo.qty[c])||0;return q?cartCatLine("prog|"+key+"|"+ci,c,q,b.price||0):"";}).filter(Boolean).join("");
+      if(lines) cartRows.push(cartGroup(r.n,b.n||r.cat,lines));});});
   const summaryPay=hasItems?`<div class="summary-pay">
     <div class="summary-pay-lbl">Payment method</div>
     <div class="summary-pay-grid">${["Cash","Card","UPI","Voucher"].map(m=>`<button class="summary-pay-btn" data-book-pay="${escAttr(m)}" aria-pressed="${bookingPay===m}">${m}</button>`).join("")}</div>
@@ -4393,21 +4403,28 @@ function currentCalBaseDate(){
   return new Date();
 }
 
+// A fresh combination for an item: products/add-ons get {date, slot, qty(,redeem)}; programs get {batch, qty}.
+function firstComboFor(kind,id){
+  if(kind==="prog"){ const rec=progRecFor(id); const batches=(rec&&rec.batches)||[]; let bi=batches.findIndex(b=>slotLeft(b)>0); if(bi<0) bi=0; return {batch:bi,qty:{}}; }
+  const slots=kind==="prod"?P[+id].slots:((P.find(x=>x.c===id)||{}).slots||[]);
+  const d=defaultDateFor(slots);
+  const s=slotsForDate(slots,d).find(x=>slotLeft(x)>0)||slotsForDate(slots,d)[0]||firstAvailableSlot(slots);
+  const combo={date:d,slot:s?s.n:"",qty:{}}; if(kind==="prod") combo.redeem={}; return combo;
+}
 function ensureCartEntry(kind,id){
-  // Products & add-ons: one cart entry per item, holding a single date plus a *set* of selected
-  // slots for that date — each selected slot carries its own qty/redeem so a visitor can book
-  // several time slots of the same product/add-on, for the same or different people, in one order.
-  if(kind==="prod"){ const i=+id; if(!bookingProducts.has(i)){ const slots=P[i].slots,d=defaultDateFor(slots); const s=slotsForDate(slots,d).find(x=>slotLeft(x)>0)||slotsForDate(slots,d)[0]||firstAvailableSlot(slots); bookingProducts.set(i,{date:d,slots:s?{[s.n]:{qty:{},redeem:{}}}:{}}); } }
-  else if(kind==="addon"){ if(!bookingAddons.has(id)){ const a=P.find(x=>x.c===id); const slots=a?a.slots:[]; const d=defaultDateFor(slots); const s=slotsForDate(slots,d).find(x=>slotLeft(x)>0)||slotsForDate(slots,d)[0]||firstAvailableSlot(slots); bookingAddons.set(id,{date:d,slots:s?{[s.n]:{qty:{}}}:{}}); } }
-  else if(kind==="prog"){ if(!bookingPrograms.has(id)){ const rec=progRecFor(id); const batches=(rec&&rec.batches)||[]; let bi=batches.findIndex(b=>slotLeft(b)>0); if(bi<0) bi=0; bookingPrograms.set(id,{batch:bi,qty:{}}); } }
+  // One cart entry per item, holding an array of independent {date+slot+tickets} (or {batch+tickets})
+  // combinations — the "Add Ticket" button appends more, so an item can be booked across several
+  // dates/times/batches in the same order.
+  if(kind==="prod"){ const i=+id; if(!bookingProducts.has(i)) bookingProducts.set(i,{combos:[firstComboFor("prod",i)]}); }
+  else if(kind==="addon"){ if(!bookingAddons.has(id)) bookingAddons.set(id,{combos:[firstComboFor("addon",id)]}); }
+  else if(kind==="prog"){ if(!bookingPrograms.has(id)) bookingPrograms.set(id,{combos:[firstComboFor("prog",id)]}); }
 }
 function progRecFor(id){ const [k,idx]=id.split(":"); return k==="event"?EVENTS[+idx]:WORKSHOPS[+idx]; }
 function getCartCfg(kind,id){ return kind==="prod"?bookingProducts.get(+id):kind==="addon"?bookingAddons.get(id):bookingPrograms.get(id); }
 function removeCartEntry(kind,id){ if(kind==="prod") bookingProducts.delete(+id); else if(kind==="addon") bookingAddons.delete(id); else bookingPrograms.delete(id); }
 function hasBookingItems(){
-  const sumSlotted=cfg=>Object.values((cfg&&cfg.slots)||{}).reduce((a,sc)=>a+Object.values(sc.qty||{}).reduce((x,n)=>x+ +n,0)+Object.values(sc.redeem||{}).reduce((x,n)=>x+ +n,0),0);
-  const sumFlat=cfg=>Object.values((cfg&&cfg.qty)||{}).reduce((a,n)=>a+ +n,0);
-  return [...bookingProducts.values()].some(c=>sumSlotted(c)>0)||[...bookingAddons.values()].some(c=>sumSlotted(c)>0)||[...bookingPrograms.values()].some(c=>sumFlat(c)>0);
+  const sum=cfg=>((cfg&&cfg.combos)||[]).reduce((a,combo)=>a+Object.values(combo.qty||{}).reduce((x,n)=>x+ +n,0)+Object.values(combo.redeem||{}).reduce((x,n)=>x+ +n,0),0);
+  return [...bookingProducts.values()].some(c=>sum(c)>0)||[...bookingAddons.values()].some(c=>sum(c)>0)||[...bookingPrograms.values()].some(c=>sum(c)>0);
 }
 /* Membership visits the matched member has left. Only one visit may be used per booking/day
    (1 Adult + 1 Child), so at most one is consumed by the current order. */
@@ -4423,7 +4440,7 @@ function membershipVisitApplies(){
   const keys=[...bookingProducts.keys()];
   if(!keys.some(i=>P[i]&&P[i].c==="MUSO")) return false;   // Tour must be selected
   if(keys.some(i=>P[i]&&P[i].c!=="MUSO")) return false;    // any other product hides it
-  const addonSelected=[...bookingAddons.values()].some(cf=>cf&&cf.slots&&Object.values(cf.slots).some(sc=>Object.values(sc.qty||{}).some(n=>+n>0)));
+  const addonSelected=[...bookingAddons.values()].some(cf=>((cf&&cf.combos)||[]).some(combo=>Object.values(combo.qty||{}).some(n=>+n>0)));
   return !addonSelected;                                    // any add-on hides it
 }
 
@@ -4511,7 +4528,7 @@ document.addEventListener("click",e=>{
     bookingCustomer={name:b.customer||"",phone:b.phone||"",email:b.email||"",member:b.member||null,location:b.location||""};
     bookingCustomerLinked=CUSTOMERS.findIndex(c=>c.phone===b.phone);
     const pi=P.findIndex(p=>p.n===b.product);
-    if(pi>=0){ const qty={}; (b.ticketRows||[]).forEach(r=>{ qty[r[0]]=+r[1]||0; }); const sn=b.slot||P[pi].slots[0].n; bookingProducts.set(pi,{date:b.date||defaultDateFor(P[pi].slots),slots:{[sn]:{qty,redeem:{}}}}); }
+    if(pi>=0){ const qty={}; (b.ticketRows||[]).forEach(r=>{ qty[r[0]]=+r[1]||0; }); const sn=b.slot||P[pi].slots[0].n; bookingProducts.set(pi,{combos:[{date:b.date||defaultDateFor(P[pi].slots),slot:sn,qty,redeem:{}}]}); }
     bookingPay=b.paymentMode||"Cash";
     tab="edit"; addOpen=null; render(); $(".stage").scrollTop=0; return; }
   // ---- POS order flow: 3-step wizard (Customer / Booking / Attendees), payment docked in the summary ----
@@ -4525,35 +4542,40 @@ document.addEventListener("click",e=>{
   if(bkTab){ bookingTab=bkTab.dataset.bookTab; render(); return; }
   const bkCard=e.target.closest("[data-book-card]");
   if(bkCard){ const key=bkCard.dataset.bookCard; const [kind,id]=key.split("|"); ensureCartEntry(kind,id); bookingOpenItem=bookingOpenItem===key?null:key; bookingCalMonth=null; render(); return; }
-  const bkQuick=e.target.closest("[data-book-quick]");
-  if(bkQuick){ const [kind,id,d]=bkQuick.dataset.bookQuick.split("|"); ensureCartEntry(kind,id); const cfg=getCartCfg(kind,id); const cat=primaryCatFor(kind,id); cfg.qty=cfg.qty||{}; cfg.qty[cat]=Math.max(0,(cfg.qty[cat]||0)+ +d); render(); return; }
   const bkRemove=e.target.closest("[data-book-remove]");
   if(bkRemove){ const [kind,id]=bkRemove.dataset.bookRemove.split("|"); removeCartEntry(kind,id); if(bookingOpenItem===kind+"|"+id) bookingOpenItem=null; render(); return; }
-  // toggles one slot on/off in the product/add-on's selected-slots set (multi-select — several
-  // slots can be checked at once); the same control also serves as each slot block's "Remove slot"
+  // "Add Ticket" — append a fresh combination to the item; Remove — drop one combination
+  const addCombo=e.target.closest("[data-book-add-combo]");
+  if(addCombo){ const [kind,id]=addCombo.dataset.bookAddCombo.split("|"); const cfg=getCartCfg(kind,id); if(cfg){ cfg.combos=cfg.combos||[]; cfg.combos.push(firstComboFor(kind,id)); } render(); return; }
+  const rmCombo=e.target.closest("[data-book-remove-combo]");
+  if(rmCombo){ const parts=rmCombo.dataset.bookRemoveCombo.split("|"); const ci=+parts.pop(), kind=parts[0], id=parts[1]; const cfg=getCartCfg(kind,id);
+    if(cfg&&cfg.combos){ cfg.combos.splice(ci,1); if(!cfg.combos.length){ removeCartEntry(kind,id); if(bookingOpenItem===kind+"|"+id) bookingOpenItem=null; } }
+    render(); return; }
+  // radio slot pick: set THIS combination's single slot (pfx = kind|id|comboIdx|slotName)
   const bkSlot=e.target.closest("[data-book-slot]");
-  if(bkSlot){ const [kind,id,sn]=bkSlot.dataset.bookSlot.split("|"); const cfg=kind==="prod"?bookingProducts.get(+id):bookingAddons.get(id);
-    if(cfg){ cfg.slots=cfg.slots||{}; if(cfg.slots[sn]) delete cfg.slots[sn]; else cfg.slots[sn]={qty:{},redeem:{}}; }
+  if(bkSlot){ const [kind,id,ci,sn]=bkSlot.dataset.bookSlot.split("|"); const cfg=kind==="prod"?bookingProducts.get(+id):bookingAddons.get(id);
+    const combo=cfg&&cfg.combos&&cfg.combos[+ci]; if(combo) combo.slot=sn;
     render(); return; }
   const calNav=e.target.closest("[data-book-cal-nav]");
-  if(calNav){ const d=currentCalBaseDate(); bookingCalMonth=new Date(d.getFullYear(),d.getMonth()+(+calNav.dataset.bookCalNav),1); render(); return; }
+  if(calNav){ const parts=calNav.dataset.bookCalNav.split("|"); const dir=+parts.pop(), ci=+parts.pop(), kind=parts[0], id=parts[1];
+    const cfg=kind==="prod"?bookingProducts.get(+id):bookingAddons.get(id); const combo=cfg&&cfg.combos&&cfg.combos[ci];
+    if(combo){ const anchor=combo.calMonth||parseDMY(combo.date)||new Date(); combo.calMonth=new Date(anchor.getFullYear(),anchor.getMonth()+dir,1); }
+    render(); return; }
   const calDate=e.target.closest("[data-book-cal-date]");
-  if(calDate){ const [kind,id,dateStr]=calDate.dataset.bookCalDate.split("|"); const cfg=kind==="prod"?bookingProducts.get(+id):bookingAddons.get(id);
-    if(cfg){ cfg.date=dateStr; const slots=kind==="prod"?P[+id].slots:(P.find(x=>x.c===id)||{slots:[]}).slots; const candidates=slotsForDate(slots,dateStr); const candNames=new Set(candidates.map(x=>x.n));
-      // slots selected on the old date only carry over if they still run on the new one — anything
-      // else is dropped, and if nothing survives we auto-pick the first available slot so the panel isn't empty
-      const kept={}; Object.keys(cfg.slots||{}).forEach(sn=>{ if(candNames.has(sn)) kept[sn]=cfg.slots[sn]; });
-      if(!Object.keys(kept).length){ const pick=candidates.find(x=>slotLeft(x)>0)||candidates[0]; if(pick) kept[pick.n]={qty:{},redeem:{}}; }
-      cfg.slots=kept; }
+  if(calDate){ const [kind,id,ci,dateStr]=calDate.dataset.bookCalDate.split("|"); const cfg=kind==="prod"?bookingProducts.get(+id):bookingAddons.get(id);
+    const combo=cfg&&cfg.combos&&cfg.combos[+ci];
+    if(combo){ combo.date=dateStr; const slots=kind==="prod"?P[+id].slots:(P.find(x=>x.c===id)||{slots:[]}).slots; const candidates=slotsForDate(slots,dateStr);
+      // keep the current slot only if it still runs on the new date, else auto-pick the first available
+      if(!candidates.some(x=>x.n===combo.slot)){ const pick=candidates.find(x=>slotLeft(x)>0)||candidates[0]; combo.slot=pick?pick.n:""; }
+      const dd=parseDMY(dateStr); if(dd) combo.calMonth=new Date(dd.getFullYear(),dd.getMonth(),1); }
     render(); return; }
   const bkBatch=e.target.closest("[data-book-batch]");
-  if(bkBatch){ const [k,bi]=bkBatch.dataset.bookBatch.split("|"); const cfg=bookingPrograms.get(k); if(cfg) cfg.batch=+bi; render(); return; }
-  // pfx is "kind|id|category|delta" for programs (flat qty) or "kind|id|slotName|category|delta"
-  // for products/add-ons (qty lives per selected slot) — peel delta/category off the end first
+  if(bkBatch){ const [kind,key,ci,bi]=bkBatch.dataset.bookBatch.split("|"); const cfg=bookingPrograms.get(key); const combo=cfg&&cfg.combos&&cfg.combos[+ci]; if(combo) combo.batch=+bi; render(); return; }
+  // qty pfx is "kind|id|comboIdx|category|delta" — peel delta/category off the end, then index the combo
   const bkQty=e.target.closest("[data-book-qty]");
-  if(bkQty){ const parts=bkQty.dataset.bookQty.split("|"); const d=+parts.pop(), cat=parts.pop(), kind=parts[0], id=parts[1], sn=parts[2];
-    if(kind==="prog"){ const cfg=bookingPrograms.get(id); if(cfg){ cfg.qty=cfg.qty||{}; cfg.qty[cat]=Math.max(0,(cfg.qty[cat]||0)+d); } }
-    else{ const cfg=kind==="prod"?bookingProducts.get(+id):bookingAddons.get(id); const sc=cfg&&cfg.slots&&cfg.slots[sn]; if(sc){ sc.qty=sc.qty||{}; sc.qty[cat]=Math.max(0,(sc.qty[cat]||0)+d); } }
+  if(bkQty){ const parts=bkQty.dataset.bookQty.split("|"); const d=+parts.pop(), cat=parts.pop(), kind=parts[0], id=parts[1], ci=+parts[2];
+    const cfg=kind==="prog"?bookingPrograms.get(id):kind==="prod"?bookingProducts.get(+id):bookingAddons.get(id);
+    const combo=cfg&&cfg.combos&&cfg.combos[ci]; if(combo){ combo.qty=combo.qty||{}; combo.qty[cat]=Math.max(0,(combo.qty[cat]||0)+d); }
     render(); return; }
   // ---- membership visit checkboxes (1 visit = 1 Adult + 1 Child, one per day) ----
   if(e.target.closest("[data-redeem-visit]")){ const m=bookingCustomer.member;
