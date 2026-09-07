@@ -768,6 +768,19 @@ tbody tr[aria-selected="true"] td:first-child{box-shadow:inset 2px 0 0 var(--blu
 .shop-cta .btn{width:100%;display:flex;align-items:center;justify-content:center}
 .shop-cta-row{display:flex;gap:8px}
 .shop-cta-row .btn{flex:1}
+/* dashboard: live building occupancy (emergency headcount) */
+.occ-card{border-color:var(--amber-line);margin-bottom:16px}
+.occ-card .card-head{background:var(--amber-wash);border-bottom-color:var(--amber-line)}
+.occ-card .card-title{display:flex;align-items:center;gap:8px}
+.occ-body{display:flex;align-items:center;gap:26px;flex-wrap:wrap}
+.occ-total{display:flex;align-items:baseline;gap:10px}
+.occ-num{font-size:40px;font-weight:700;letter-spacing:-.02em;font-family:var(--mono);color:var(--ink)}
+.occ-lbl{font-size:12.5px;color:var(--ink2);max-width:120px;line-height:1.3}
+.occ-split{display:flex;gap:14px}
+.occ-seg{border:1px solid var(--rule2);border-radius:8px;padding:8px 16px;text-align:center;min-width:82px}
+.occ-seg-n{display:block;font-size:22px;font-weight:700;font-family:var(--mono)}
+.occ-seg-l{display:block;font-size:11px;color:var(--ink3);letter-spacing:.04em;text-transform:uppercase;margin-top:2px}
+.occ-note{margin:0;flex:1 1 200px;min-width:180px}
 </style>
 </head>
 <body>
@@ -1094,8 +1107,8 @@ const M = {
     view:"hsncodes",
     schema:[["Code|code","string","6 digits for services, 8 for goods."],
             ["Goods or services|kind","enum","hsn · sac","Admission and activities are services, so SAC."],
-            ["Description on the invoice|description","string","Prints on the tax invoice."],
-            ["Unit it is counted in|uqc","string","Unit quantity code, required on the GST return."]]},
+            ["Description|description","string","Prints on the tax invoice."],
+            ["Tax rate|tax_rate_id","fk","→ Tax rates. The GST rate that applies to items under this code."]]},
 
   products:{g:1,n:"Products & add-ons",owner:OWN_RETAIL,perm:"master.product.manage",src:"Scope §1.4 · §1.5",q:1,
     d:"Everything sellable, in one table. Type says whether it can be sold on its own. A product carries its own time slots, its own add-on list, its own capacity, its own tax and its own prices.",
@@ -1204,15 +1217,16 @@ const TAXRATES = [
 ];
 const RATE = c => TAXRATES.find(x=>x.code===c);
 const HSNCODES = [
-  {code:"999692",kind:"SAC",desc:"Amusement, recreation and other entertainment services",uqc:"NOS"},
-  // ---- goods (8-digit HSN) for the Shop / Merchandise module ----
-  {code:"49011010",kind:"HSN",desc:"Printed books",uqc:"NOS"},
-  {code:"95030090",kind:"HSN",desc:"Toys and puzzles",uqc:"NOS"},
-  {code:"61091000",kind:"HSN",desc:"T-shirts, cotton",uqc:"NOS"},
-  {code:"48201090",kind:"HSN",desc:"Notebooks and diaries",uqc:"NOS"},
-  {code:"69120040",kind:"HSN",desc:"Ceramic mugs and tableware",uqc:"NOS"},
-  {code:"96091000",kind:"HSN",desc:"Pencils and crayons",uqc:"NOS"}
+  {code:"999692",kind:"SAC",desc:"Amusement, recreation and other entertainment services",uqc:"NOS",gst:18},
+  // ---- goods (8-digit HSN) for the Shop / Merchandise module — each carries its GST rate ----
+  {code:"49011010",kind:"HSN",desc:"Printed books",uqc:"NOS",gst:12},
+  {code:"95030090",kind:"HSN",desc:"Toys and puzzles",uqc:"NOS",gst:12},
+  {code:"61091000",kind:"HSN",desc:"T-shirts, cotton",uqc:"NOS",gst:5},
+  {code:"48201090",kind:"HSN",desc:"Notebooks and diaries",uqc:"NOS",gst:12},
+  {code:"69120040",kind:"HSN",desc:"Ceramic mugs and tableware",uqc:"NOS",gst:18},
+  {code:"96091000",kind:"HSN",desc:"Pencils and crayons",uqc:"NOS",gst:12}
 ];
+const hsnByCode = c => HSNCODES.find(h=>h.code===c);
 
 /* ================= Shop / Merchandise module (Scope §5) ================= */
 const MUSO_SELLER = {name:"MuSo Foundation", addr:["5A, Jindal Mansion, Dr G Deshmukh Marg","Mumbai, Maharashtra — 400026, India"], gstin:"27AAQCM9400K1ZZ", state:"Maharashtra", stateCode:"27", email:"finance.foundation@jsw.in", bank:{name:"Axis Bank", ac:"XXXXXXXX1234", ifsc:"UTIB0000XXX · Andheri West, Mumbai"}};
@@ -1229,6 +1243,9 @@ const SHOP_ITEMS = [
   {pd:"PD_848",barcode:"8901234500848",n:"Colour Pencil Set",desc:"24 shades",cat:"Stationery",base:249,tax:["CGST-6","SGST-6","IGST-12"],hsn:"96091000",mrp:299,stock:25}
 ];
 const SHOP_CATS = [...new Set(SHOP_ITEMS.map(x=>x.cat))];
+/* Product ID is auto-generated from the category: <prefix>-<5-digit running number>, e.g. Books → BK-00001. */
+const SHOP_CAT_PREFIX = {Books:"BK", Toys:"TY", Apparel:"AP", Stationery:"ST", Games:"GM", Home:"HM"};
+function shopPdFor(cat){ const p=SHOP_CAT_PREFIX[cat]; if(!p) return ""; const n=SHOP_ITEMS.filter(x=>x.cat===cat).length+1; return p+"-"+String(n).padStart(5,"0"); }
 const shopItemByPd = pd => SHOP_ITEMS.find(x=>x.pd===pd);
 const shopItemByBarcode = bc => SHOP_ITEMS.find(x=>String(x.barcode)===String(bc));
 /* GST% for an item comes from its linked Tax-rate rows (intra-state = CGST + SGST). */
@@ -1289,7 +1306,7 @@ function amountInWords(num){
 /* ---- CSV export for the Shop tables ---- */
 function shopExportRows(kind){
   if(kind==="shopitems") return [["PD","Barcode","Name","Category","Base price","GST %","MRP","Stock"]].concat(SHOP_ITEMS.map(x=>[x.pd,x.barcode,x.n,x.cat,x.base,shopGstPct(x),x.mrp,x.stock]));
-  if(kind==="shopcoupons") return [["Code","Description","Type","Value","Prepared by","Proposed by","Approved by","Status","Valid from","Valid to"]].concat(SHOP_COUPONS.map(c=>[c.code,c.desc,c.type,c.v,c.preparedBy,c.proposedBy,c.approvedBy,c.status,c.from,c.to]));
+  if(kind==="shopcoupons") return [["Code","Description","Type","Value","Proposed by","Status","Valid from","Valid to"]].concat(SHOP_COUPONS.map(c=>[c.code,c.desc,c.type,c.v,c.proposedBy,c.status,c.from,c.to]));
   if(kind==="shopsales") return [["Txn","Invoice","Date","Customer","Phone","GSTIN","Items","Payment","Subtotal","Discount","GST","Grand total"]].concat(SHOP_SALES.map(s=>{const c=shopSaleCompute(s);const n=(s.lines||[]).reduce((a,l)=>a+(+l.qty||0),0);return [s.txn,s.inv,s.date,s.name,s.phone,s.gstin||"",n,s.pay,Math.round(c.subtotal),Math.round(c.discAmt),Math.round(c.gst),c.grand];}));
   if(kind==="shopreports-pay"){ const byPay={}; SHOP_SALES.forEach(s=>{const c=shopSaleCompute(s);byPay[s.pay]=(byPay[s.pay]||0)+c.grand;}); return [["Payment mode","Amount"]].concat(Object.entries(byPay).map(([k,v])=>[k,Math.round(v)])); }
   if(kind==="shopreports-hsn"){ const hm={}; SHOP_SALES.forEach(s=>{const c=shopSaleCompute(s);const f=c.subtotal>0?(c.subtotal-c.discAmt)/c.subtotal:0;c.lines.forEach(l=>{const it=l.it;if(!it.hsn)return;const taxable=l.gross*f;const cg=taxable*l.halfPct/100;const m=hm[it.hsn]||(hm[it.hsn]={hsn:it.hsn,qty:0,taxable:0,cgst:0,sgst:0,pct:l.gstPct});m.qty+=l.qty;m.taxable+=taxable;m.cgst+=cg;m.sgst+=cg;});}); return [["HSN/SAC","Qty sold","Taxable value","CGST %","CGST","SGST %","SGST","Total tax"]].concat(Object.values(hm).map(m=>[m.hsn,m.qty,Math.round(m.taxable),m.pct/2,Math.round(m.cgst),m.pct/2,Math.round(m.sgst),Math.round(m.cgst+m.sgst)])); }
@@ -1640,9 +1657,7 @@ const SCHEMAS = {
     ["Discount type|type","enum","% · ₹","Percentage or flat amount off."],
     ["Value|v","int","20 for 20% off, or a rupee amount for flat, e.g. 20."],
     ["Valid|valid_from / valid_to","date","When the coupon can be used."],
-    ["Prepared by|preparedBy","string","Who drafted the code (Shop ops), e.g. Sawood."],
     ["Proposed by|proposedBy","string","Who proposed it to management, e.g. Ashish."],
-    ["Approved by|approvedBy","string","Management sign-off — required before the code can apply, e.g. Chandresh."],
     ["Status|status","enum","Draft · Pending approval · Approved","Only Approved codes apply at the counter."]],
   bookings:[
     ["Customer name|customer_name","string","Name on the booking."],
@@ -1661,6 +1676,7 @@ const SCHEMAS = {
   categories:[
     ["Short code|code","string","ADULT, CH1217, CH0311, BABY"],
     ["Name visitors see|name","string","Shown on the booking page and on every price row."],
+    ["Is adult|is_adult","bool","On for adult ticket types — used to split adults from children in the live headcount."],
     ["Age range|from_age / to_age","int","Guidance shown to the buyer, who picks their own category. Date of birth is captured but optional, so this is not computed."],
     ["Must be booked with|requires_category_id","fk","→ Visitor categories. Another category that must also be on the booking — a Child 3–11 cannot be booked without an Adult."],
     ["How many of those|requires_min","int","How many of that category. Default 1."],
@@ -2596,13 +2612,13 @@ let current = "dashboard", selP = 0, tab = "list", sub = "details", pType = "pro
     selW = 0, selB = 0, selE = 0, esub = "details", eventCats = new Set(), selBooking = 0, bookingProduct = 0, bookingSlot = "", bookingDiscountCode = "", csub = "details", copyFrom = 0, copyTo = new Set(), copyWhat = new Set(["price","seats"]), editD = -1,
     progKind = "event", progCat = "Event", prodBuildingPool = false,
     bookingProducts = new Map(), bookingAddons = new Map(), bookingPrograms = new Map(), bookingPay = "Cash", bookingTab = "products",
-    bookingCustomer = {name:"",phone:"",email:"",member:null,location:""}, bookingCustomerLinked = -1, bookingStep = 1, bookingOpenItem = null, bookingCalMonth = null, bookingCancelConfirm = false, bookingDiscountTried = false, bookingStep1Tried = false, bookingRedeemVisit = false, bookingRedeemAdult = false,
+    bookingCustomer = {name:"",phone:"",email:"",member:null,location:"",pincode:"",gstin:""}, bookingCustomerLinked = -1, bookingStep = 1, bookingOpenItem = null, bookingCalMonth = null, bookingCancelConfirm = false, bookingDiscountTried = false, bookingStep1Tried = false, bookingRedeemVisit = false, bookingRedeemAdult = false,
     selD = 0, dsub = "summary", editCond = -1, condDraft = null, draftDiscount = null, condStep = 0, condItemsOpen = false,
     selMember = 0, selTier = 0, msub = "summary", redeemStep = 1, redeemVisits = 1,
     checkinRef = null,   // reception: booking ref currently on the scanner (null = waiting for a scan)
     shopCart = [{pd:"",qty:1}], shopPay = "Cash", shopCustomer = {phone:"",name:"",email:"",gstin:"",member:null},
     shopDiscType = "", shopSpot = 0, shopCouponCode = "", shopCouponTried = false, shopSplit = false, shopSplitA = 0,
-    shopStep1Tried = false, selShopSale = 0, selShopItem = 0, selShopCoupon = 0, shopAddStock = null;
+    shopStep1Tried = false, selShopSale = 0, selShopItem = 0, selShopCoupon = 0, shopAddStock = null, shopCostTouched = false;
 /* Check-in / check-out log, keyed by booking ref → {inTime, outTime}. Persists across renders so
    re-scanning a ticket reflects its real state (expected → checked in → checked out). In-memory only. */
 const CHECKINS = {};
@@ -2923,7 +2939,8 @@ const DASH = {
   sources:{website:9, pos:5},          // today's orders: website vs POS walk-ins
   adultsToday:61, childrenToday:35,     // visitor mix (sums to visitorsToday)
   repeatVisitors:22, repeatPct:23,      // returning customers today
-  schoolsToday:2, schoolsMonth:9        // school group bookings
+  schoolsToday:2, schoolsMonth:9,       // school group bookings
+  occupancy:{adults:6, children:4, school:10, product:8, program:6}   // live headcount in the building now, by visit type
 };
 
 /* Reception check-in helpers. Real Date() is fine in the page runtime. */
@@ -3042,6 +3059,21 @@ const VIEWS = {
       ${kpi("discount","blue","Active discounts",0,activeDisc,`of ${DISCOUNTS.length} configured`)}
     </div>`;
 
+    // ---- live building occupancy — for an emergency / evacuation headcount ----
+    const occ=DASH.occupancy, occTot=occ.adults+occ.children+occ.school+occ.product+occ.program;
+    const occupancy=`<div class="card occ-card">
+      <div class="card-head"><span class="card-title"><span class="dot-live"></span> In the building now</span></div>
+      <div class="card-body occ-body">
+        <div class="occ-total"><div class="occ-num">${occTot}</div><div class="occ-lbl">visitors currently inside</div></div>
+        <div class="occ-split">
+          <div class="occ-seg"><span class="occ-seg-n">${occ.adults}</span><span class="occ-seg-l">Adults</span></div>
+          <div class="occ-seg"><span class="occ-seg-n">${occ.children}</span><span class="occ-seg-l">Children</span></div>
+          <div class="occ-seg"><span class="occ-seg-n">${occ.school}</span><span class="occ-seg-l">School</span></div>
+          <div class="occ-seg"><span class="occ-seg-n">${occ.product}</span><span class="occ-seg-l">Product</span></div>
+          <div class="occ-seg"><span class="occ-seg-n">${occ.program}</span><span class="occ-seg-l">Program</span></div>
+        </div>
+      </div></div>`;
+
     // ---- audience stat strip (sample) ----
     const strip=`<div class="set">
       ${kpi("adult","blue","Adults today",1,DASH.adultsToday,`${Math.round(DASH.adultsToday/mix*100)}% of visitors`)}
@@ -3143,7 +3175,7 @@ const VIEWS = {
       <div class="matrix-wrap"><table class="reclist"><thead><tr><th>Member ID</th><th>Registered pair</th><th>Tier</th><th>Expires</th><th>Status</th></tr></thead>
       <tbody>${expRows}</tbody></table></div></div>`;
 
-    return tiles + strip + `<div class="dash-row">${sessions}${attn}</div>` + `<div class="dash-row">${bars}${meters}</div>` + `<div class="dash-row">${sources}${bestday}</div>` + `<div class="dash-row">${membership}${expiring}</div>` + orders;
+    return tiles + occupancy + strip + `<div class="dash-row">${sessions}${attn}</div>` + `<div class="dash-row">${bars}${meters}</div>` + `<div class="dash-row">${sources}${bestday}</div>` + `<div class="dash-row">${membership}${expiring}</div>` + orders;
   },
   tiers(){
     return `${toolbar("Search membership tiers",MEMBERSHIP_TIERS.length+" plans")}
@@ -3563,10 +3595,10 @@ const VIEWS = {
   },
   shopcoupons(){
     const rows=SHOP_COUPONS.map((c,i)=>{ const pill=c.status==="Approved"?'<span class="pill pill-ok"><i class="dot"></i>Approved</span>':'<span class="pill pill-draft"><i class="dot"></i>'+c.status+'</span>';
-      return `<tr data-open="shopcoupon:${i}"><td class="code">${c.code}</td><td>${c.desc||""}</td><td class="code">${c.type==="%"?c.v+"%":money(c.v)}</td><td class="sub">${c.preparedBy||"—"} / ${c.proposedBy||"—"} / ${c.approvedBy||"—"}</td><td>${pill}</td><td><button class="btn" data-open="shopcoupon:${i}">View</button></td></tr>`;
+      return `<tr data-open="shopcoupon:${i}"><td class="code">${c.code}</td><td>${c.desc||""}</td><td class="code">${c.type==="%"?c.v+"%":money(c.v)}</td><td class="sub">${c.proposedBy||"—"}</td><td>${pill}</td><td><button class="btn" data-open="shopcoupon:${i}">View</button></td></tr>`;
     }).join("");
     const bar=`<div class="toolbar"><label class="search"><span>&#8981;</span><input placeholder="Search shop coupons" aria-label="Search shop coupons"></label><span class="tool-note">${SHOP_COUPONS.length} coupons</span><button class="btn" data-export="shopcoupons">Export CSV</button></div>`;
-    return bar+`<div class="card"><div class="matrix-wrap"><table class="reclist"><thead><tr><th>Code</th><th>Description</th><th>Value</th><th>Prepared / Proposed / Approved</th><th>Status</th><th></th></tr></thead><tbody>${rows}
+    return bar+`<div class="card"><div class="matrix-wrap"><table class="reclist"><thead><tr><th>Code</th><th>Description</th><th>Value</th><th>Proposed by</th><th>Status</th><th></th></tr></thead><tbody>${rows}
       <tr><td colspan="6"><button class="rep-add" data-tab="new" style="border-radius:4px">+ New coupon</button></td></tr></tbody></table></div></div>`;
   },
   shopreports(){
@@ -3692,6 +3724,14 @@ function createForm(schema,label,footNote,values={},editing=false){
     ];
     headings=secs.map(s=>s[0]);
     groups=secs.map(s=>byName(s[1]));
+  } else if(current==="categories"){   // Visitor category — field-based sections
+    const byName=names=>names.map(n=>schema.find(f=>(f[0].split("|")[1]||f[0])===n)).filter(Boolean);
+    const secs=[["Basic information",["code","name","is_adult","from_age / to_age"]],["Booking rules",["requires_category_id","requires_min"]],["Display",["sort_order","is_active"]]];
+    headings=secs.map(s=>s[0]); groups=secs.map(s=>byName(s[1]));
+  } else if(current==="hsn"){   // HSN / SAC code — field-based sections, not catalogue chunks
+    const byName=names=>names.map(n=>schema.find(f=>(f[0].split("|")[1]||f[0])===n)).filter(Boolean);
+    const secs=[["Basics",["code","kind","description"]],["Tax",["tax_rate_id"]]];
+    headings=secs.map(s=>s[0]); groups=secs.map(s=>byName(s[1]));
   } else if(label==="tax rate"){   // Tax rate — group by field so sections aren't catalogue chunks
     const byName=names=>names.map(n=>schema.find(f=>(f[0].split("|")[1]||f[0])===n)).filter(Boolean);
     const secs=[["Basics",["code","name"]],["Rate & validity",["percentage","is_active"]]];
@@ -3702,7 +3742,7 @@ function createForm(schema,label,footNote,values={},editing=false){
     headings=secs.map(s=>s[0]); groups=secs.map(s=>byName(s[1]));
   } else if(label==="coupon"){   // Shop coupon
     const byName=names=>names.map(n=>schema.find(f=>(f[0].split("|")[1]||f[0])===n)).filter(Boolean);
-    const secs=[["Coupon",["code","desc","type","v","valid_from / valid_to"]],["Approval",["preparedBy","proposedBy","approvedBy","status"]]];
+    const secs=[["Coupon",["code","desc","type","v","valid_from / valid_to"]],["Approval",["proposedBy","status"]]];
     headings=secs.map(s=>s[0]); groups=secs.map(s=>byName(s[1]));
   } else {
     for(let i=0;i<schema.length;i+=3) groups.push(schema.slice(i,i+3));
@@ -4031,12 +4071,18 @@ function bookingForm(editing=false){
   const custMatch=bookingCustomerLinked>=0?CUSTOMERS[bookingCustomerLinked]:null;
   const miss=f=>bookingStep1Tried&&!String((bookingCustomer[f]||"")).trim();
   const reqMark=f=>miss(f)?'<span class="lab-req" style="color:var(--stop)">Required</span>':'<span class="lab-req">Required</span>';
+  // Location and PIN code — at least ONE must be provided
+  const locOrPin=String(bookingCustomer.location||"").trim()||String(bookingCustomer.pincode||"").trim();
+  const missLoc=bookingStep1Tried&&!locOrPin;
+  const reqLoc=`<span class="lab-req"${missLoc?' style="color:var(--stop)"':''}>Optional</span>`;
   const customerSection=section("Customer",`
     <div class="fld${miss("phone")?" fld-miss":""}"><div class="lab"><span class="lab-n">Phone</span>${reqMark("phone")}</div><div class="inp-wrap"><input class="inp mono${custMatch?" inp-matched":""}" id="bookCustPhone" type="tel" inputmode="tel" autocomplete="off" placeholder="10-digit mobile number" value="${escAttr(bookingCustomer.phone)}">${custMatch?`<button type="button" class="cust-match-tab${bookingCustomer.member?" cust-match-tab-member":""}" data-unlink-customer="1" title="Matched ${escAttr(custMatch.name)}${bookingCustomer.member?` — ${escAttr(bookingCustomer.member.tier)} member, ${Math.max(0,bookingCustomer.member.passesTotal-bookingCustomer.member.passesUsed)} passes remaining`:""} — click to remove">${bookingCustomer.member?bookingCustomer.member.tier:"Existing"}</button>`:""}<div class="cust-suggest" id="custSuggest"></div></div></div>
     <div class="fld${miss("name")?" fld-miss":""}"><div class="lab"><span class="lab-n">Name</span>${reqMark("name")}</div><input class="inp" id="bookCustName" placeholder="Full name" value="${escAttr(bookingCustomer.name)}"></div>
     <div class="fld"><div class="lab"><span class="lab-n">Email</span><span class="lab-req">Optional</span></div><input class="inp" id="bookCustEmail" type="email" placeholder="name@example.com" value="${escAttr(bookingCustomer.email)}"></div>
-    <div class="fld${miss("location")?" fld-miss":""}"><div class="lab"><span class="lab-n">Location</span>${reqMark("location")}</div><input class="inp" id="bookCustLocation" placeholder="Customer's city or area" value="${escAttr(bookingCustomer.location||"")}"></div>
-    ${bookingStep1Tried&&(miss("phone")||miss("name")||miss("location"))?`<div class="fld" style="grid-column:1/-1;color:var(--stop);font-size:12px">Fill the required fields to continue.</div>`:""}
+    <div class="fld"><div class="lab"><span class="lab-n">GSTIN</span><span class="lab-req">Optional</span></div><input class="inp mono" id="bookCustGstin" placeholder="For a business / e-invoice" value="${escAttr(bookingCustomer.gstin||"")}"></div>
+    <div class="fld${missLoc?" fld-miss":""}"><div class="lab"><span class="lab-n">Location</span>${reqLoc}</div><input class="inp" id="bookCustLocation" placeholder="Customer's city or area" value="${escAttr(bookingCustomer.location||"")}"></div>
+    <div class="fld${missLoc?" fld-miss":""}"><div class="lab"><span class="lab-n">PIN code</span>${reqLoc}</div><input class="inp mono" id="bookCustPincode" inputmode="numeric" placeholder="e.g. 400058" value="${escAttr(bookingCustomer.pincode||"")}"></div>
+    ${bookingStep1Tried&&(miss("phone")||miss("name")||missLoc)?`<div class="fld" style="grid-column:1/-1;color:var(--stop);font-size:12px">Fill the required fields to continue — PIN code or Location is required.</div>`:""}
   `);
 
   // ---- 3-step wizard: Customer → Booking → Attendees. Payment lives in the summary, not a step. ----
@@ -4315,6 +4361,7 @@ function tierForm(editing){
       ${sec("Basics",
         fld("Plan name",`<input class="inp" value="${escAttr(t.name||"")}" placeholder="e.g. Silver, Gold, Platinum">`,"The plan name shown to customers.",true,true)
         +fld("Price",`<div class="inp-suffix"><input class="inp mono" type="number" min="0" value="${escAttr(t.price||"")}" placeholder="0"><span>₹</span></div>`,"One-time price of the plan.",true)
+        +fld("Striked price",`<div class="inp-suffix"><input class="inp mono" type="number" min="0" value="${escAttr(t.strikedPrice||"")}" placeholder="0"><span>₹</span></div>`,"Optional original price shown struck-through next to the plan price to signal a discount.",false)
         +fld("Status",`<div class="selwrap"><select class="inp"><option${t.status==="Active"?" selected":""}>Active</option><option${t.status==="Draft"?" selected":""}>Draft</option></select></div>`,"Draft plans are not on sale yet.",false))}
       ${sec("Visits & validity",
         fld("Visits included",`<div class="inp-suffix"><input class="inp mono" type="number" min="0" step="1" value="${escAttr(numvis)}" placeholder="Leave blank for Unlimited"><span>visits</span></div>`,"Number of visits included. Leave blank to mean Unlimited. One visit admits 1 adult + 1 child.",false)
@@ -4349,9 +4396,11 @@ function memberForm(editing){
       ${sec("Contact",
         fld("Phone",`<input class="inp mono" type="tel" inputmode="tel" value="${escAttr(m.phone||"")}" placeholder="10-digit mobile">`,"Used for OTP at redemption and for confirmations.",true)
         +fld("Email",`<input class="inp" type="email" value="${escAttr(m.email||"")}" placeholder="name@example.com">`,"For confirmations and to view history on login.",true)
-        +fld("Location",`<input class="inp" value="${escAttr(m.location||"")}" placeholder="City / area — e.g. Andheri West, Mumbai">`,"The member's home city or area.",false,true))}
+        +`<div class="fld wide"><div class="lab"><span class="lab-n">Location</span>${tip("The member's home city or area. Provide either PIN code or Location.")}<span class="lab-req">Optional</span></div><input class="inp" id="memberLocation" value="${escAttr(m.location||"")}" placeholder="City / area — e.g. Andheri West, Mumbai"></div>`
+        +`<div class="fld"><div class="lab"><span class="lab-n">PIN code</span>${tip("6-digit postal PIN code. Provide either PIN code or Location.")}<span class="lab-req">Optional</span></div><input class="inp mono" id="memberPincode" value="${escAttr(m.pincode||"")}" placeholder="e.g. 400058"></div>`)}
     </div>
-    <div class="form-foot"><span></span><button class="btn" data-tab="list">Cancel</button><button class="btn btn-primary" data-tab="list">${editing?"Save changes":"Create member"}</button></div>
+    <div id="memberLocErr" class="booking-discount-msg bad" style="display:none;margin:0 16px 12px">Provide either a PIN code or a Location.</div>
+    <div class="form-foot"><span></span><button class="btn" data-tab="list">Cancel</button><button class="btn btn-primary" data-member-save="1">${editing?"Save changes":"Create member"}</button></div>
   </div></div>`;
 }
 /* ---- member detail (Summary / Purchases / Redemptions) + actions ---- */
@@ -4519,6 +4568,48 @@ function shopAddStockCard(){ const it=SHOP_ITEMS[shopAddStock]; if(!it) return "
   </div></div>`;
 }
 
+/* New/Edit shop product — the user picks the HSN/SAC code; GST is auto-filled from it and the
+   Base price is auto-calculated (Selling price − GST). GST and Base price are read-only. */
+function shopRecalcForm(){
+  const hsnEl=document.getElementById("shopHsn"), sellEl=document.getElementById("shopSelling");
+  if(!hsnEl||!sellEl) return;
+  const h=hsnByCode(hsnEl.value), gstPct=h?h.gst:0, selling=+sellEl.value||0;
+  const gstAmt=(selling&&gstPct)?Math.round(selling*gstPct/(100+gstPct)):0;   // Selling price is GST-inclusive
+  const base=(h&&selling)?selling-gstAmt:0;
+  const g=document.getElementById("shopGstOut"); if(g) g.value=h?`${gstPct}%${selling?` · ${money(gstAmt)}`:""}`:"—";
+  const b=document.getElementById("shopBaseOut"); if(b) b.value=(h&&selling)?money(base):"—";
+  const c=document.getElementById("shopCost"); if(c&&!shopCostTouched) c.value=(h&&selling)?base:"";   // Cost follows Base until edited
+}
+function shopItemForm(editing){
+  shopCostTouched=false;   // fresh form — Cost price follows Base price until manually edited
+  const it=editing?SHOP_ITEMS[selShopItem]:{pd:"",barcode:"",n:"",desc:"",cat:"",mrp:"",hsn:"",stock:""};
+  const sec=(title,body)=>`<section class="form-sec"><div class="form-sec-head"><span class="form-sec-title">${title}</span></div><div class="form-sec-body">${body}</div></section>`;
+  const fld=(label,inner,hint,req,wide)=>`<div class="fld${wide?" wide":""}"><div class="lab"><span class="lab-n">${label}</span>${hint?tip(hint):""}<span class="lab-req">${req?"Required":"Optional"}</span></div>${inner}</div>`;
+  const h=hsnByCode(it.hsn), gstPct=h?h.gst:0, selling=+it.mrp||0;
+  const gstAmt=(selling&&gstPct)?Math.round(selling*gstPct/(100+gstPct)):0, base=(h&&selling)?selling-gstAmt:0;
+  const catOpts=["Books","Toys","Apparel","Stationery","Games","Home"];
+  return `<div><div class="card">
+    <div class="card-head"><span class="card-title">${editing?"Edit "+it.n:"New shop product"}</span></div>
+    <div class="form-body product-form">
+      ${sec("Basics",
+        fld("Category",`<div class="selwrap"><select class="inp" id="shopCat"><option value="">Select…</option>${catOpts.map(c=>`<option${it.cat===c?" selected":""}>${c}</option>`).join("")}</select></div>`,"Merchandise department — the Product ID is generated from this.",true)
+        +fld("Product ID (PD)",`<input class="inp mono" id="shopPd" value="${escAttr(editing?(it.pd||""):(it.cat?shopPdFor(it.cat):""))}" placeholder="Auto — select a category" disabled>`,"Auto-generated from the category, e.g. Books → BK-00001. Read-only.",false)
+        +fld("Barcode",`<input class="inp mono" id="shopBarcode" value="${escAttr(it.barcode||"")}" placeholder="8901234500116">`,"EAN/UPC scanned at the counter.",false)
+        +fld("Name",`<input class="inp" id="shopName2" value="${escAttr(it.n||"")}" placeholder="Ceramic Mug">`,"Shown on the receipt and reports.",true,true)
+        +fld("Description",`<input class="inp" id="shopDesc" value="${escAttr(it.desc||"")}" placeholder="MuSo branded mug">`,"Optional short description.",false,true))}
+      ${sec("Pricing & tax",
+        fld("HSN / SAC code",`<div class="selwrap"><select class="inp" id="shopHsn"><option value="">Select…</option>${HSNCODES.map(x=>`<option value="${x.code}"${it.hsn===x.code?" selected":""}>${x.kind} ${x.code} · ${x.gst}% GST</option>`).join("")}</select></div>`,"Pick the code — the GST rate is taken from it.",true,true)
+        +fld("Selling price",`<div class="inp-suffix"><input class="inp mono" id="shopSelling" type="number" min="0" value="${escAttr(it.mrp||"")}" placeholder="0"><span>₹</span></div>`,"The GST-inclusive price the customer pays.",true)
+        +fld("GST",`<input class="inp mono" id="shopGstOut" value="${gstPct?`${gstPct}% · ${money(gstAmt)}`:"—"}" disabled>`,"Auto-filled from the HSN / SAC code.",false)
+        +fld("Base price",`<input class="inp mono" id="shopBaseOut" value="${base?money(base):"—"}" disabled>`,"Auto-calculated: Selling price − GST. Read-only.",false)
+        +fld("Cost price",`<div class="inp-suffix"><input class="inp mono" id="shopCost" type="number" min="0" value="${base?base:""}" placeholder="0"><span>₹</span></div>`,"Defaults to the Base price (Selling − GST); edit to record the actual purchase cost.",false))}
+      ${sec("Inventory",
+        fld("Available units",`<input class="inp mono" id="shopStock2" type="number" min="0" value="${escAttr(it.stock||"")}" placeholder="0">`,"Units on hand.",false)
+        +fld("Unit",`<div class="selwrap"><select class="inp" id="shopUqc">${["NOS","PCS","SET","KGS","MTR","PAC"].map(u=>`<option${(it.uqc||"NOS")===u?" selected":""}>${u}</option>`).join("")}</select></div>`,"Unit quantity code (UQC) for the GST return.",false))}
+    </div>
+    <div class="form-foot"><span></span><button class="btn" data-tab="list">Cancel</button><button class="btn btn-primary" data-tab="list">${editing?"Save changes":"Create product"}</button></div>
+  </div></div>`;
+}
 function shopItemDetail(){ const it=SHOP_ITEMS[selShopItem]; if(!it) return "";
   const row=(k,v)=>`<tr><td style="color:var(--ink3);width:42%">${k}</td><td>${v}</td></tr>`;
   const gst=shopGstPct(it);
@@ -4542,7 +4633,7 @@ function shopCouponDetail(){ const c=SHOP_COUPONS[selShopCoupon]; if(!c) return 
     ${row("Description",c.desc||"—")}${row("Discount",c.type==="%"?c.v+"%":money(c.v))}${row("Valid",(c.from||"—")+" → "+(c.to||"—"))}
   </tbody></table></div></div>
   <div class="card"><div class="card-head"><span class="card-title">Approval</span><span class="card-note">a code cannot apply until Approved</span></div><div class="matrix-wrap"><table class="reclist"><tbody>
-    ${row("Prepared by",c.preparedBy||"—")}${row("Proposed by",c.proposedBy||"—")}${row("Approved by",c.approvedBy||"—")}${row("Status",pill)}
+    ${row("Proposed by",c.proposedBy||"—")}${row("Status",pill)}
   </tbody></table></div></div></div>`;
 }
 
@@ -4655,8 +4746,8 @@ function render(){
   const label=singular(current,m.n);
   const back=t=>`<button class="pageback" data-tab="list">&larr; ${t}</button>`;
   let body;
-  if(tab==="new") body = back("Back to "+m.n.toLowerCase()) + (current==="products" ? productForm() : current==="programs" ? createForm(PROGRAM_SCHEMA,"program","",{}) : current==="bookings" ? bookingForm() : current==="discounts" ? discountForm(false) : current==="tiers" ? tierForm(false) : current==="members" ? memberForm(false) : current==="shopsales" ? shopSaleForm() : current==="shopitems" ? createForm(SCHEMAS.shopitems,"product") : current==="shopcoupons" ? createForm(SCHEMAS.shopcoupons,"coupon") : createForm(schema,label));
-  else if(tab==="edit" && current==="shopitems"){ const it=SHOP_ITEMS[selShopItem]||{}; body = back("Back to shop products") + createForm(SCHEMAS.shopitems,"product","",{pd:it.pd,barcode:it.barcode,name:it.n,description:it.desc,cat:it.cat,base:it.base,mrp:it.mrp,stock:it.stock},true); }
+  if(tab==="new") body = back("Back to "+m.n.toLowerCase()) + (current==="products" ? productForm() : current==="programs" ? createForm(PROGRAM_SCHEMA,"program","",{}) : current==="bookings" ? bookingForm() : current==="discounts" ? discountForm(false) : current==="tiers" ? tierForm(false) : current==="members" ? memberForm(false) : current==="shopsales" ? shopSaleForm() : current==="shopitems" ? shopItemForm(false) : current==="shopcoupons" ? createForm(SCHEMAS.shopcoupons,"coupon") : current==="hsn" ? createForm(schema,label,"",{kind:"hsn"}) : createForm(schema,label));
+  else if(tab==="edit" && current==="shopitems") body = back("Back to shop products") + shopItemForm(true);
   else if(tab==="edit" && current==="shopcoupons"){ const c=SHOP_COUPONS[selShopCoupon]||{}; body = back("Back to shop coupons") + createForm(SCHEMAS.shopcoupons,"coupon","",{code:c.code,desc:c.desc,type:c.type,v:c.v,preparedBy:c.preparedBy,proposedBy:c.proposedBy,approvedBy:c.approvedBy,status:c.status},true); }
   else if(tab==="edit" && current==="tiers") body = back("Back to membership tiers") + tierForm(true);
   else if(tab==="edit" && current==="members") body = back("Back to members") + memberForm(true);
@@ -4736,7 +4827,7 @@ function addSubmit(){
   addOpen=null; render(); $(".stage").scrollTop=0;
 }
 
-function resetBooking(){ bookingProducts=new Map(); bookingAddons=new Map(); bookingPrograms=new Map(); bookingPay="Cash"; bookingDiscountCode=""; bookingDiscountTried=false; bookingStep1Tried=false; bookingTab="products"; bookingCustomer={name:"",phone:"",email:"",member:null,location:""}; bookingCustomerLinked=-1; bookingStep=1; bookingOpenItem=null; bookingCalMonth=null; bookingCancelConfirm=false; bookingRedeemVisit=false; bookingRedeemAdult=false; }
+function resetBooking(){ bookingProducts=new Map(); bookingAddons=new Map(); bookingPrograms=new Map(); bookingPay="Cash"; bookingDiscountCode=""; bookingDiscountTried=false; bookingStep1Tried=false; bookingTab="products"; bookingCustomer={name:"",phone:"",email:"",member:null,location:"",pincode:"",gstin:""}; bookingCustomerLinked=-1; bookingStep=1; bookingOpenItem=null; bookingCalMonth=null; bookingCancelConfirm=false; bookingRedeemVisit=false; bookingRedeemAdult=false; }
 
 /* ---- POS cart helpers — shared by bookingForm() (display) and the click handlers (state changes) ---- */
 function slotLeft(s){ if(!s||s.cap==null) return Infinity; return Math.max(0,(s.cap||0)-(s.sold||0)); }
@@ -4883,6 +4974,11 @@ document.addEventListener("click",e=>{
   const t=e.target.closest("[data-tab]");
   if(t){ tab=t.dataset.tab; if(tab==="new"&&current==="bookings") resetBooking(); if(tab==="new"&&current==="shopsales") resetShopSale(); if(tab==="new"&&current==="programs"){progKind=progFormat(progCat)==="multi"?"camp":"event";eventCats=new Set();} if(tab==="new"&&current==="events") eventCats=new Set(); if(tab==="new"&&current==="discounts") draftDiscount=null; if(tab==="new"&&(current==="products"||current==="programs")) prodBuildingPool=false; addOpen=null; render(); $(".stage").scrollTop=0; return; }
   if(e.target.closest("#hAdd")){ tab="new"; if(current==="bookings") resetBooking(); if(current==="shopsales") resetShopSale(); if(current==="events") eventCats=new Set(); if(current==="discounts") draftDiscount=null; if(current==="products"||current==="programs") prodBuildingPool=false; addOpen=null; render(); $(".stage").scrollTop=0; return; }
+  // member form Save — Location and PIN code are each optional, but at least one must be given
+  const memSave=e.target.closest("[data-member-save]");
+  if(memSave){ const loc=((document.getElementById("memberLocation")||{}).value||"").trim(), pin=((document.getElementById("memberPincode")||{}).value||"").trim();
+    if(!loc&&!pin){ const err=document.getElementById("memberLocErr"); if(err) err.style.display=""; return; }
+    tab="list"; render(); $(".stage").scrollTop=0; return; }
   // ---- reception check-in / out ----
   const scan=e.target.closest("[data-scan]");
   if(scan){ checkinRef=scan.dataset.scan; render(); $(".stage").scrollTop=0; return; }
@@ -4941,7 +5037,7 @@ document.addEventListener("click",e=>{
   const stepBtn=e.target.closest("[data-book-step]");
   if(stepBtn){ const n=+stepBtn.dataset.bookStep; if(n<=bookingStep) bookingStep=n; render(); $(".stage").scrollTop=0; return; }
   const nextBtn=e.target.closest("[data-book-next]");
-  if(nextBtn){ if(bookingStep===1){ const c=bookingCustomer; if(!String(c.phone||"").trim()||!String(c.name||"").trim()||!String(c.location||"").trim()){ bookingStep1Tried=true; render(); return; } bookingStep1Tried=false; bookingStep=2; } else if(bookingStep===2 && hasBookingItems()) bookingStep=3; render(); $(".stage").scrollTop=0; return; }
+  if(nextBtn){ if(bookingStep===1){ const c=bookingCustomer; if(!String(c.phone||"").trim()||!String(c.name||"").trim()||(!String(c.location||"").trim()&&!String(c.pincode||"").trim())){ bookingStep1Tried=true; render(); return; } bookingStep1Tried=false; bookingStep=2; } else if(bookingStep===2 && hasBookingItems()) bookingStep=3; render(); $(".stage").scrollTop=0; return; }
   const backBtn=e.target.closest("[data-book-back]");
   if(backBtn){ bookingStep=Math.max(1,bookingStep-1); render(); $(".stage").scrollTop=0; return; }
   const bkTab=e.target.closest("[data-book-tab]");
@@ -5134,6 +5230,8 @@ document.addEventListener("change",e=>{
   if(e.target.id==="bookingSlotSelect"){ bookingSlot=e.target.value; render(); }
   const shPick=e.target.closest&&e.target.closest("[data-shop-pick]");
   if(shPick){ const i=+shPick.dataset.shopPick; if(shopCart[i]) shopCart[i].pd=e.target.value; render(); return; }
+  if(e.target.id==="shopHsn"){ shopRecalcForm(); return; }   // new-product form: HSN drives GST + Base price
+  if(e.target.id==="shopCat"){ const pd=document.getElementById("shopPd"); if(pd) pd.value=shopPdFor(e.target.value); return; }   // PD auto-generated from category
   if(e.target.id==="shopSpot"){ shopSpot=Math.max(0,+e.target.value||0); render(); return; }
   if(e.target.matches&&e.target.matches("[data-shop-split]")){ shopSplit=e.target.checked; render(); return; }
   if(e.target.id==="shopSplitA"){ shopSplitA=Math.max(0,+e.target.value||0); render(); return; }
@@ -5162,6 +5260,8 @@ document.addEventListener("input",e=>{
     if(wrap) wrap.querySelectorAll(".msel-opt").forEach(o=>{ o.style.display=(!q||(o.dataset.label||"").includes(q))?"":"none"; });
     return;
   }
+  if(e.target.id==="shopSelling"){ shopRecalcForm(); return; }   // new-product form: recompute GST + Base as Selling price is typed
+  if(e.target.id==="shopCost"){ shopCostTouched=true; return; }   // Cost price manually overridden — stop following Base
   if(e.target.id==="shopPhone"){ shopCustomer.phone=e.target.value; return; }
   if(e.target.id==="shopName"){ shopCustomer.name=e.target.value; return; }
   if(e.target.id==="shopEmail"){ shopCustomer.email=e.target.value; return; }
@@ -5203,6 +5303,8 @@ document.addEventListener("input",e=>{
 document.addEventListener("input",e=>{
   if(e.target.id==="bookCustName"){ bookingCustomer.name=e.target.value; return; }
   if(e.target.id==="bookCustLocation"){ bookingCustomer.location=e.target.value; return; }
+  if(e.target.id==="bookCustPincode"){ bookingCustomer.pincode=e.target.value; return; }
+  if(e.target.id==="bookCustGstin"){ bookingCustomer.gstin=e.target.value; return; }
   if(e.target.id==="bookCustEmail"){ bookingCustomer.email=e.target.value; return; }
   if(e.target.id==="bookCustPhone"){
     bookingCustomer.phone=e.target.value; bookingCustomerLinked=-1; bookingCustomer.member=null;
