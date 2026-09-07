@@ -730,6 +730,44 @@ tbody tr[aria-selected="true"] td:first-child{box-shadow:inset 2px 0 0 var(--blu
 .combo-title{font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--blue)}
 .pos-item>.rep-add{margin-top:2px}
 .cal-slot-radio{border-radius:50%}
+
+/* ---- Shop / Merchandise ---- */
+.shop-seg{display:inline-flex;border:1px solid var(--rule2);border-radius:7px;overflow:hidden}
+.shop-seg-btn{padding:6px 14px;font-size:12px;background:#fff;border:0;border-right:1px solid var(--rule2)}
+.shop-seg-btn:last-child{border-right:0}
+.shop-seg-btn.on{background:var(--blue);color:#fff}
+.shop-sale-table th,.shop-sale-table td{white-space:nowrap;font-size:12px}
+.shop-sale-table .selwrap,.shop-sale-table select.inp{min-width:170px}
+.invoice-actions{display:flex;align-items:center;gap:10px;margin-bottom:12px}
+.invoice{border:1px solid var(--rule2);border-radius:8px;padding:20px;background:#fff;max-width:840px;font-size:12px;line-height:1.5}
+.inv-top{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:1px solid var(--rule);padding-bottom:8px;margin-bottom:10px}
+.inv-kind{font-size:14px;font-weight:700;letter-spacing:.02em}
+.inv-qr{width:56px;height:56px;border:1px dashed var(--rule2);display:flex;align-items:center;justify-content:center;font-size:10px;color:var(--ink3);border-radius:4px}
+.inv-irn{font-size:11px;color:var(--ink2);margin-bottom:10px;font-family:var(--mono)}
+.inv-parties{display:grid;grid-template-columns:1fr 1fr;gap:14px;border:1px solid var(--rule);border-radius:6px;padding:12px;margin-bottom:8px}
+.inv-party b{font-size:13px}
+.inv-meta{display:flex;gap:26px;align-items:flex-start}
+.inv-buyer{border:1px solid var(--rule);border-radius:6px;padding:12px;margin-bottom:12px}
+.inv-buyer b{display:block;margin-bottom:2px}
+.inv-table td,.inv-table th,.inv-hsn td,.inv-hsn th{font-size:11.5px}
+.inv-tax td{color:var(--ink2)}
+.inv-total td{border-top:2px solid var(--rule2)}
+.inv-words{margin:10px 0;font-size:12px}
+.inv-hsn{margin-top:10px}
+.inv-foot{display:flex;justify-content:space-between;margin-top:16px;gap:20px}
+.inv-sign{text-align:right;min-width:190px}
+.inv-sign-line{height:38px}
+.inv-note{text-align:center;margin-top:14px;font-size:11px}
+/* shop sale: sticky Totals & payment box (right column) */
+.shop-sale-main{display:flex;flex-direction:column;gap:14px}
+.shop-totals-body{display:flex;flex-direction:column;gap:12px}
+.shop-seg{flex-wrap:wrap}
+.shop-total-rows{border-top:1px solid var(--rule);border-bottom:1px solid var(--rule);padding:4px 0;margin:2px 0}
+.shop-words{font-size:11.5px;color:var(--ink2);line-height:1.4}
+.shop-cta{display:flex;flex-direction:column;gap:8px;margin-top:2px}
+.shop-cta .btn{width:100%;display:flex;align-items:center;justify-content:center}
+.shop-cta-row{display:flex;gap:8px}
+.shop-cta-row .btn{flex:1}
 </style>
 </head>
 <body>
@@ -768,14 +806,17 @@ const GROUPS = [
   {name:"3 · Calendar", color:"#C25B18"},
   {name:"4 · Offers", color:"#C2286E"},
   {name:"5 · Checkout & site", color:"#6B3FC4"},
-  {name:"6 · Membership", color:"#8A5A00"}
+  {name:"6 · Membership", color:"#8A5A00"},
+  {name:"7 · Shop", color:"#B23A8F"}
 ];
 const ORDER = ["categories","pools","tax","hsn","progcats","products","programs","blackout","bookings","checkin",
-               "discounts","affiliates","paymodes","sources","scripts","tiers","members"];
+               "discounts","affiliates","paymodes","sources","scripts","tiers","members",
+               "shopitems","shopsales","shopcoupons","shopreports"];
 const PHASE = {categories:0,pools:0,tax:0,hsn:0,progcats:0, products:1, programs:1, blackout:2,
                discounts:3,affiliates:3,
                paymodes:4,sources:4,scripts:4,bookings:2,checkin:2,
-               tiers:5,members:5};
+               tiers:5,members:5,
+               shopitems:6,shopsales:6,shopcoupons:6,shopreports:6};
 const PREREQ = {
   categories:[], pools:[], tax:[], hsn:[], paymodes:[], sources:[], scripts:[], progcats:[], bookings:["Products & add-ons"], checkin:["Products & add-ons"],
   products:["Visitor categories","Inventory pools","Tax rates","HSN / SAC codes"],
@@ -785,7 +826,8 @@ const PREREQ = {
   blackout:["Products & add-ons"],
   discounts:["Products & add-ons"],
   affiliates:["Discounts & offers"],
-  tiers:[], members:["Membership tiers"]
+  tiers:[], members:["Membership tiers"],
+  shopitems:["Tax rates","HSN / SAC codes"], shopsales:["Shop products"], shopcoupons:[], shopreports:["Shop products"]
 };
 const SUBS = [
   ["details","Details"],["slots","Time slots"],["addons","Add-ons"],
@@ -1043,16 +1085,10 @@ const M = {
   tax:{g:0,n:"Tax rates",owner:"Shivam · Finance & Accounts",perm:"master.tax.manage",src:"Scope §12",
     d:"One rate in force: 18%, charged as CGST 9% plus SGST 9%. A rate is never edited — a change closes one row and opens another, so a past invoice keeps what it was charged.",
     view:"taxrates",
-    schema:[["Short code|code","string","CGST-9, SGST-9, IGST-18"],
-            ["Name on the invoice|name","string","Printed on the invoice line."],
-            ["Which tax this is|component","enum","cgst · sgst · igst · cess","What this rate is. §12 needs the GST breakup by component, which is only possible if each is its own row."],
-            ["Charged when this field|condition_field","enum","place of supply state · customer type · always","What the invoice is tested on. Nothing about the state is hard-coded — change the field and the same three rows can be driven by something else entirely."],
-            ["Matches or does not|condition_operator","enum","is · is not","IGST is the “is not” of the other two, which is why one row does not need a rule of its own."],
-            ["This value|condition_value","string","Maharashtra, because that is where MuSo is registered. It sits here rather than in a hidden setting, so moving or adding a registration is an edit on these rows."],
-            ["Rate|percentage","decimal","One number. A row is a single rate — CGST 9% and SGST 9% are two rows, not two columns on one."],
-            ["Charged when this field|condition_field","enum","within state · inter-state · always","Which rows fire on an invoice, resolved from the place of supply. A product carries all three; only the matching ones are charged."],
-            ["In force between|effective_from / effective_to","date","An invoice resolves against its own date, so a past booking keeps the rate it was raised under. A revision closes this row and opens a new one."],
-            ["In use|is_active","bool",""]]},
+    schema:[["Short code|code","string","Short code used on reports, e.g. CGST-9."],
+            ["Name on the invoice|name","string","Printed on the invoice line, e.g. CGST."],
+            ["Rate %|percentage","decimal","The single rate for this row, e.g. 9. CGST 9% and SGST 9% are two rows, not two columns on one."],
+            ["Live|is_active","bool","Turn a rate off to stop it applying to new invoices."]]},
   hsn:{g:0,n:"HSN / SAC codes",owner:"Shivam · Finance & Accounts",perm:"master.tax.manage",src:"Scope §12",
     d:"The code each product invoices under. §12 requires an HSN/SAC report with quantity, and notes the current one shows product count rather than quantity sold.",
     view:"hsncodes",
@@ -1121,6 +1157,14 @@ const M = {
     d:"The membership plans on sale — Silver, Gold, Platinum and any others. Each sets its visit count (limited or unlimited), validity, price and the discounts a member earns.",view:"tiers"},
   members:{g:5,n:"Members",owner:"Hasmukh · Sales & Marketing",perm:"membership.manage",src:"Scope §10",q:0,
     d:"Everyone holding a membership. A visit admits the registered adult + child pair; only that pair may redeem. View purchase and redemption history, renew, and record redemptions.",view:"members"},
+  shopitems:{g:6,n:"Shop products",owner:"Sawood · Shop ops",perm:"shop.manage",src:"Scope §5",q:1,
+    d:"The merchandise catalogue — PD code, barcode, price, GST (linked to the Tax-rate master), MRP, HSN and stock on hand. Restock via Add stock.",view:"shopitems"},
+  shopsales:{g:6,n:"Shop sales",owner:"Sawood · Shop ops",perm:"shop.sell",src:"Scope §5",q:0,
+    d:"Barcode POS for the shop counter — scan or search items, apply Employee/Gift, on-the-spot, coupon and membership discounts, take payment and print the GST tax invoice.",view:"shopsales"},
+  shopcoupons:{g:6,n:"Shop coupons",owner:"Ashish · Manager",perm:"shop.promo.manage",src:"Scope §5",q:1,
+    d:"Shop discount codes. A code cannot apply until it is Approved — the form records who prepared, proposed and approved it.",view:"shopcoupons"},
+  shopreports:{g:6,n:"Shop reports",owner:"Shivam · Finance & Accounts",perm:"shop.report.view",src:"Scope §12",q:0,
+    d:"Shop sales summary and the HSN/SAC-wise quantity + GST breakup for the GST return.",view:"shopreports"},
   dashboard:{n:"Dashboard",owner:"Visitor Experience",perm:"dashboard.view",view:"dashboard"},
   checkin:{n:"Check-in / out",owner:"Reception",perm:"reception.checkin",view:"checkin"}
 };
@@ -1146,10 +1190,121 @@ const TAXRATES = [
   {code:"SGST-9",name:"SGST",comp:"sgst",pct:9,
    field:"Place of supply state",op:"is",val:"Maharashtra",from:"01 Apr 2026",to:"open"},
   {code:"IGST-18",name:"IGST",comp:"igst",pct:18,
-   field:"Place of supply state",op:"is not",val:"Maharashtra",from:"01 Apr 2026",to:"open"}
+   field:"Place of supply state",op:"is not",val:"Maharashtra",from:"01 Apr 2026",to:"open"},
+  // ---- goods rates for the Shop / Merchandise module (5% / 12% / 28%); 0% items simply carry no rate ----
+  {code:"CGST-2.5",name:"CGST",comp:"cgst",pct:2.5,field:"Place of supply state",op:"is",val:"Maharashtra",from:"01 Apr 2026",to:"open"},
+  {code:"SGST-2.5",name:"SGST",comp:"sgst",pct:2.5,field:"Place of supply state",op:"is",val:"Maharashtra",from:"01 Apr 2026",to:"open"},
+  {code:"IGST-5",name:"IGST",comp:"igst",pct:5,field:"Place of supply state",op:"is not",val:"Maharashtra",from:"01 Apr 2026",to:"open"},
+  {code:"CGST-6",name:"CGST",comp:"cgst",pct:6,field:"Place of supply state",op:"is",val:"Maharashtra",from:"01 Apr 2026",to:"open"},
+  {code:"SGST-6",name:"SGST",comp:"sgst",pct:6,field:"Place of supply state",op:"is",val:"Maharashtra",from:"01 Apr 2026",to:"open"},
+  {code:"IGST-12",name:"IGST",comp:"igst",pct:12,field:"Place of supply state",op:"is not",val:"Maharashtra",from:"01 Apr 2026",to:"open"},
+  {code:"CGST-14",name:"CGST",comp:"cgst",pct:14,field:"Place of supply state",op:"is",val:"Maharashtra",from:"01 Apr 2026",to:"open"},
+  {code:"SGST-14",name:"SGST",comp:"sgst",pct:14,field:"Place of supply state",op:"is",val:"Maharashtra",from:"01 Apr 2026",to:"open"},
+  {code:"IGST-28",name:"IGST",comp:"igst",pct:28,field:"Place of supply state",op:"is not",val:"Maharashtra",from:"01 Apr 2026",to:"open"}
 ];
 const RATE = c => TAXRATES.find(x=>x.code===c);
-const HSNCODES = [{code:"999692",kind:"SAC",desc:"Amusement, recreation and other entertainment services",uqc:"NOS"}];
+const HSNCODES = [
+  {code:"999692",kind:"SAC",desc:"Amusement, recreation and other entertainment services",uqc:"NOS"},
+  // ---- goods (8-digit HSN) for the Shop / Merchandise module ----
+  {code:"49011010",kind:"HSN",desc:"Printed books",uqc:"NOS"},
+  {code:"95030090",kind:"HSN",desc:"Toys and puzzles",uqc:"NOS"},
+  {code:"61091000",kind:"HSN",desc:"T-shirts, cotton",uqc:"NOS"},
+  {code:"48201090",kind:"HSN",desc:"Notebooks and diaries",uqc:"NOS"},
+  {code:"69120040",kind:"HSN",desc:"Ceramic mugs and tableware",uqc:"NOS"},
+  {code:"96091000",kind:"HSN",desc:"Pencils and crayons",uqc:"NOS"}
+];
+
+/* ================= Shop / Merchandise module (Scope §5) ================= */
+const MUSO_SELLER = {name:"MuSo Foundation", addr:["5A, Jindal Mansion, Dr G Deshmukh Marg","Mumbai, Maharashtra — 400026, India"], gstin:"27AAQCM9400K1ZZ", state:"Maharashtra", stateCode:"27", email:"finance.foundation@jsw.in", bank:{name:"Axis Bank", ac:"XXXXXXXX1234", ifsc:"UTIB0000XXX · Andheri West, Mumbai"}};
+/* Merchandise inventory. GST + HSN are references into the existing Tax-rate / HSN masters (a 0% item
+   simply carries no rate codes). Prices are flat (not per visitor-category like a ticket). */
+const SHOP_ITEMS = [
+  {pd:"PD_116",barcode:"8901234500116",n:"Emotional First Aid",desc:"Illustrated card deck for feelings",cat:"Books",base:1937,tax:["CGST-6","SGST-6","IGST-12"],hsn:"49011010",mrp:1937,stock:12},
+  {pd:"PD_204",barcode:"8901234500204",n:"MuSo Puzzle Cube",desc:"3×3 logic cube",cat:"Toys",base:499,tax:["CGST-6","SGST-6","IGST-12"],hsn:"95030090",mrp:599,stock:3},
+  {pd:"PD_318",barcode:"8901234500318",n:"Kids Explorer Tee",desc:"Cotton t-shirt (kids)",cat:"Apparel",base:699,tax:["CGST-2.5","SGST-2.5","IGST-5"],hsn:"61091000",mrp:799,stock:0},
+  {pd:"PD_402",barcode:"8901234500402",n:"Doodle Notebook",desc:"A5 blank notebook",cat:"Stationery",base:150,tax:[],hsn:"48201090",mrp:150,stock:40},
+  {pd:"PD_511",barcode:"8901234500511",n:"Science Kit — Volcano",desc:"DIY chemistry kit",cat:"Games",base:1299,tax:["CGST-9","SGST-9","IGST-18"],hsn:"95030090",mrp:1499,stock:7},
+  {pd:"PD_623",barcode:"8901234500623",n:"MuSo Mascot Plush",desc:"Soft toy mascot",cat:"Toys",base:899,tax:["CGST-6","SGST-6","IGST-12"],hsn:"95030090",mrp:999,stock:2},
+  {pd:"PD_735",barcode:"8901234500735",n:"Ceramic Mug",desc:"MuSo branded mug",cat:"Home",base:349,tax:["CGST-9","SGST-9","IGST-18"],hsn:"69120040",mrp:399,stock:18},
+  {pd:"PD_848",barcode:"8901234500848",n:"Colour Pencil Set",desc:"24 shades",cat:"Stationery",base:249,tax:["CGST-6","SGST-6","IGST-12"],hsn:"96091000",mrp:299,stock:25}
+];
+const SHOP_CATS = [...new Set(SHOP_ITEMS.map(x=>x.cat))];
+const shopItemByPd = pd => SHOP_ITEMS.find(x=>x.pd===pd);
+const shopItemByBarcode = bc => SHOP_ITEMS.find(x=>String(x.barcode)===String(bc));
+/* GST% for an item comes from its linked Tax-rate rows (intra-state = CGST + SGST). */
+const shopGstPct = it => (it&&it.tax||[]).filter(c=>/^(CGST|SGST)/.test(c)).reduce((a,c)=>a+((RATE(c)||{}).pct||0),0);
+const shopHalfPct = it => { const cg=(it&&it.tax||[]).find(c=>/^CGST/.test(c)); return (RATE(cg)||{}).pct||0; };  // CGST (= SGST) half
+/* Employee / Gift preset discount % (wireframe presets; a spot discount can be added on top). */
+const shopTypeDiscPct = t => t==="Employee"?15:t==="Gift"?100:0;
+
+/* Shop coupons — a Shop-only master, approval-gated (only Approved coupons apply on a sale). */
+const SHOP_COUPONS = [
+  {code:"STAFF20",type:"%",v:20,desc:"Staff discount",preparedBy:"Sawood",proposedBy:"Ashish",approvedBy:"Chandresh",status:"Approved",from:"01 Apr 2026",to:"31 Mar 2027"},
+  {code:"MUSO50",type:"₹",v:50,desc:"Flat ₹50 off",preparedBy:"Sawood",proposedBy:"Ashish",approvedBy:"",status:"Pending approval",from:"01 Sep 2026",to:"30 Sep 2026"},
+  {code:"DIWALI10",type:"%",v:10,desc:"Festive 10%",preparedBy:"Sawood",proposedBy:"",approvedBy:"",status:"Draft",from:"",to:""}
+];
+const shopCoupon = code => SHOP_COUPONS.find(c=>String(c.code).toUpperCase()===String(code||"").trim().toUpperCase());
+
+/* Past sales (All Muso Sales). Totals are computed from lines × SHOP_ITEMS, not stored. */
+const SHOP_SALES = [
+  {txn:"4949",inv:"MUSO/25-26/0142",date:"27 Feb 2026",phone:"98765 43210",name:"Aarav Mehta",email:"aarav@example.com",gstin:"",lines:[{pd:"PD_116",qty:1}],discType:"",spot:0,coupon:"",pay:"Cash"},
+  {txn:"4948",inv:"MUSO/25-26/0141",date:"27 Feb 2026",phone:"99887 76655",name:"Nisha Rao",email:"",gstin:"27ABCDE1234F1Z5",lines:[{pd:"PD_204",qty:2},{pd:"PD_402",qty:3}],discType:"",spot:0,coupon:"",pay:"POS-Card"},
+  {txn:"4947",inv:"MUSO/25-26/0140",date:"26 Feb 2026",phone:"90000 11111",name:"Sawood (staff)",email:"",gstin:"",lines:[{pd:"PD_735",qty:1}],discType:"Employee",spot:0,coupon:"",pay:"POS-UPI"},
+  {txn:"4946",inv:"MUSO/25-26/0139",date:"26 Feb 2026",phone:"91234 56789",name:"Kabir Shah",email:"",gstin:"",lines:[{pd:"PD_511",qty:1},{pd:"PD_848",qty:2}],discType:"",spot:0,coupon:"STAFF20",pay:"Cash"},
+  {txn:"4945",inv:"MUSO/25-26/0138",date:"25 Feb 2026",phone:"93333 22222",name:"Gift order",email:"",gstin:"",lines:[{pd:"PD_623",qty:1}],discType:"Gift",spot:0,coupon:"",pay:"POS-Card"}
+];
+
+/* ---- sale math (shared by the sale form, the invoice detail and the reports) ---- */
+function shopSaleCompute(sale){
+  const lines=(sale.lines||[]).map(l=>{ const it=shopItemByPd(l.pd)||{}; const qty=+l.qty||0; const gross=(it.base||0)*qty; return {...l,it,qty,gross,gstPct:shopGstPct(it),halfPct:shopHalfPct(it)}; });
+  const subtotal=lines.reduce((a,l)=>a+l.gross,0);
+  let discPct=shopTypeDiscPct(sale.discType)+(+sale.spot||0);
+  const cp=sale.coupon?shopCoupon(sale.coupon):null; const couponOk=cp&&cp.status==="Approved";
+  let flat=0;
+  if(couponOk){ if(cp.type==="%") discPct+=(+cp.v||0); else flat+=(+cp.v||0); }
+  discPct=Math.min(100,discPct);
+  const discFromPct=subtotal*discPct/100;
+  const discAmt=Math.min(subtotal, discFromPct+flat);
+  const factor=subtotal>0?(subtotal-discAmt)/subtotal:0;   // spread the discount across lines pro-rata
+  let cgst=0,sgst=0;
+  lines.forEach(l=>{ const net=l.gross*factor; cgst+=net*l.halfPct/100; sgst+=net*l.halfPct/100; });
+  const gst=cgst+sgst;
+  const net=subtotal-discAmt;
+  const grand=Math.round(net+gst);
+  return {lines,subtotal,discPct,discAmt,couponOk,coupon:cp,net,cgst,sgst,gst,grand};
+}
+
+/* Number → Indian words for the tax invoice ("Rupees … Only"). */
+function amountInWords(num){
+  num=Math.round(+num||0); if(num===0) return "Rupees Zero Only";
+  const a=["","One","Two","Three","Four","Five","Six","Seven","Eight","Nine","Ten","Eleven","Twelve","Thirteen","Fourteen","Fifteen","Sixteen","Seventeen","Eighteen","Nineteen"];
+  const b=["","","Twenty","Thirty","Forty","Fifty","Sixty","Seventy","Eighty","Ninety"];
+  const two=n=>n<20?a[n]:b[Math.floor(n/10)]+(n%10?" "+a[n%10]:"");
+  const three=n=>{ const h=Math.floor(n/100),r=n%100; return (h?a[h]+" Hundred"+(r?" ":""):"")+(r?two(r):""); };
+  let out="", cr=Math.floor(num/10000000); num%=10000000; const la=Math.floor(num/100000); num%=100000; const th=Math.floor(num/1000); num%=1000;
+  if(cr) out+=three(cr)+" Crore "; if(la) out+=three(la)+" Lakh "; if(th) out+=three(th)+" Thousand "; if(num) out+=three(num);
+  return "Rupees "+out.trim().replace(/\s+/g," ")+" Only";
+}
+
+/* ---- CSV export for the Shop tables ---- */
+function shopExportRows(kind){
+  if(kind==="shopitems") return [["PD","Barcode","Name","Category","Base price","GST %","MRP","Stock"]].concat(SHOP_ITEMS.map(x=>[x.pd,x.barcode,x.n,x.cat,x.base,shopGstPct(x),x.mrp,x.stock]));
+  if(kind==="shopcoupons") return [["Code","Description","Type","Value","Prepared by","Proposed by","Approved by","Status","Valid from","Valid to"]].concat(SHOP_COUPONS.map(c=>[c.code,c.desc,c.type,c.v,c.preparedBy,c.proposedBy,c.approvedBy,c.status,c.from,c.to]));
+  if(kind==="shopsales") return [["Txn","Invoice","Date","Customer","Phone","GSTIN","Items","Payment","Subtotal","Discount","GST","Grand total"]].concat(SHOP_SALES.map(s=>{const c=shopSaleCompute(s);const n=(s.lines||[]).reduce((a,l)=>a+(+l.qty||0),0);return [s.txn,s.inv,s.date,s.name,s.phone,s.gstin||"",n,s.pay,Math.round(c.subtotal),Math.round(c.discAmt),Math.round(c.gst),c.grand];}));
+  if(kind==="shopreports-pay"){ const byPay={}; SHOP_SALES.forEach(s=>{const c=shopSaleCompute(s);byPay[s.pay]=(byPay[s.pay]||0)+c.grand;}); return [["Payment mode","Amount"]].concat(Object.entries(byPay).map(([k,v])=>[k,Math.round(v)])); }
+  if(kind==="shopreports-hsn"){ const hm={}; SHOP_SALES.forEach(s=>{const c=shopSaleCompute(s);const f=c.subtotal>0?(c.subtotal-c.discAmt)/c.subtotal:0;c.lines.forEach(l=>{const it=l.it;if(!it.hsn)return;const taxable=l.gross*f;const cg=taxable*l.halfPct/100;const m=hm[it.hsn]||(hm[it.hsn]={hsn:it.hsn,qty:0,taxable:0,cgst:0,sgst:0,pct:l.gstPct});m.qty+=l.qty;m.taxable+=taxable;m.cgst+=cg;m.sgst+=cg;});}); return [["HSN/SAC","Qty sold","Taxable value","CGST %","CGST","SGST %","SGST","Total tax"]].concat(Object.values(hm).map(m=>[m.hsn,m.qty,Math.round(m.taxable),m.pct/2,Math.round(m.cgst),m.pct/2,Math.round(m.sgst),Math.round(m.cgst+m.sgst)])); }
+  return [];
+}
+function downloadCSV(name,rows){
+  try{
+    const csv=rows.map(r=>r.map(c=>{const s=String(c==null?"":c);return /[",\n]/.test(s)?'"'+s.replace(/"/g,'""')+'"':s;}).join(",")).join("\r\n");
+    const blob=new Blob(["﻿"+csv],{type:"text/csv;charset=utf-8"});
+    const url=URL.createObjectURL(blob), a=document.createElement("a");
+    a.href=url; a.download=name; document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(()=>URL.revokeObjectURL(url),1500);
+  }catch(e){}
+}
+const EXPORT_NAMES={shopitems:"shop-products.csv",shopsales:"shop-sales.csv",shopcoupons:"shop-coupons.csv","shopreports-pay":"shop-revenue-by-payment.csv","shopreports-hsn":"shop-hsn-gst.csv"};
 const SCRIPTS = [
   {n:"Google Tag Manager",place:"head",pages:"Every page",note:"The container. Everything else can be managed inside GTM once this is in.",st:"Needs container ID"},
   {n:"Google Tag Manager — noscript",place:"body open",pages:"Every page",note:"The iframe fallback. Has to be the first thing inside the body or it does nothing.",st:"Needs container ID"},
@@ -1441,7 +1596,8 @@ const OPTIONS = {
   "Time slots on this product":[...new Set(P.flatMap(p=>p.slots.map(s=>s.n)))],
   "Tax rates":TAXRATES.map(t=>t.name+" "+t.pct+"% · "+t.op+" "+t.val),
   "HSN / SAC codes":HSNCODES.map(h=>h.kind+" "+h.code),
-  "Referral sources":SOURCES
+  "Referral sources":SOURCES,
+  "Shop products":SHOP_ITEMS.map(x=>x.pd+" · "+x.n)
 };
 
 /* ---- create-form schemas ---- */
@@ -1467,6 +1623,27 @@ const PROD_SCHEMA = PROD_BASE.concat(PROD_ADDON_ONLY, PROD_PRODUCT_ONLY, PROD_RE
 
 const SCHEMAS = {
   products: PROD_SCHEMA,
+  shopitems:[
+    ["Product ID (PD)|pd","string","The PD code on the shelf label, e.g. PD_116."],
+    ["Barcode|barcode","string","EAN/UPC scanned at the counter, e.g. 8901234500116."],
+    ["Name|name","string","Shown on the receipt and reports, e.g. Ceramic Mug."],
+    ["Description|description","string","Optional short description, e.g. MuSo branded mug."],
+    ["Category|cat","enum","Books · Toys · Apparel · Stationery · Games · Home","Merchandise department."],
+    ["Base price|base","money","Pre-tax selling price, e.g. 349."],
+    ["Sale GST|tax_rate_ids[]","fk[]","→ Tax rates. Pick the CGST + SGST (and IGST) rows for this item's slab — 0% items carry none."],
+    ["MRP|mrp","money","Printed maximum retail price, e.g. 399."],
+    ["HSN / SAC code|hsn_sac_id","fk","→ HSN / SAC codes"],
+    ["Available units|stock","int","Units on hand — restock with Add stock, e.g. 12."]],
+  shopcoupons:[
+    ["Coupon code|code","string","What is typed at the counter, e.g. STAFF20."],
+    ["Description|desc","string","What the coupon is for, e.g. Staff discount."],
+    ["Discount type|type","enum","% · ₹","Percentage or flat amount off."],
+    ["Value|v","int","20 for 20% off, or a rupee amount for flat, e.g. 20."],
+    ["Valid|valid_from / valid_to","date","When the coupon can be used."],
+    ["Prepared by|preparedBy","string","Who drafted the code (Shop ops), e.g. Sawood."],
+    ["Proposed by|proposedBy","string","Who proposed it to management, e.g. Ashish."],
+    ["Approved by|approvedBy","string","Management sign-off — required before the code can apply, e.g. Chandresh."],
+    ["Status|status","enum","Draft · Pending approval · Approved","Only Approved codes apply at the counter."]],
   bookings:[
     ["Customer name|customer_name","string","Name on the booking."],
     ["Email|email","string","Confirmation is sent here."],
@@ -2422,7 +2599,10 @@ let current = "dashboard", selP = 0, tab = "list", sub = "details", pType = "pro
     bookingCustomer = {name:"",phone:"",email:"",member:null,location:""}, bookingCustomerLinked = -1, bookingStep = 1, bookingOpenItem = null, bookingCalMonth = null, bookingCancelConfirm = false, bookingDiscountTried = false, bookingStep1Tried = false, bookingRedeemVisit = false, bookingRedeemAdult = false,
     selD = 0, dsub = "summary", editCond = -1, condDraft = null, draftDiscount = null, condStep = 0, condItemsOpen = false,
     selMember = 0, selTier = 0, msub = "summary", redeemStep = 1, redeemVisits = 1,
-    checkinRef = null;   // reception: booking ref currently on the scanner (null = waiting for a scan)
+    checkinRef = null,   // reception: booking ref currently on the scanner (null = waiting for a scan)
+    shopCart = [{pd:"",qty:1}], shopPay = "Cash", shopCustomer = {phone:"",name:"",email:"",gstin:"",member:null},
+    shopDiscType = "", shopSpot = 0, shopCouponCode = "", shopCouponTried = false, shopSplit = false, shopSplitA = 0,
+    shopStep1Tried = false, selShopSale = 0, selShopItem = 0, selShopCoupon = 0, shopAddStock = null;
 /* Check-in / check-out log, keyed by booking ref → {inTime, outTime}. Persists across renders so
    re-scanning a ticket reflects its real state (expected → checked in → checked out). In-memory only. */
 const CHECKINS = {};
@@ -3130,8 +3310,7 @@ const VIEWS = {
       Admission and the activities are <b>services</b>, so they invoice under a SAC rather than an HSN. Each product names one, and it prints on the tax invoice alongside the rate.
     </div></div>
     <div class="card">
-      <div class="card-head"><span class="card-title">Codes</span>
-        <span class="card-note">§12 wants the report by code <b>and quantity sold</b></span></div>
+      <div class="card-head"><span class="card-title">Codes</span></div>
       <div class="matrix-wrap"><table><thead><tr>
         <th>Code</th><th>Kind</th><th>Description</th><th>Unit</th><th>Used by</th></tr></thead>
       <tbody>${HSNCODES.map(h=>`<tr>
@@ -3139,9 +3318,6 @@ const VIEWS = {
         <td style="font-size:12.5px">${h.desc}</td><td class="code">${h.uqc}</td>
         <td class="muted" style="font-size:11.5px">${P.map(x=>x.n).join(", ")}</td></tr>`).join("")}
         ${addRowNew("Add code")}</tbody></table></div>
-      <div class="card-body" style="border-top:1px solid var(--rule);font-size:12.5px;color:var(--ink2);line-height:1.65">
-        §12 notes the existing report counts products rather than quantity sold. The unit column is what fixes that — the return needs the quantity in a declared unit, so a slot with four adult tickets reports four, not one line.
-      </div>
     </div>`;
   },
 
@@ -3337,6 +3513,86 @@ const VIEWS = {
     </div>`;
   },
 
+  shopitems(){
+    const low=SHOP_ITEMS.filter(x=>x.stock>0&&x.stock<=3).length, out=SHOP_ITEMS.filter(x=>x.stock<=0).length;
+    const stockVal=SHOP_ITEMS.reduce((a,x)=>a+x.base*x.stock,0);
+    const S=(p)=>`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${p}</svg>`;
+    const kpi=(ico,color,label,value,sub)=>`<div class="setcard"><div class="kpi-top"><span class="kpi-ico kpi-${color}">${ico}</span><div class="set-k">${label}</div></div><div class="set-v pos">${value}</div><div class="kpi-sub">${sub}</div></div>`;
+    const tiles=`<div class="set">
+      ${kpi(S('<path d="M3 7l9-4 9 4v10l-9 4-9-4z"/><path d="M3 7l9 4 9-4M12 11v10"/>'),"blue","Total SKUs",SHOP_ITEMS.length,"in the catalogue")}
+      ${kpi(S('<circle cx="9" cy="9" r="6"/><path d="M18.1 10.7A6 6 0 1 1 10.7 18.1"/><path d="M7.5 7h2v4"/>'),"teal","Stock value",money(stockVal),"at base price")}
+      ${kpi(S('<path d="M10.3 3.5 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.5a2 2 0 0 0-3.4 0Z"/><path d="M12 9v4M12 17h.01"/>'),"amber","Low stock",low,"≤ 3 units left")}
+      ${kpi(S('<circle cx="12" cy="12" r="9"/><path d="M15 9l-6 6M9 9l6 6"/>'),"blue","Out of stock",out,"needs restock")}
+    </div>`;
+    const rows=SHOP_ITEMS.map((x,i)=>{
+      const hay=`${x.pd} ${x.barcode} ${x.n} ${x.cat}`.toLowerCase();
+      const st=x.stock<=0?'<span class="pill pill-off">Out</span>':x.stock<=3?'<span class="pill pill-warn">Low · '+x.stock+'</span>':'<span class="pill pill-ok"><i class="dot"></i>'+x.stock+'</span>';
+      return `<tr data-open="shopitem:${i}" data-shop-row data-search="${escAttr(hay)}">
+        <td class="code">${x.pd}</td><td class="code">${x.barcode}</td>
+        <td><b style="font-weight:500">${x.n}</b><div class="sub">${x.cat}</div></td>
+        <td class="code">${money(x.base)}</td><td class="code">${shopGstPct(x)}%</td><td class="code">${money(x.mrp)}</td>
+        <td>${st}</td>
+        <td><div style="display:flex;gap:8px"><button class="btn" data-open="shopitem:${i}">View</button><button class="btn" data-shop-addstock="${i}">Add stock</button></div></td></tr>`;
+    }).join("");
+    const searchbar=`<div class="toolbar"><label class="search"><span>&#8981;</span><input data-shop-search placeholder="Search by PD, barcode, name or category" aria-label="Search products" autocomplete="off"></label><span class="tool-note" id="shopCount">${SHOP_ITEMS.length} products</span><button class="btn" data-export="shopitems">Export CSV</button></div>`;
+    return tiles+searchbar+`<div class="card"><div class="matrix-wrap"><table class="reclist" id="shopItemsTable"><thead><tr><th>PD</th><th>Barcode</th><th>Product</th><th>Base</th><th>GST</th><th>MRP</th><th>Stock</th><th>Actions</th></tr></thead><tbody>${rows}
+      <tr data-shop-newrow><td colspan="8"><button class="rep-add" data-tab="new" style="border-radius:4px">+ New product</button></td></tr>
+      <tr data-shop-empty style="display:none"><td colspan="8" class="muted" style="text-align:center;padding:16px">No products match that search.</td></tr>
+    </tbody></table></div></div>${shopAddStock!=null?shopAddStockCard():""}`;
+  },
+  shopsales(){
+    const today="27 Feb 2026";
+    const todays=SHOP_SALES.filter(s=>s.date===today);
+    const rev=todays.reduce((a,s)=>a+shopSaleCompute(s).grand,0);
+    const items=todays.reduce((a,s)=>a+(s.lines||[]).reduce((x,l)=>x+(+l.qty||0),0),0);
+    const avg=todays.length?Math.round(rev/todays.length):0;
+    const S=(p)=>`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${p}</svg>`;
+    const kpi=(ico,color,label,value,sub)=>`<div class="setcard"><div class="kpi-top"><span class="kpi-ico kpi-${color}">${ico}</span><div class="set-k">${label}</div></div><div class="set-v pos">${value}</div><div class="kpi-sub">${sub}</div></div>`;
+    const tiles=`<div class="set">
+      ${kpi(S('<path d="M3 3h2l2.4 12.4a1 1 0 0 0 1 .8h9.7a1 1 0 0 0 1-.8L21 7H6"/><circle cx="9" cy="20" r="1"/><circle cx="18" cy="20" r="1"/>'),"blue","Sales today",todays.length,"transactions")}
+      ${kpi(S('<circle cx="9" cy="9" r="6"/><path d="M18.1 10.7A6 6 0 1 1 10.7 18.1"/><path d="M7.5 7h2v4"/>'),"teal","Revenue today",money(rev),"incl. GST")}
+      ${kpi(S('<path d="M3 7l9-4 9 4v10l-9 4-9-4z"/><path d="M3 7l9 4 9-4"/>'),"amber","Items sold",items,"today")}
+      ${kpi(S('<path d="M3 3v18h18"/><path d="M7 14l3-3 3 3 5-6"/>'),"blue","Avg basket",money(avg),"per sale")}
+    </div>`;
+    const rows=SHOP_SALES.map((s,i)=>{ const c=shopSaleCompute(s); const nItems=(s.lines||[]).reduce((a,l)=>a+(+l.qty||0),0);
+      return `<tr data-open="shopsale:${i}"><td class="code">${s.txn}</td><td class="code">${s.inv}</td><td>${s.date}</td><td><b style="font-weight:500">${s.name||"Walk-in"}</b><div class="sub code">${s.phone}</div></td><td class="code">${nItems}</td><td>${s.pay}</td><td class="code">${money(c.grand)}</td><td><button class="btn" data-open="shopsale:${i}">View invoice</button></td></tr>`;
+    }).join("");
+    const bar=`<div class="toolbar"><span></span><span class="tool-note">${SHOP_SALES.length} sales</span><button class="btn" data-export="shopsales">Export CSV</button></div>`;
+    return tiles+bar+`<div class="card"><div class="matrix-wrap"><table class="reclist"><thead><tr><th>Txn</th><th>Invoice</th><th>Date</th><th>Customer</th><th>Items</th><th>Payment</th><th>Grand total</th><th></th></tr></thead><tbody>${rows}
+      <tr><td colspan="8"><button class="rep-add" data-tab="new" style="border-radius:4px">+ New sale</button></td></tr></tbody></table></div></div>`;
+  },
+  shopcoupons(){
+    const rows=SHOP_COUPONS.map((c,i)=>{ const pill=c.status==="Approved"?'<span class="pill pill-ok"><i class="dot"></i>Approved</span>':'<span class="pill pill-draft"><i class="dot"></i>'+c.status+'</span>';
+      return `<tr data-open="shopcoupon:${i}"><td class="code">${c.code}</td><td>${c.desc||""}</td><td class="code">${c.type==="%"?c.v+"%":money(c.v)}</td><td class="sub">${c.preparedBy||"—"} / ${c.proposedBy||"—"} / ${c.approvedBy||"—"}</td><td>${pill}</td><td><button class="btn" data-open="shopcoupon:${i}">View</button></td></tr>`;
+    }).join("");
+    const bar=`<div class="toolbar"><label class="search"><span>&#8981;</span><input placeholder="Search shop coupons" aria-label="Search shop coupons"></label><span class="tool-note">${SHOP_COUPONS.length} coupons</span><button class="btn" data-export="shopcoupons">Export CSV</button></div>`;
+    return bar+`<div class="card"><div class="matrix-wrap"><table class="reclist"><thead><tr><th>Code</th><th>Description</th><th>Value</th><th>Prepared / Proposed / Approved</th><th>Status</th><th></th></tr></thead><tbody>${rows}
+      <tr><td colspan="6"><button class="rep-add" data-tab="new" style="border-radius:4px">+ New coupon</button></td></tr></tbody></table></div></div>`;
+  },
+  shopreports(){
+    const totRev=SHOP_SALES.reduce((a,s)=>a+shopSaleCompute(s).grand,0);
+    const totGst=SHOP_SALES.reduce((a,s)=>a+shopSaleCompute(s).gst,0);
+    const totNet=SHOP_SALES.reduce((a,s)=>a+shopSaleCompute(s).net,0);
+    const byPay={}; SHOP_SALES.forEach(s=>{const c=shopSaleCompute(s);byPay[s.pay]=(byPay[s.pay]||0)+c.grand;});
+    const S=(p)=>`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${p}</svg>`;
+    const kpi=(ico,color,label,value,sub)=>`<div class="setcard"><div class="kpi-top"><span class="kpi-ico kpi-${color}">${ico}</span><div class="set-k">${label}</div></div><div class="set-v pos">${value}</div><div class="kpi-sub">${sub}</div></div>`;
+    const tiles=`<div class="set">
+      ${kpi(S('<path d="M3 3v18h18"/><path d="M7 14l3-3 3 3 5-6"/>'),"blue","Sales",SHOP_SALES.length,"transactions")}
+      ${kpi(S('<circle cx="9" cy="9" r="6"/><path d="M18.1 10.7A6 6 0 1 1 10.7 18.1"/><path d="M7.5 7h2v4"/>'),"teal","Revenue",money(Math.round(totRev)),"incl. GST")}
+      ${kpi(S('<path d="M4 4h16v16H4z"/><path d="M4 9h16M9 4v16"/>'),"amber","GST collected",money(Math.round(totGst)),"CGST + SGST")}
+      ${kpi(S('<path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>'),"blue","Net (taxable)",money(Math.round(totNet)),"before GST")}
+    </div>`;
+    const payRows=Object.entries(byPay).map(([k,v])=>`<tr><td>${k}</td><td class="code">${money(Math.round(v))}</td></tr>`).join("");
+    const payTable=`<div class="card"><div class="card-head"><span class="card-title">Revenue by payment mode</span><button class="btn" style="margin-left:auto" data-export="shopreports-pay">Export CSV</button></div><div class="matrix-wrap"><table class="reclist"><thead><tr><th>Payment mode</th><th>Amount</th></tr></thead><tbody>${payRows}</tbody></table></div></div>`;
+    const hsnMap={};
+    SHOP_SALES.forEach(s=>{ const c=shopSaleCompute(s); const factor=c.subtotal>0?(c.subtotal-c.discAmt)/c.subtotal:0;
+      c.lines.forEach(l=>{ const it=l.it; if(!it||!it.hsn) return; const taxable=l.gross*factor; const cg=taxable*l.halfPct/100;
+        const m=hsnMap[it.hsn]||(hsnMap[it.hsn]={hsn:it.hsn,qty:0,taxable:0,cgst:0,sgst:0,pct:l.gstPct}); m.qty+=l.qty; m.taxable+=taxable; m.cgst+=cg; m.sgst+=cg; }); });
+    const hsnRows=Object.values(hsnMap).map(m=>`<tr><td class="code">${m.hsn}</td><td class="code">${m.qty}</td><td class="code">${money(Math.round(m.taxable))}</td><td class="code">${m.pct/2}% · ${money(Math.round(m.cgst))}</td><td class="code">${m.pct/2}% · ${money(Math.round(m.sgst))}</td><td class="code">${money(Math.round(m.cgst+m.sgst))}</td></tr>`).join("");
+    const hsnTable=`<div class="card"><div class="card-head"><span class="card-title">HSN / SAC-wise breakup</span><span class="card-note">quantity is the units sold — mandatory for the GST return</span><button class="btn" style="margin-left:auto" data-export="shopreports-hsn">Export CSV</button></div><div class="matrix-wrap"><table class="reclist"><thead><tr><th>HSN/SAC</th><th>Qty sold</th><th>Taxable value</th><th>CGST</th><th>SGST</th><th>Total tax</th></tr></thead><tbody>${hsnRows}</tbody></table></div></div>`;
+    return tiles+payTable+hsnTable;
+  },
+
   emptyList(){
     const m=M[current], rows=OPTIONS[m.n]||[];
     if(!rows.length) return `${openBlock(m.open)}
@@ -3436,6 +3692,18 @@ function createForm(schema,label,footNote,values={},editing=false){
     ];
     headings=secs.map(s=>s[0]);
     groups=secs.map(s=>byName(s[1]));
+  } else if(label==="tax rate"){   // Tax rate — group by field so sections aren't catalogue chunks
+    const byName=names=>names.map(n=>schema.find(f=>(f[0].split("|")[1]||f[0])===n)).filter(Boolean);
+    const secs=[["Basics",["code","name"]],["Rate & validity",["percentage","is_active"]]];
+    headings=secs.map(s=>s[0]); groups=secs.map(s=>byName(s[1]));
+  } else if(label==="product"){   // Shop product — group by field so sections are meaningful, not chunks of 3
+    const byName=names=>names.map(n=>schema.find(f=>(f[0].split("|")[1]||f[0])===n)).filter(Boolean);
+    const secs=[["Basics",["pd","barcode","name","description","cat"]],["Pricing & tax",["base","mrp","tax_rate_ids[]","hsn_sac_id"]],["Inventory",["stock"]]];
+    headings=secs.map(s=>s[0]); groups=secs.map(s=>byName(s[1]));
+  } else if(label==="coupon"){   // Shop coupon
+    const byName=names=>names.map(n=>schema.find(f=>(f[0].split("|")[1]||f[0])===n)).filter(Boolean);
+    const secs=[["Coupon",["code","desc","type","v","valid_from / valid_to"]],["Approval",["preparedBy","proposedBy","approvedBy","status"]]];
+    headings=secs.map(s=>s[0]); groups=secs.map(s=>byName(s[1]));
   } else {
     for(let i=0;i<schema.length;i+=3) groups.push(schema.slice(i,i+3));
   }
@@ -3838,6 +4106,10 @@ const FIELD_HINTS = (()=>{
 function fieldHint(name){
   const order = current==="programs" ? ["events","camps"] : [current];
   for(const m of order){ const mm=FIELD_HINTS.perMaster[m]; if(mm&&mm[name]) return mm[name]; }
+  // Shop masters have their own schema notes — don't inherit another master's generic hint by field
+  // name (that's what put "Batch 1" in the shop product Name placeholder), so return null and let the
+  // schema note drive the tooltip + placeholder.
+  if(/^shop/.test(current)) return null;
   return FIELD_HINTS.any[name]||null;
 }
 /* Detail-page tooltips: map a read-only field label to the same description + watch-for the form shows. */
@@ -3887,7 +4159,7 @@ function field(f,values={}){
   const opts=optRaw?optRaw.split("·").map(x=>x.trim()).filter(Boolean):[];
   const parts=name.includes(" / ")?name.split(" / "):[name];
   const wide=(!NARROW.includes(type)||parts.length>1)?" wide":"";
-  const req=(/^code$|^name$|^label$|^title$|^date$|^trigger$|^channel$|^price$|^min_age$|^start_time$|_id$/.test(name)||name==="valid_from / valid_to"||name==="start_time / end_time")&&type!=="bool"&&!/override/.test(name)?"Required":"Optional";
+  const req=(/^code$|^name$|^label$|^title$|^date$|^trigger$|^channel$|^price$|^percentage$|^min_age$|^start_time$|_id$/.test(name)||name==="valid_from / valid_to"||name==="start_time / end_time")&&type!=="bool"&&!/override/.test(name)?"Required":"Optional";
   const hint=fieldHint(name);
   const isFk=type==="fk"||type==="fk[]";
   // schema note is authoritative for the description (fk fields carry a "→ target" note, so use the FAQ text there)
@@ -3944,7 +4216,7 @@ function field(f,values={}){
     ctl=`<div class="${parts.length>1?"row2":""}">${parts.map((x,i)=>{
       const fieldVal=Array.isArray(val)?val[i]:val;
       const ph=cutoff?(i===0?"e.g. 1":"e.g. 0"):(type==="date"?"DD/MM/YYYY":type==="time"?"HH:MM":(ex||(isNum?"0":x.replace(/_/g," "))));
-      const input=`<input class="inp${isNum||type==="string"?" mono":""}" placeholder="${ph}"${fieldVal!=null?` value="${escAttr(fieldVal)}"`:""}>`;
+      const input=`<input class="inp${isNum||type==="string"?" mono":""}" placeholder="${ph}"${isNum?` type="number" inputmode="decimal" min="0" step="${type==="int"?"1":"any"}"`:""}${fieldVal!=null?` value="${escAttr(fieldVal)}"`:""}>`;
       return cutoff?`<div class="inp-suffix">${input}<span>${i===0?"days ahead":"hours"}</span></div>`
         :minutes?`<div class="inp-suffix">${input}<span>minutes</span></div>`:input;
     }).join("")}</div>`;
@@ -4233,7 +4505,139 @@ function programForm(){
     </div></div>`;
 }
 const MEMBER_SUBS = [["summary","Summary"],["purchases","Purchase history"],["redemptions","Redemptions & visits"]];
-const DETAIL = { products:productDetail, programs:campDetail, events:eventDetail, camps:campDetail, discounts:discountDetail, members:memberDetail, tiers:tierDetail };
+/* ---- Shop / Merchandise: sale form, invoice, detail pages, restock, reset ---- */
+function resetShopSale(){ shopCart=[{pd:"",qty:1}]; shopPay="Cash"; shopCustomer={phone:"",name:"",email:"",gstin:"",member:null}; shopDiscType=""; shopSpot=0; shopCouponCode=""; shopCouponTried=false; shopSplit=false; shopSplitA=0; shopStep1Tried=false; }
+
+function shopAddStockCard(){ const it=SHOP_ITEMS[shopAddStock]; if(!it) return "";
+  return `<div class="drawer-layer"><div class="drawer-backdrop" data-shop-addstock-close></div><div class="drawer-panel" style="max-width:360px">
+    <div class="card-head"><span class="card-title">Add stock — ${it.n}</span></div>
+    <div class="card-body">
+      <div class="fld"><div class="lab"><span class="lab-n">Units received</span></div><input class="inp mono" id="shopStockQty" type="number" min="1" value="1"></div>
+      <div class="muted" style="font-size:12px;margin-top:8px">Currently on hand: <b>${it.stock}</b></div>
+    </div>
+    <div class="form-foot"><span></span><button class="btn" data-shop-addstock-close>Cancel</button><button class="btn btn-primary" data-shop-addstock-save="${shopAddStock}">Add to stock</button></div>
+  </div></div>`;
+}
+
+function shopItemDetail(){ const it=SHOP_ITEMS[selShopItem]; if(!it) return "";
+  const row=(k,v)=>`<tr><td style="color:var(--ink3);width:42%">${k}</td><td>${v}</td></tr>`;
+  const gst=shopGstPct(it);
+  const stPill=it.stock<=0?'<span class="pill pill-off">Out of stock</span>':it.stock<=3?'<span class="pill pill-warn">Low stock</span>':'<span class="pill pill-ok"><i class="dot"></i>'+it.stock+' in stock</span>';
+  return `<div class="detailhead"><h2 class="detailname">${it.n}</h2><span class="code">${it.pd}</span>${stPill}</div>
+  <div class="two"><div class="card"><div class="card-head"><span class="card-title">Product</span></div><div class="matrix-wrap"><table class="reclist"><tbody>
+    ${row("Barcode",`<span class="code">${it.barcode}</span>`)}${row("Category",it.cat)}${row("Description",it.desc||"—")}
+    ${row("Base price",money(it.base))}${row("MRP",money(it.mrp))}${row("Sale GST",gst?`${gst}% · CGST ${gst/2}% + SGST ${gst/2}%`:"0% (exempt)")}${row("HSN / SAC",`<span class="code">${it.hsn}</span>`)}${row("Available units",`<b>${it.stock}</b>`)}
+  </tbody></table></div></div>
+  <div class="card"><div class="card-head"><span class="card-title">Actions</span></div><div class="card-body" style="display:flex;flex-direction:column;gap:8px">
+    <button class="btn btn-primary" data-shop-addstock="${selShopItem}">Add stock</button>
+    <button class="btn" data-tab="edit">Edit product</button>
+  </div></div></div>${shopAddStock!=null?shopAddStockCard():""}`;
+}
+
+function shopCouponDetail(){ const c=SHOP_COUPONS[selShopCoupon]; if(!c) return "";
+  const row=(k,v)=>`<tr><td style="color:var(--ink3);width:42%">${k}</td><td>${v}</td></tr>`;
+  const pill=c.status==="Approved"?'<span class="pill pill-ok"><i class="dot"></i>Approved</span>':'<span class="pill pill-draft"><i class="dot"></i>'+c.status+'</span>';
+  return `<div class="detailhead"><h2 class="detailname">${c.code}</h2>${pill}</div>
+  <div class="two"><div class="card"><div class="card-head"><span class="card-title">Coupon</span></div><div class="matrix-wrap"><table class="reclist"><tbody>
+    ${row("Description",c.desc||"—")}${row("Discount",c.type==="%"?c.v+"%":money(c.v))}${row("Valid",(c.from||"—")+" → "+(c.to||"—"))}
+  </tbody></table></div></div>
+  <div class="card"><div class="card-head"><span class="card-title">Approval</span><span class="card-note">a code cannot apply until Approved</span></div><div class="matrix-wrap"><table class="reclist"><tbody>
+    ${row("Prepared by",c.preparedBy||"—")}${row("Proposed by",c.proposedBy||"—")}${row("Approved by",c.approvedBy||"—")}${row("Status",pill)}
+  </tbody></table></div></div></div>`;
+}
+
+function shopSaleForm(){
+  const comp=shopSaleCompute({lines:shopCart.filter(r=>r.pd),discType:shopDiscType,spot:shopSpot,coupon:shopCouponTried?shopCouponCode:""});
+  const miss=f=>shopStep1Tried&&!String(shopCustomer[f]||"").trim();
+  const reqMark=f=>miss(f)?'<span class="lab-req" style="color:var(--stop)">Required</span>':'<span class="lab-req">Required</span>';
+  const opt=(sel)=>`<option value="">— Select —</option>`+SHOP_ITEMS.map(x=>`<option value="${x.pd}"${x.pd===sel?" selected":""}>${x.pd} · ${x.n}</option>`).join("");
+  const rows=shopCart.map((r,i)=>{ const it=shopItemByPd(r.pd)||{}; const gst=it.pd?shopGstPct(it):0; const total=(it.base||0)*(+r.qty||0);
+    return `<tr>
+      <td class="code">${i+1}</td>
+      <td class="code">${it.barcode||"—"}</td>
+      <td><div class="selwrap"><select class="inp" data-shop-pick="${i}">${opt(r.pd)}</select></div></td>
+      <td>${it.n||'<span class="muted">—</span>'}</td>
+      <td class="code">${it.pd?it.stock:"—"}</td>
+      <td class="code">${it.pd?money(it.base):"—"}</td>
+      <td class="code">${it.pd?gst+"%":"—"}</td>
+      <td class="code">${it.pd?money(it.mrp):"—"}</td>
+      <td><span class="pos-step"><button data-shop-qty="${i}|-1" ${(+r.qty||0)<=1?"disabled":""}>−</button><span>${+r.qty||0}</span><button data-shop-qty="${i}|1">+</button></span></td>
+      <td class="code">${it.pd?money(total):"—"}</td>
+      <td>${shopCart.length>1?`<button class="cart-line-x" data-shop-removerow="${i}" aria-label="Remove">✕</button>`:""}</td>
+    </tr>`;
+  }).join("");
+  const nItems=shopCart.reduce((a,r)=>a+(r.pd?(+r.qty||0):0),0);
+  const header=`<section class="form-sec"><div class="form-sec-head"><span class="form-sec-title">Sale</span><span class="card-note" style="margin-left:auto">Txn 4950 · 27 Feb 2026</span></div><div class="form-sec-body">
+    <div class="fld${miss("phone")?" fld-miss":""}"><div class="lab"><span class="lab-n">Customer phone</span>${reqMark("phone")}</div><input class="inp mono" id="shopPhone" type="tel" value="${escAttr(shopCustomer.phone)}" placeholder="+91 81234 56789"></div>
+    <div class="fld"><div class="lab"><span class="lab-n">Customer name</span><span class="lab-req">Optional</span></div><input class="inp" id="shopName" value="${escAttr(shopCustomer.name)}" placeholder="Name"></div>
+    <div class="fld"><div class="lab"><span class="lab-n">Customer email</span><span class="lab-req">Optional</span></div><input class="inp" id="shopEmail" type="email" value="${escAttr(shopCustomer.email)}" placeholder="name@example.com"></div>
+    <div class="fld wide"><div class="lab"><span class="lab-n">Customer GSTIN</span><span class="lab-req">Optional</span></div><input class="inp mono" id="shopGstin" value="${escAttr(shopCustomer.gstin)}" placeholder="For a business / e-invoice — leave blank for a B2C sale"></div>
+  </div></section>`;
+  const itemsSec=`<section class="form-sec"><div class="form-sec-head"><span class="form-sec-title">Item details</span></div><div class="form-sec-body" style="grid-template-columns:1fr">
+    <div class="fld wide"><div class="lab"><span class="lab-n">Scan barcode</span><span class="lab-req">Optional</span></div><input class="inp mono" id="shopScan" placeholder="Scan or type a barcode, then Enter (wireframe)" data-shop-scan></div>
+    <div class="matrix-wrap"><table class="reclist shop-sale-table"><thead><tr><th>S.No</th><th>Barcode</th><th>Product (PD)</th><th>Name</th><th>Avail</th><th>Base</th><th>GST</th><th>MRP</th><th>Units</th><th>Total</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>
+    <button class="rep-add" data-shop-addrow>+ Add row</button>
+  </div></section>`;
+  const couponMsg=shopCouponTried?(comp.couponOk?`<div class="booking-discount-msg ok">✓ ${comp.coupon.code} applied</div>`:`<div class="booking-discount-msg bad">${shopCoupon(shopCouponCode)?"Coupon not approved yet.":"Code not recognised."}</div>`):"";
+  const payBtns=["Cash","POS-UPI","POS-Card","None"].map(m=>`<button class="summary-pay-btn" data-shop-pay="${escAttr(m)}" aria-pressed="${shopPay===m}">${m}</button>`).join("");
+  const splitBal=money(Math.max(0,comp.grand-(+shopSplitA||0)));
+  // Totals & payment — a sticky box on the right, mirroring the Orders page summary aside
+  const totalsBox=`<div class="card-head"><span class="card-title">Totals &amp; payment</span><span class="card-note" style="margin-left:auto">${nItems} item${nItems===1?"":"s"}</span></div><div class="card-body shop-totals-body">
+    <div class="fld"><div class="lab"><span class="lab-n">Discount type</span><span class="lab-req">Optional</span></div><div class="shop-seg">
+      <button class="shop-seg-btn${shopDiscType==="Employee"?" on":""}" data-shop-disctype="Employee">Employee</button>
+      <button class="shop-seg-btn${shopDiscType==="Gift"?" on":""}" data-shop-disctype="Gift">Gift</button>
+      <button class="shop-seg-btn${shopDiscType===""?" on":""}" data-shop-disctype="">None</button>
+    </div></div>
+    <div class="fld"><div class="lab"><span class="lab-n">On-the-spot discount %</span><span class="lab-req">Optional</span></div><input class="inp mono" id="shopSpot" type="number" min="0" max="100" value="${shopSpot||""}" placeholder="0"></div>
+    <div class="fld"><div class="lab"><span class="lab-n">Coupon code</span><span class="lab-req">Optional</span></div><div class="booking-discount" style="margin:0"><input class="inp mono" id="shopCouponCode" value="${escAttr(shopCouponCode)}" placeholder="Approved coupon"><button class="btn" data-shop-coupon-apply>Apply</button></div>${couponMsg}</div>
+    <div class="shop-total-rows">
+      <div class="booking-summary-row"><span>Sub total</span><span>${money(comp.subtotal)}</span></div>
+      ${comp.discAmt?`<div class="booking-summary-row" style="color:var(--ok)"><span>Discount${comp.discPct?` <span class="q">${comp.discPct}%</span>`:""}</span><span>− ${money(Math.round(comp.discAmt))}</span></div>`:""}
+      <div class="booking-summary-row"><span>CGST + SGST</span><span>${money(Math.round(comp.gst))}</span></div>
+      <div class="booking-summary-total"><span>Grand total</span><span>${money(comp.grand)}</span></div>
+    </div>
+    <div class="shop-words">${amountInWords(comp.grand)}</div>
+    <div class="fld"><div class="lab"><span class="lab-n">Payment mode</span></div><div class="summary-pay-grid pos-pay">${payBtns}</div></div>
+    <div class="fld"><label style="display:flex;align-items:center;gap:8px;font-size:13px"><input type="checkbox" data-shop-split ${shopSplit?"checked":""}> Split payment</label>${shopSplit?`<div style="display:flex;gap:8px;margin-top:8px"><input class="inp mono" id="shopSplitA" placeholder="First amount" value="${shopSplitA||""}"><input class="inp mono" placeholder="Balance" disabled value="${splitBal}"></div>`:""}</div>
+    <div class="shop-cta">
+      <button class="btn btn-primary" data-shop-save>Save sale · ${money(comp.grand)}</button>
+      <div class="shop-cta-row"><button class="btn" data-shop-print>Print invoice</button><button class="btn">Send SMS + WhatsApp</button></div>
+      <div class="muted" style="font-size:11px">Print / SMS / WhatsApp are wireframe stubs</div>
+    </div>
+  </div>`;
+  return `<div class="disc-layout">
+    <div class="shop-sale-main">${header}${itemsSec}</div>
+    <aside class="disc-summary-col"><div class="card">${totalsBox}</div></aside>
+  </div>`;
+}
+
+function shopSaleDetail(){ const s=SHOP_SALES[selShopSale]; if(!s) return ""; const c=shopSaleCompute(s);
+  const eInv=!!(s.gstin&&s.gstin.trim());
+  const factor=c.subtotal>0?(c.subtotal-c.discAmt)/c.subtotal:0;
+  const partRows=c.lines.map((l,idx)=>{ const it=l.it; const taxable=l.gross*factor; return `<tr><td>${idx+1}</td><td>${it.n}</td><td class="code">${it.hsn||"—"}</td><td class="code">${l.qty}</td><td class="code">${money(it.base)}</td><td>Nos</td><td class="code">${money(Math.round(taxable))}</td></tr>`; }).join("");
+  const rateMap={}; c.lines.forEach(l=>{ const taxable=l.gross*factor; const r=rateMap[l.halfPct]||(rateMap[l.halfPct]={taxable:0,half:l.halfPct}); r.taxable+=taxable; });
+  const taxRows=Object.values(rateMap).filter(r=>r.half>0).map(r=>`<tr class="inv-tax"><td colspan="6" style="text-align:right">CGST ${r.half}% Output</td><td class="code">${money(Math.round(r.taxable*r.half/100))}</td></tr><tr class="inv-tax"><td colspan="6" style="text-align:right">SGST ${r.half}% Output</td><td class="code">${money(Math.round(r.taxable*r.half/100))}</td></tr>`).join("");
+  const hsnMap={}; c.lines.forEach(l=>{ const it=l.it; if(!it.hsn) return; const taxable=l.gross*factor; const cg=taxable*l.halfPct/100; const m=hsnMap[it.hsn]||(hsnMap[it.hsn]={hsn:it.hsn,taxable:0,cgst:0,sgst:0,half:l.halfPct}); m.taxable+=taxable; m.cgst+=cg; m.sgst+=cg; });
+  const hsnRows=Object.values(hsnMap).map(m=>`<tr><td class="code">${m.hsn}</td><td class="code">${money(Math.round(m.taxable))}</td><td class="code">${m.half}%</td><td class="code">${money(Math.round(m.cgst))}</td><td class="code">${m.half}%</td><td class="code">${money(Math.round(m.sgst))}</td><td class="code">${money(Math.round(m.cgst+m.sgst))}</td></tr>`).join("");
+  return `<div class="invoice-actions"><button class="btn btn-primary" data-shop-print>Print</button><span class="muted" style="font-size:11.5px">Wireframe — no PDF / e-invoice API</span></div>
+  <div class="invoice">
+    <div class="inv-top"><div class="inv-kind">${eInv?"Tax Invoice &nbsp;·&nbsp; e-Invoice":"Tax Invoice"}</div>${eInv?`<div class="inv-qr">QR</div>`:""}</div>
+    ${eInv?`<div class="inv-irn"><span>IRN: <span class="code">a1b2c3…(generated)</span></span> &nbsp; <span>Ack No.: <span class="code">112010001234</span></span> &nbsp; <span>Ack Date: ${s.date}</span></div>`:""}
+    <div class="inv-parties">
+      <div class="inv-party"><b>${MUSO_SELLER.name}</b><div>${MUSO_SELLER.addr.join("<br>")}</div><div>GSTIN/UIN: <span class="code">${MUSO_SELLER.gstin}</span></div><div>State: ${MUSO_SELLER.state}, Code: ${MUSO_SELLER.stateCode}</div><div>${MUSO_SELLER.email}</div></div>
+      <div class="inv-party inv-meta"><div><span class="muted">Invoice No.</span><br><b>${s.inv}</b></div><div><span class="muted">Dated</span><br><b>${s.date}</b></div><div><span class="muted">Payment</span><br><b>${s.pay}</b></div></div>
+    </div>
+    <div class="inv-buyer"><b>Buyer (Bill to)</b><div>${s.name||"Walk-in customer"}${s.phone?" · "+s.phone:""}</div>${eInv?`<div>GSTIN/UIN: <span class="code">${s.gstin}</span></div><div>Place of Supply: ${MUSO_SELLER.state} (${MUSO_SELLER.stateCode})</div>`:'<div class="muted">B2C — no GSTIN provided</div>'}</div>
+    <div class="matrix-wrap"><table class="reclist inv-table"><thead><tr><th>Sl</th><th>Particulars</th><th>HSN/SAC</th><th>Qty</th><th>Rate</th><th>per</th><th>Amount</th></tr></thead><tbody>${partRows}${taxRows}
+      <tr class="inv-total"><td colspan="6" style="text-align:right"><b>Total</b></td><td class="code"><b>${money(c.grand)}</b></td></tr></tbody></table></div>
+    <div class="inv-words">Amount Chargeable (in words): <b>INR ${amountInWords(c.grand).replace(/^Rupees /,"")}</b></div>
+    <div class="matrix-wrap"><table class="reclist inv-hsn"><thead><tr><th>HSN/SAC</th><th>Taxable Value</th><th>CGST Rate</th><th>CGST Amt</th><th>SGST Rate</th><th>SGST Amt</th><th>Total Tax</th></tr></thead><tbody>${hsnRows}</tbody></table></div>
+    <div class="inv-foot"><div><b>Company's Bank Details</b><div>Bank: ${MUSO_SELLER.bank.name}</div><div>A/c No.: <span class="code">${MUSO_SELLER.bank.ac}</span></div><div>IFSC: ${MUSO_SELLER.bank.ifsc}</div></div><div class="inv-sign"><div>for <b>${MUSO_SELLER.name}</b></div><div class="inv-sign-line"></div><div class="muted">Authorised Signatory</div></div></div>
+    <div class="inv-note muted">This is a Computer Generated Invoice</div>
+  </div>`;
+}
+
+const DETAIL = { products:productDetail, programs:campDetail, events:eventDetail, camps:campDetail, discounts:discountDetail, members:memberDetail, tiers:tierDetail, shopsales:shopSaleDetail, shopitems:shopItemDetail, shopcoupons:shopCouponDetail };
 function render(){
   document.querySelector("body > .drawer-layer")?.remove();
   document.querySelector("body > .confirm-layer")?.remove();
@@ -4251,7 +4655,9 @@ function render(){
   const label=singular(current,m.n);
   const back=t=>`<button class="pageback" data-tab="list">&larr; ${t}</button>`;
   let body;
-  if(tab==="new") body = back("Back to "+m.n.toLowerCase()) + (current==="products" ? productForm() : current==="programs" ? createForm(PROGRAM_SCHEMA,"program","",{}) : current==="bookings" ? bookingForm() : current==="discounts" ? discountForm(false) : current==="tiers" ? tierForm(false) : current==="members" ? memberForm(false) : createForm(schema,label));
+  if(tab==="new") body = back("Back to "+m.n.toLowerCase()) + (current==="products" ? productForm() : current==="programs" ? createForm(PROGRAM_SCHEMA,"program","",{}) : current==="bookings" ? bookingForm() : current==="discounts" ? discountForm(false) : current==="tiers" ? tierForm(false) : current==="members" ? memberForm(false) : current==="shopsales" ? shopSaleForm() : current==="shopitems" ? createForm(SCHEMAS.shopitems,"product") : current==="shopcoupons" ? createForm(SCHEMAS.shopcoupons,"coupon") : createForm(schema,label));
+  else if(tab==="edit" && current==="shopitems"){ const it=SHOP_ITEMS[selShopItem]||{}; body = back("Back to shop products") + createForm(SCHEMAS.shopitems,"product","",{pd:it.pd,barcode:it.barcode,name:it.n,description:it.desc,cat:it.cat,base:it.base,mrp:it.mrp,stock:it.stock},true); }
+  else if(tab==="edit" && current==="shopcoupons"){ const c=SHOP_COUPONS[selShopCoupon]||{}; body = back("Back to shop coupons") + createForm(SCHEMAS.shopcoupons,"coupon","",{code:c.code,desc:c.desc,type:c.type,v:c.v,preparedBy:c.preparedBy,proposedBy:c.proposedBy,approvedBy:c.approvedBy,status:c.status},true); }
   else if(tab==="edit" && current==="tiers") body = back("Back to membership tiers") + tierForm(true);
   else if(tab==="edit" && current==="members") body = back("Back to members") + memberForm(true);
   else if(tab==="edit" && current==="products") body = back("Back to "+m.n.toLowerCase()) + productForm(true);
@@ -4475,8 +4881,8 @@ document.addEventListener("click",e=>{
   const goto=e.target.closest("[data-goto]");
   if(goto){ current=goto.dataset.goto; selP=0; selW=0; selB=0; selE=0; selD=0; selBooking=0; tab="list"; sub="details"; csub="details"; dsub="summary"; addOpen=null; render(); $(".stage").scrollTop=0; return; }
   const t=e.target.closest("[data-tab]");
-  if(t){ tab=t.dataset.tab; if(tab==="new"&&current==="bookings") resetBooking(); if(tab==="new"&&current==="programs"){progKind=progFormat(progCat)==="multi"?"camp":"event";eventCats=new Set();} if(tab==="new"&&current==="events") eventCats=new Set(); if(tab==="new"&&current==="discounts") draftDiscount=null; if(tab==="new"&&(current==="products"||current==="programs")) prodBuildingPool=false; addOpen=null; render(); $(".stage").scrollTop=0; return; }
-  if(e.target.closest("#hAdd")){ tab="new"; if(current==="bookings") resetBooking(); if(current==="events") eventCats=new Set(); if(current==="discounts") draftDiscount=null; if(current==="products"||current==="programs") prodBuildingPool=false; addOpen=null; render(); $(".stage").scrollTop=0; return; }
+  if(t){ tab=t.dataset.tab; if(tab==="new"&&current==="bookings") resetBooking(); if(tab==="new"&&current==="shopsales") resetShopSale(); if(tab==="new"&&current==="programs"){progKind=progFormat(progCat)==="multi"?"camp":"event";eventCats=new Set();} if(tab==="new"&&current==="events") eventCats=new Set(); if(tab==="new"&&current==="discounts") draftDiscount=null; if(tab==="new"&&(current==="products"||current==="programs")) prodBuildingPool=false; addOpen=null; render(); $(".stage").scrollTop=0; return; }
+  if(e.target.closest("#hAdd")){ tab="new"; if(current==="bookings") resetBooking(); if(current==="shopsales") resetShopSale(); if(current==="events") eventCats=new Set(); if(current==="discounts") draftDiscount=null; if(current==="products"||current==="programs") prodBuildingPool=false; addOpen=null; render(); $(".stage").scrollTop=0; return; }
   // ---- reception check-in / out ----
   const scan=e.target.closest("[data-scan]");
   if(scan){ checkinRef=scan.dataset.scan; render(); $(".stage").scrollTop=0; return; }
@@ -4603,8 +5009,35 @@ document.addEventListener("click",e=>{
   // ---- open a record's detail page ----
   const od=e.target.closest("[data-open]");
   if(od){ const [kind,i]=od.dataset.open.split(":"); const idx=+i;
-    if(kind==="prod") selP=idx; else if(kind==="camp"){ selW=idx; selB=0; progKind="camp"; } else if(kind==="event"){ selE=idx; progKind="event"; } else if(kind==="disc"){ selD=idx; dsub="summary"; } else if(kind==="member"){ selMember=idx; msub="summary"; } else if(kind==="tier"){ selTier=idx; }
+    if(kind==="prod") selP=idx; else if(kind==="camp"){ selW=idx; selB=0; progKind="camp"; } else if(kind==="event"){ selE=idx; progKind="event"; } else if(kind==="disc"){ selD=idx; dsub="summary"; } else if(kind==="member"){ selMember=idx; msub="summary"; } else if(kind==="tier"){ selTier=idx; } else if(kind==="shopitem"){ selShopItem=idx; } else if(kind==="shopsale"){ selShopSale=idx; } else if(kind==="shopcoupon"){ selShopCoupon=idx; }
     tab="detail"; sub="details"; esub="details"; csub="details"; addOpen=null; render(); $(".stage").scrollTop=0; return; }
+  // ---- Shop / Merchandise handlers ----
+  const shAdd=e.target.closest("[data-shop-addstock]");
+  if(shAdd){ shopAddStock=+shAdd.dataset.shopAddstock; render(); return; }
+  if(e.target.closest("[data-shop-addstock-close]")){ shopAddStock=null; render(); return; }
+  const shAddSave=e.target.closest("[data-shop-addstock-save]");
+  if(shAddSave){ const idx=+shAddSave.dataset.shopAddstockSave, q=Math.max(0,+(document.getElementById("shopStockQty")||{}).value||0); const it=SHOP_ITEMS[idx]; if(it) it.stock+=q; shopAddStock=null; render(); return; }
+  if(e.target.closest("[data-shop-addrow]")){ shopCart.push({pd:"",qty:1}); render(); return; }
+  const shRm=e.target.closest("[data-shop-removerow]");
+  if(shRm){ shopCart.splice(+shRm.dataset.shopRemoverow,1); if(!shopCart.length) shopCart=[{pd:"",qty:1}]; render(); return; }
+  const shQty=e.target.closest("[data-shop-qty]");
+  if(shQty){ const [i,d]=shQty.dataset.shopQty.split("|"); const r=shopCart[+i]; if(r) r.qty=Math.max(1,(+r.qty||0)+ +d); render(); return; }
+  const shDt=e.target.closest("[data-shop-disctype]");
+  if(shDt){ shopDiscType=shDt.dataset.shopDisctype; render(); return; }
+  if(e.target.closest("[data-shop-coupon-apply]")){ const el=document.getElementById("shopCouponCode"); shopCouponCode=el?el.value.trim():shopCouponCode; shopCouponTried=!!shopCouponCode; render(); return; }
+  const shPay=e.target.closest("[data-shop-pay]");
+  if(shPay){ shopPay=shPay.dataset.shopPay; render(); return; }
+  const shExp=e.target.closest("[data-export]");
+  if(shExp){ const kind=shExp.dataset.export; downloadCSV(EXPORT_NAMES[kind]||"export.csv", shopExportRows(kind)); return; }
+  if(e.target.closest("[data-shop-print]")){ return; }   // wireframe stub — no PDF
+  if(e.target.closest("[data-shop-save]")){
+    if(!String(shopCustomer.phone||"").trim()){ shopStep1Tried=true; render(); return; }
+    const lines=shopCart.filter(r=>r.pd).map(r=>({pd:r.pd,qty:+r.qty||0}));
+    if(!lines.length){ render(); return; }
+    lines.forEach(l=>{ const it=shopItemByPd(l.pd); if(it) it.stock=Math.max(0,it.stock-l.qty); });   // decrement stock
+    SHOP_SALES.unshift({txn:"4950",inv:"MUSO/25-26/0143",date:"27 Feb 2026",phone:shopCustomer.phone,name:shopCustomer.name,email:shopCustomer.email,gstin:shopCustomer.gstin,lines,discType:shopDiscType,spot:+shopSpot||0,coupon:shopCouponTried?shopCouponCode:"",pay:shopPay});
+    selShopSale=0; tab="detail"; render(); $(".stage").scrollTop=0; return;
+  }
   // ---- inline add forms (open / cancel / submit) ----
   const ao=e.target.closest("[data-addopen]");
   if(ao){ addOpen=ao.dataset.addopen; render(); $(".stage").scrollTop=0; return; }
@@ -4699,6 +5132,12 @@ document.addEventListener("change",e=>{
   if(e.target.id==="copyFrom"){ copyFrom=+e.target.value; copyTo=new Set(); render(); }
   if(e.target.id==="bookingProductSelect"){ bookingProduct=+e.target.value; bookingSlot=P[bookingProduct].slots[0].n; render(); }
   if(e.target.id==="bookingSlotSelect"){ bookingSlot=e.target.value; render(); }
+  const shPick=e.target.closest&&e.target.closest("[data-shop-pick]");
+  if(shPick){ const i=+shPick.dataset.shopPick; if(shopCart[i]) shopCart[i].pd=e.target.value; render(); return; }
+  if(e.target.id==="shopSpot"){ shopSpot=Math.max(0,+e.target.value||0); render(); return; }
+  if(e.target.matches&&e.target.matches("[data-shop-split]")){ shopSplit=e.target.checked; render(); return; }
+  if(e.target.id==="shopSplitA"){ shopSplitA=Math.max(0,+e.target.value||0); render(); return; }
+  if(e.target.id==="shopScan"){ const it=shopItemByBarcode(e.target.value.trim()); if(it){ const ex=shopCart.find(r=>r.pd===it.pd); if(ex) ex.qty=(+ex.qty||0)+1; else { const blank=shopCart.find(r=>!r.pd); if(blank) blank.pd=it.pd; else shopCart.push({pd:it.pd,qty:1}); } render(); } return; }
   refreshDiscountSummaries();
 });
 /* Whole years from a DD/MM/YYYY date of birth to today; null if incomplete/invalid. */
@@ -4721,6 +5160,20 @@ document.addEventListener("input",e=>{
   if(e.target.classList&&e.target.classList.contains("msel-search")){
     const q=e.target.value.trim().toLowerCase(), wrap=e.target.closest(".msel");
     if(wrap) wrap.querySelectorAll(".msel-opt").forEach(o=>{ o.style.display=(!q||(o.dataset.label||"").includes(q))?"":"none"; });
+    return;
+  }
+  if(e.target.id==="shopPhone"){ shopCustomer.phone=e.target.value; return; }
+  if(e.target.id==="shopName"){ shopCustomer.name=e.target.value; return; }
+  if(e.target.id==="shopEmail"){ shopCustomer.email=e.target.value; return; }
+  if(e.target.id==="shopGstin"){ shopCustomer.gstin=e.target.value; return; }
+  if(e.target.id==="shopCouponCode"){ shopCouponCode=e.target.value; return; }
+  if(e.target.matches&&e.target.matches("[data-shop-search]")){
+    const q=e.target.value.trim().toLowerCase(); const tbl=document.getElementById("shopItemsTable"); if(!tbl) return;
+    let shown=0;
+    tbl.querySelectorAll("[data-shop-row]").forEach(r=>{ const hit=!q||(r.dataset.search||"").includes(q); r.style.display=hit?"":"none"; if(hit) shown++; });
+    const empty=tbl.querySelector("[data-shop-empty]"); if(empty) empty.style.display=shown?"none":"";
+    const nr=tbl.querySelector("[data-shop-newrow]"); if(nr) nr.style.display=q?"none":"";
+    const cnt=document.getElementById("shopCount"); if(cnt) cnt.textContent=q?(shown+" of "+SHOP_ITEMS.length+" products"):(SHOP_ITEMS.length+" products");
     return;
   }
   if(e.target.matches&&e.target.matches("[data-member-search]")){
