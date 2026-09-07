@@ -4612,13 +4612,25 @@ function shopItemForm(editing){
 }
 function shopItemDetail(){ const it=SHOP_ITEMS[selShopItem]; if(!it) return "";
   const row=(k,v)=>`<tr><td style="color:var(--ink3);width:42%">${k}</td><td>${v}</td></tr>`;
-  const gst=shopGstPct(it);
+  // mirror the create form: HSN drives GST, Selling is GST-inclusive, Base = Selling − GST, Cost defaults to Base
+  const h=hsnByCode(it.hsn), gstPct=h?h.gst:0, selling=+it.mrp||0;
+  const gstAmt=(selling&&gstPct)?Math.round(selling*gstPct/(100+gstPct)):0, base=(h&&selling)?selling-gstAmt:selling;
+  const cost=(it.cost!=null&&it.cost!=="")?+it.cost:base, uqc=it.uqc||"NOS";
   const stPill=it.stock<=0?'<span class="pill pill-off">Out of stock</span>':it.stock<=3?'<span class="pill pill-warn">Low stock</span>':'<span class="pill pill-ok"><i class="dot"></i>'+it.stock+' in stock</span>';
   return `<div class="detailhead"><h2 class="detailname">${it.n}</h2><span class="code">${it.pd}</span>${stPill}</div>
-  <div class="two"><div class="card"><div class="card-head"><span class="card-title">Product</span></div><div class="matrix-wrap"><table class="reclist"><tbody>
-    ${row("Barcode",`<span class="code">${it.barcode}</span>`)}${row("Category",it.cat)}${row("Description",it.desc||"—")}
-    ${row("Base price",money(it.base))}${row("MRP",money(it.mrp))}${row("Sale GST",gst?`${gst}% · CGST ${gst/2}% + SGST ${gst/2}%`:"0% (exempt)")}${row("HSN / SAC",`<span class="code">${it.hsn}</span>`)}${row("Available units",`<b>${it.stock}</b>`)}
-  </tbody></table></div></div>
+  <div class="two"><div>
+    <div class="card"><div class="card-head"><span class="card-title">Basics</span></div><div class="matrix-wrap"><table class="reclist"><tbody>
+      ${row("Product ID (PD)",`<span class="code">${it.pd}</span>`)}${row("Category",it.cat||"—")}${row("Barcode",`<span class="code">${it.barcode||"—"}</span>`)}${row("Name",it.n)}${row("Description",it.desc||"—")}
+    </tbody></table></div></div>
+    <div class="card"><div class="card-head"><span class="card-title">Pricing &amp; tax</span></div><div class="matrix-wrap"><table class="reclist"><tbody>
+      ${row("HSN / SAC code",`<span class="code">${it.hsn||"—"}</span>${h?" · "+h.desc:""}`)}
+      ${row("GST",gstPct?`${gstPct}% · ${money(gstAmt)} (CGST ${gstPct/2}% + SGST ${gstPct/2}%)`:"—")}
+      ${row("Selling price",money(selling))}${row("Base price",money(base))}${row("Cost price",money(cost))}
+    </tbody></table></div></div>
+    <div class="card"><div class="card-head"><span class="card-title">Inventory</span></div><div class="matrix-wrap"><table class="reclist"><tbody>
+      ${row("Available units",`<b>${it.stock}</b>`)}${row("Unit",uqc)}
+    </tbody></table></div></div>
+  </div>
   <div class="card"><div class="card-head"><span class="card-title">Actions</span></div><div class="card-body" style="display:flex;flex-direction:column;gap:8px">
     <button class="btn btn-primary" data-shop-addstock="${selShopItem}">Add stock</button>
     <button class="btn" data-tab="edit">Edit product</button>
