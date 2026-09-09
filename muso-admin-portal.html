@@ -1295,25 +1295,27 @@ const SHOP_SALES = [
 
 /* ---- sale math (shared by the sale form, the invoice detail and the reports) ---- */
 function shopSaleCompute(sale){
-  const lines=(sale.lines||[]).map(l=>{ const it=shopItemByPd(l.pd)||{}; const qty=+l.qty||0; const gross=shopBaseOf(it)*qty; return {...l,it,qty,gross,gstPct:shopGstPct(it),halfPct:shopHalfPct(it)}; });
-  const subtotal=lines.reduce((a,l)=>a+l.gross,0);
+  // Total = the Selling price (list). Discount is a % off the Selling price. Sub total = Total − Discount is
+  // the taxable value, and CGST/SGST are charged on it. Grand total = Sub total + GST.
+  const lines=(sale.lines||[]).map(l=>{ const it=shopItemByPd(l.pd)||{}; const qty=+l.qty||0; const base=shopBaseOf(it)*qty, selling=shopSellingOf(it)*qty; return {...l,it,qty,base,selling,gross:selling,gstPct:shopGstPct(it),halfPct:shopHalfPct(it)}; });
+  const total=lines.reduce((a,l)=>a+l.selling,0);       // "Total" — the selling price
+  const baseTotal=lines.reduce((a,l)=>a+l.base,0);      // pre-tax base (shown per-line in Item details)
   let discPct=shopTypeDiscPct(sale.discType)+(+sale.spot||0);
   const cp=sale.coupon?shopCoupon(sale.coupon):null; const couponOk=cp&&cp.status==="Approved";
   let flat=0;
   if(couponOk){ if(cp.type==="%") discPct+=(+cp.v||0); else flat+=(+cp.v||0); }
   discPct=Math.min(100,discPct);
-  const discFromPct=subtotal*discPct/100;
-  const discAmt=Math.min(subtotal, discFromPct+flat);
-  const factor=subtotal>0?(subtotal-discAmt)/subtotal:0;   // spread the discount across lines pro-rata
+  const discAmt=Math.min(total, total*discPct/100+flat);   // discount is taken off the Selling price (Total)
+  const subtotal=Math.max(0, total-discAmt);            // "Sub total" — the taxable value
+  const factor=total>0?subtotal/total:0;                // spread the taxable value across lines pro-rata
   let cgst=0,sgst=0;
-  lines.forEach(l=>{ const net=l.gross*factor; cgst+=net*l.halfPct/100; sgst+=net*l.halfPct/100; });
+  lines.forEach(l=>{ l.taxable=l.selling*factor; cgst+=l.taxable*l.halfPct/100; sgst+=l.taxable*l.halfPct/100; });
   const gst=cgst+sgst;
-  const net=subtotal-discAmt;
-  const grand=Math.round(net+gst);
+  const grand=Math.round(subtotal+gst);
   // when every taxed line shares one rate, show the CGST/SGST % in the breakup; otherwise it's a mixed cart
   const halfPcts=[...new Set(lines.filter(l=>l.it&&l.it.pd&&l.halfPct>0).map(l=>l.halfPct))];
   const uniformHalf=halfPcts.length===1?halfPcts[0]:null;
-  return {lines,subtotal,discPct,discAmt,couponOk,coupon:cp,net,cgst,sgst,gst,grand,uniformHalf};
+  return {lines,total,baseTotal,subtotal,net:subtotal,discPct,discAmt,couponOk,coupon:cp,factor,cgst,sgst,gst,grand,uniformHalf};
 }
 
 /* Number → Indian words for the tax invoice ("Rupees … Only"). */
@@ -1334,7 +1336,7 @@ function shopExportRows(kind){
   if(kind==="shopcoupons") return [["Code","Description","Type","Value","Proposed by","Status","Valid from","Valid to"]].concat(SHOP_COUPONS.map(c=>[c.code,c.desc,c.type,c.v,c.proposedBy,c.status,c.from,c.to]));
   if(kind==="shopsales") return [["Txn","Invoice","Date","Customer","Phone","GSTIN","Items","Payment","Subtotal","Discount","GST","Grand total"]].concat(SHOP_SALES.map(s=>{const c=shopSaleCompute(s);const n=(s.lines||[]).reduce((a,l)=>a+(+l.qty||0),0);return [s.txn,s.inv,s.date,s.name,s.phone,s.gstin||"",n,s.pay,Math.round(c.subtotal),Math.round(c.discAmt),Math.round(c.gst),c.grand];}));
   if(kind==="shopreports-pay"){ const byPay={}; SHOP_SALES.forEach(s=>{const c=shopSaleCompute(s);byPay[s.pay]=(byPay[s.pay]||0)+c.grand;}); return [["Payment mode","Amount"]].concat(Object.entries(byPay).map(([k,v])=>[k,Math.round(v)])); }
-  if(kind==="shopreports-hsn"){ const hm={}; SHOP_SALES.forEach(s=>{const c=shopSaleCompute(s);const f=c.subtotal>0?(c.subtotal-c.discAmt)/c.subtotal:0;c.lines.forEach(l=>{const it=l.it;if(!it.hsn)return;const taxable=l.gross*f;const cg=taxable*l.halfPct/100;const m=hm[it.hsn]||(hm[it.hsn]={hsn:it.hsn,qty:0,taxable:0,cgst:0,sgst:0,pct:l.gstPct});m.qty+=l.qty;m.taxable+=taxable;m.cgst+=cg;m.sgst+=cg;});}); return [["HSN/SAC","Qty sold","Taxable value","CGST %","CGST","SGST %","SGST","Total tax"]].concat(Object.values(hm).map(m=>[m.hsn,m.qty,Math.round(m.taxable),m.pct/2,Math.round(m.cgst),m.pct/2,Math.round(m.sgst),Math.round(m.cgst+m.sgst)])); }
+  if(kind==="shopreports-hsn"){ const hm={}; SHOP_SALES.forEach(s=>{const c=shopSaleCompute(s);c.lines.forEach(l=>{const it=l.it;if(!it.hsn)return;const taxable=l.taxable,cg=taxable*l.halfPct/100;const m=hm[it.hsn]||(hm[it.hsn]={hsn:it.hsn,qty:0,taxable:0,cgst:0,sgst:0,pct:l.gstPct});m.qty+=l.qty;m.taxable+=taxable;m.cgst+=cg;m.sgst+=cg;});}); return [["HSN/SAC","Qty sold","Taxable value","CGST %","CGST","SGST %","SGST","Total tax"]].concat(Object.values(hm).map(m=>[m.hsn,m.qty,Math.round(m.taxable),m.pct/2,Math.round(m.cgst),m.pct/2,Math.round(m.sgst),Math.round(m.cgst+m.sgst)])); }
   return [];
 }
 function downloadCSV(name,rows){
@@ -3637,11 +3639,11 @@ const VIEWS = {
       ${kpi(S('<path d="M3 3v18h18"/><path d="M7 14l3-3 3 3 5-6"/>'),"blue","Avg basket",money(avg),"per sale")}
     </div>`;
     const rows=SHOP_SALES.map((s,i)=>{ const c=shopSaleCompute(s); const nItems=(s.lines||[]).reduce((a,l)=>a+(+l.qty||0),0);
-      return `<tr data-open="shopsale:${i}"><td class="code">${s.txn}</td><td class="code">${s.inv}</td><td>${s.date}</td><td><b style="font-weight:500">${s.name||"Walk-in"}</b><div class="sub code">${s.phone}</div></td><td class="code">${nItems}</td><td>${s.pay}</td><td class="code">${money(c.grand)}</td><td><button class="btn" data-open="shopsale:${i}">View invoice</button></td></tr>`;
+      return `<tr data-open="shopsale:${i}"><td class="code">${s.txn}</td><td class="code">${s.inv}</td><td>${s.date}</td><td><b style="font-weight:500">${s.name||"Walk-in"}</b><div class="sub code">${s.phone}</div></td><td class="code">${nItems}</td><td>${s.pay}</td><td class="code">${c.discAmt?`<span style="color:var(--ok)">− ${money(Math.round(c.discAmt))}</span>${c.discPct?` <span class="q">${c.discPct}%</span>`:""}`:"—"}</td><td class="code">${money(c.grand)}</td><td><button class="btn" data-open="shopsale:${i}">View invoice</button></td></tr>`;
     }).join("");
     const bar=`<div class="toolbar"><span></span><span class="tool-note">${SHOP_SALES.length} sales</span><button class="btn" data-export="shopsales">Export CSV</button></div>`;
-    return tiles+bar+`<div class="card"><div class="matrix-wrap"><table class="reclist"><thead><tr><th>Txn</th><th>Invoice</th><th>Date</th><th>Customer</th><th>Items</th><th>Payment</th><th>Grand total</th><th></th></tr></thead><tbody>${rows}
-      <tr><td colspan="8"><button class="rep-add" data-tab="new" style="border-radius:4px">+ New sale</button></td></tr></tbody></table></div></div>`;
+    return tiles+bar+`<div class="card"><div class="matrix-wrap"><table class="reclist"><thead><tr><th>Txn</th><th>Invoice</th><th>Date</th><th>Customer</th><th>Items</th><th>Payment</th><th>Discount</th><th>Grand total</th><th></th></tr></thead><tbody>${rows}
+      <tr><td colspan="9"><button class="rep-add" data-tab="new" style="border-radius:4px">+ New sale</button></td></tr></tbody></table></div></div>`;
   },
   shopcoupons(){
     const rows=SHOP_COUPONS.map((c,i)=>{ const pill=c.status==="Approved"?'<span class="pill pill-ok"><i class="dot"></i>Approved</span>':'<span class="pill pill-draft"><i class="dot"></i>'+c.status+'</span>';
@@ -3667,8 +3669,8 @@ const VIEWS = {
     const payRows=Object.entries(byPay).map(([k,v])=>`<tr><td>${k}</td><td class="code">${money(Math.round(v))}</td></tr>`).join("");
     const payTable=`<div class="card"><div class="card-head"><span class="card-title">Revenue by payment mode</span><button class="btn" style="margin-left:auto" data-export="shopreports-pay">Export CSV</button></div><div class="matrix-wrap"><table class="reclist"><thead><tr><th>Payment mode</th><th>Amount</th></tr></thead><tbody>${payRows}</tbody></table></div></div>`;
     const hsnMap={};
-    SHOP_SALES.forEach(s=>{ const c=shopSaleCompute(s); const factor=c.subtotal>0?(c.subtotal-c.discAmt)/c.subtotal:0;
-      c.lines.forEach(l=>{ const it=l.it; if(!it||!it.hsn) return; const taxable=l.gross*factor; const cg=taxable*l.halfPct/100;
+    SHOP_SALES.forEach(s=>{ const c=shopSaleCompute(s);
+      c.lines.forEach(l=>{ const it=l.it; if(!it||!it.hsn) return; const taxable=l.taxable, cg=taxable*l.halfPct/100;
         const m=hsnMap[it.hsn]||(hsnMap[it.hsn]={hsn:it.hsn,qty:0,taxable:0,cgst:0,sgst:0,pct:l.gstPct}); m.qty+=l.qty; m.taxable+=taxable; m.cgst+=cg; m.sgst+=cg; }); });
     const hsnRows=Object.values(hsnMap).map(m=>`<tr><td class="code">${m.hsn}</td><td class="code">${m.qty}</td><td class="code">${money(Math.round(m.taxable))}</td><td class="code">${m.pct/2}% · ${money(Math.round(m.cgst))}</td><td class="code">${m.pct/2}% · ${money(Math.round(m.sgst))}</td><td class="code">${money(Math.round(m.cgst+m.sgst))}</td></tr>`).join("");
     const hsnTable=`<div class="card"><div class="card-head"><span class="card-title">HSN / SAC-wise breakup</span><span class="card-note">quantity is the units sold — mandatory for the GST return</span><button class="btn" style="margin-left:auto" data-export="shopreports-hsn">Export CSV</button></div><div class="matrix-wrap"><table class="reclist"><thead><tr><th>HSN/SAC</th><th>Qty sold</th><th>Taxable value</th><th>CGST</th><th>SGST</th><th>Total tax</th></tr></thead><tbody>${hsnRows}</tbody></table></div></div>`;
@@ -4793,8 +4795,9 @@ function shopSaleForm(){
     <div class="fld"><div class="lab"><span class="lab-n">On-the-spot discount %</span><span class="lab-req">Optional</span></div><input class="inp mono" id="shopSpot" type="number" min="0" max="100" value="${shopSpot||""}" placeholder="0">${spotMsg}</div>
     <div class="fld"><div class="lab"><span class="lab-n">Coupon code</span><span class="lab-req">Optional</span></div><div class="booking-discount" style="margin:0"><input class="inp mono" id="shopCouponCode" value="${escAttr(shopCouponCode)}" placeholder="Approved coupon"><button class="btn" data-shop-coupon-apply>Apply</button></div>${couponMsg}</div>
     <div class="shop-total-rows">
-      <div class="booking-summary-row"><span>Sub total</span><span>${money(comp.subtotal)}</span></div>
+      <div class="booking-summary-row"><span>Total</span><span>${money(comp.total)}</span></div>
       ${comp.discAmt?`<div class="booking-summary-row" style="color:var(--ok)"><span>Discount${comp.discPct?` <span class="q">${comp.discPct}%</span>`:""}</span><span>− ${money(Math.round(comp.discAmt))}</span></div>`:""}
+      <div class="booking-summary-row"><span>Sub total</span><span>${money(Math.round(comp.subtotal))}</span></div>
       ${comp.gst?`<div class="booking-summary-row"><span>CGST${comp.uniformHalf!=null?` <span class="q">${comp.uniformHalf}%</span>`:""}</span><span>${money(Math.round(comp.cgst))}</span></div>
       <div class="booking-summary-row"><span>SGST${comp.uniformHalf!=null?` <span class="q">${comp.uniformHalf}%</span>`:""}</span><span>${money(Math.round(comp.sgst))}</span></div>`:""}
       <div class="booking-summary-total"><span>Grand total</span><span>${money(comp.grand)}</span></div>
@@ -4815,11 +4818,11 @@ function shopSaleForm(){
 
 function shopSaleDetail(){ const s=SHOP_SALES[selShopSale]; if(!s) return ""; const c=shopSaleCompute(s);
   const eInv=!!(s.gstin&&s.gstin.trim());
-  const factor=c.subtotal>0?(c.subtotal-c.discAmt)/c.subtotal:0;
-  const partRows=c.lines.map((l,idx)=>{ const it=l.it; const taxable=l.gross*factor; return `<tr><td>${idx+1}</td><td>${it.n}</td><td class="code">${it.hsn||"—"}</td><td class="code">${l.qty}</td><td class="code">${money(shopBaseOf(it))}</td><td>Nos</td><td class="code">${money(Math.round(taxable))}</td></tr>`; }).join("");
-  const rateMap={}; c.lines.forEach(l=>{ const taxable=l.gross*factor; const r=rateMap[l.halfPct]||(rateMap[l.halfPct]={taxable:0,half:l.halfPct}); r.taxable+=taxable; });
+  const partRows=c.lines.map((l,idx)=>{ const it=l.it; return `<tr><td>${idx+1}</td><td>${it.n}</td><td class="code">${it.hsn||"—"}</td><td class="code">${l.qty}</td><td class="code">${money(shopSellingOf(it))}</td><td>Nos</td><td class="code">${money(Math.round(l.selling))}</td></tr>`; }).join("");
+  const discRow=c.discAmt?`<tr class="inv-tax"><td colspan="6" style="text-align:right">Less: Discount${c.discPct?` @ ${c.discPct}%`:""}</td><td class="code">− ${money(Math.round(c.discAmt))}</td></tr>`:"";
+  const rateMap={}; c.lines.forEach(l=>{ const r=rateMap[l.halfPct]||(rateMap[l.halfPct]={taxable:0,half:l.halfPct}); r.taxable+=l.taxable; });
   const taxRows=Object.values(rateMap).filter(r=>r.half>0).map(r=>`<tr class="inv-tax"><td colspan="6" style="text-align:right">CGST ${r.half}% Output</td><td class="code">${money(Math.round(r.taxable*r.half/100))}</td></tr><tr class="inv-tax"><td colspan="6" style="text-align:right">SGST ${r.half}% Output</td><td class="code">${money(Math.round(r.taxable*r.half/100))}</td></tr>`).join("");
-  const hsnMap={}; c.lines.forEach(l=>{ const it=l.it; if(!it.hsn) return; const taxable=l.gross*factor; const cg=taxable*l.halfPct/100; const m=hsnMap[it.hsn]||(hsnMap[it.hsn]={hsn:it.hsn,taxable:0,cgst:0,sgst:0,half:l.halfPct}); m.taxable+=taxable; m.cgst+=cg; m.sgst+=cg; });
+  const hsnMap={}; c.lines.forEach(l=>{ const it=l.it; if(!it.hsn) return; const cg=l.taxable*l.halfPct/100; const m=hsnMap[it.hsn]||(hsnMap[it.hsn]={hsn:it.hsn,taxable:0,cgst:0,sgst:0,half:l.halfPct}); m.taxable+=l.taxable; m.cgst+=cg; m.sgst+=cg; });
   const hsnRows=Object.values(hsnMap).map(m=>`<tr><td class="code">${m.hsn}</td><td class="code">${money(Math.round(m.taxable))}</td><td class="code">${m.half}%</td><td class="code">${money(Math.round(m.cgst))}</td><td class="code">${m.half}%</td><td class="code">${money(Math.round(m.sgst))}</td><td class="code">${money(Math.round(m.cgst+m.sgst))}</td></tr>`).join("");
   return `<div class="invoice-actions"><button class="btn btn-primary" data-shop-print>Print</button><span class="muted" style="font-size:11.5px">Wireframe — no PDF / e-invoice API</span></div>
   <div class="invoice">
@@ -4830,7 +4833,7 @@ function shopSaleDetail(){ const s=SHOP_SALES[selShopSale]; if(!s) return ""; co
       <div class="inv-party inv-meta"><div><span class="muted">Invoice No.</span><br><b>${s.inv}</b></div><div><span class="muted">Dated</span><br><b>${s.date}</b></div><div><span class="muted">Payment</span><br><b>${s.pay}</b></div></div>
     </div>
     <div class="inv-buyer"><b>Buyer (Bill to)</b><div>${s.name||"Walk-in customer"}${s.phone?" · "+s.phone:""}</div>${eInv?`<div>GSTIN/UIN: <span class="code">${s.gstin}</span></div><div>Place of Supply: ${MUSO_SELLER.state} (${MUSO_SELLER.stateCode})</div>`:'<div class="muted">B2C — no GSTIN provided</div>'}</div>
-    <div class="matrix-wrap"><table class="reclist inv-table"><thead><tr><th>Sl</th><th>Particulars</th><th>HSN/SAC</th><th>Qty</th><th>Rate</th><th>per</th><th>Amount</th></tr></thead><tbody>${partRows}${taxRows}
+    <div class="matrix-wrap"><table class="reclist inv-table"><thead><tr><th>Sl</th><th>Particulars</th><th>HSN/SAC</th><th>Qty</th><th>Rate</th><th>per</th><th>Amount</th></tr></thead><tbody>${partRows}${discRow}${taxRows}
       <tr class="inv-total"><td colspan="6" style="text-align:right"><b>Total</b></td><td class="code"><b>${money(c.grand)}</b></td></tr></tbody></table></div>
     <div class="inv-words">Amount Chargeable (in words): <b>INR ${amountInWords(c.grand).replace(/^Rupees /,"")}</b></div>
     <div class="matrix-wrap"><table class="reclist inv-hsn"><thead><tr><th>HSN/SAC</th><th>Taxable Value</th><th>CGST Rate</th><th>CGST Amt</th><th>SGST Rate</th><th>SGST Amt</th><th>Total Tax</th></tr></thead><tbody>${hsnRows}</tbody></table></div>
