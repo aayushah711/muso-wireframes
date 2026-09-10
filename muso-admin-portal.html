@@ -2554,7 +2554,23 @@ function discountDetail(){
   const subs=[["summary","Summary"],["rule","Discount rule"]].concat(applyInfo(d).auto?[]:[["codelink","Code & link"]]);
   if(!subs.some(([k])=>k===dsub)) dsub="summary";
   const tabs=`<div class="subs">${subs.map(([k,l])=>`<button class="sub-tab" data-dsub="${k}" aria-selected="${dsub===k}">${l}</button>`).join("")}</div>`;
-  return `<div class="detailhead"><h2 class="detailname">${codeLabel(d)}</h2>${isSeries(d)?`<span class="q">series · ${seriesCount(d.series)}</span>`:""}${applyBadge(d)}</div>${tabs}<div class="sub-body">${discDetailBody(d)}</div>`;
+  // Tabs + their content take the left 3/4; the Approval box stays in the right 1/4 across every tab.
+  return `<div class="detailhead"><h2 class="detailname">${codeLabel(d)}</h2>${isSeries(d)?`<span class="q">series · ${seriesCount(d.series)}</span>`:""}${applyBadge(d)}</div>
+    <div class="two">
+      <div>${tabs}<div class="sub-body">${discDetailBody(d)}</div></div>
+      <aside>${discApprovalBox(d)}</aside>
+    </div>`;
+}
+/* The approval card — created/approved by, status, and the Approve button while pending. Shown beside every detail tab. */
+function discApprovalBox(d){
+  const stPill=d.status==="Approved"?'<span class="pill pill-ok"><i class="dot"></i>Approved</span>':'<span class="pill pill-draft"><i class="dot"></i>'+d.status+'</span>';
+  const arow=(k,v)=>`<tr><td style="color:var(--ink3);width:42%">${k}</td><td>${v}</td></tr>`;
+  return `<div class="card"><div class="card-head"><span class="card-title">Approval</span><span class="card-note">a discount cannot apply until Approved</span></div>
+    <div class="matrix-wrap"><table class="reclist"><tbody>
+      ${arow("Created by",d.maker||"—")}
+      ${arow("Approved by",(d.checker&&d.checker!=="—")?d.checker:'<span class="muted">—</span>')}
+      ${arow("Status",stPill)}
+    </tbody></table>${d.status==="Pending approval"?`<div class="card-body"><button class="btn btn-primary" data-disc-approve="${selD}" style="width:100%;justify-content:center">Approve discount</button></div>`:""}</div>`;
 }
 function discDetailBody(d){
   const row=(k,vv)=>`<tr><td><b style="font-weight:500">${k}</b></td><td style="font-size:12.5px">${vv}</td></tr>`;
@@ -2613,13 +2629,9 @@ function discDetailBody(d){
         <div class="matrix-wrap"><table><thead><tr><th>UTM tag</th><th>Value</th></tr></thead>
         <tbody>${UTM_FIELDS.map(([k,p,,req])=>`<tr><td class="code">${p}${req?"":' <span class="q">optional</span>'}</td><td>${u[k]?escAttr(u[k]):'<span class="muted">—</span>'}</td></tr>`).join("")}</tbody></table></div></div>`;
   }
-  // ---- Summary (default) ----
+  // ---- Summary (default) — left-column cards only; the Approval box is rendered beside every tab by discountDetail() ----
   const it=discBasketItems(d);
-  const stPill=d.status==="Approved"?'<span class="pill pill-ok"><i class="dot"></i>Approved</span>':'<span class="pill pill-draft"><i class="dot"></i>'+d.status+'</span>';
-  const arow=(k,v)=>`<tr><td style="color:var(--ink3);width:42%">${k}</td><td>${v}</td></tr>`;
-  return `<div class="two">
-    <div>
-      <div class="card"><div class="card-body" style="font-size:14px;line-height:1.7;color:var(--ink)">${discountSummary(d)}</div></div>
+  return `<div class="card"><div class="card-body" style="font-size:14px;line-height:1.7;color:var(--ink)">${discountSummary(d)}</div></div>
       <div class="card"><div class="matrix-wrap"><table><thead><tr><th style="width:34%">Field</th><th>Value</th></tr></thead>
       <tbody>
         ${row("Method",applyText(d))}
@@ -2630,15 +2642,7 @@ function discDetailBody(d){
         ${(d.visit&&d.visit[0])?row("Visit date",d.visit[0]+(d.visit[1]&&d.visit[1]!==d.visit[0]?" – "+d.visit[1]:"")):""}
         ${row("Per user",once?"Once":"Reusable")}
         ${row("Total uses across users",d.maxr||"No limit")}
-      </tbody></table></div></div>
-    </div>
-    <aside><div class="card"><div class="card-head"><span class="card-title">Approval</span><span class="card-note">a discount cannot apply until Approved</span></div>
-      <div class="matrix-wrap"><table class="reclist"><tbody>
-        ${arow("Created by",d.maker||"—")}
-        ${arow("Approved by",(d.checker&&d.checker!=="—")?d.checker:'<span class="muted">—</span>')}
-        ${arow("Status",stPill)}
-      </tbody></table>${d.status==="Pending approval"?`<div class="card-body"><button class="btn btn-primary" data-disc-approve="${selD}" style="width:100%;justify-content:center">Approve discount</button></div>`:""}</div></aside>
-  </div>`;
+      </tbody></table></div></div>`;
 }
 
 
