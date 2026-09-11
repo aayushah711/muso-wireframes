@@ -3106,7 +3106,7 @@ const VIEWS = {
     const ciTot=bld.reduce((a,r)=>a+r.cAdult+r.cChild,0);   // checked-in headcount currently inside
     const occRows=bld.map(r=>`<tr>
         <td><b style="font-weight:500">${r.product}</b></td>
-        <td>${r.date}</td><td class="code">${r.start}</td><td class="code">${r.end}</td><td>${r.from}</td>
+        <td>${r.date}</td><td class="code">${r.start}</td><td class="code">${r.end}</td>
         <td class="code ctr occ-grp">${r.bAdult}</td><td class="code ctr">${r.bChild}</td>
         <td class="code ctr occ-grp">${r.cAdult}</td><td class="code ctr">${r.cChild}</td>
       </tr>`).join("");
@@ -3114,8 +3114,8 @@ const VIEWS = {
       <div class="card-head"><span class="card-title"><span class="dot-live"></span> In the building now</span><span class="card-note" style="margin-left:auto">${ciTot} currently inside</span></div>
       <div class="matrix-wrap"><table class="reclist occ-table">
         <thead>
-          <tr><th colspan="5"></th><th colspan="2" class="ctr occ-grp">Booked</th><th colspan="2" class="ctr occ-grp">Checked-in</th></tr>
-          <tr><th>Product</th><th>Date</th><th>Start time</th><th>End time</th><th>Booked from</th><th class="ctr occ-grp">Adult</th><th class="ctr">Child</th><th class="ctr occ-grp">Adult</th><th class="ctr">Child</th></tr>
+          <tr><th colspan="4"></th><th colspan="2" class="ctr occ-grp">Booked</th><th colspan="2" class="ctr occ-grp">Checked-in</th></tr>
+          <tr><th>Product</th><th>Date</th><th>Start time</th><th>End time</th><th class="ctr occ-grp">Adult</th><th class="ctr">Child</th><th class="ctr occ-grp">Adult</th><th class="ctr">Child</th></tr>
         </thead>
         <tbody>${occRows}</tbody>
       </table></div></div>`;
@@ -3880,7 +3880,7 @@ function bookingForm(editing=false){
   const progTotal=[...bookingPrograms].reduce((t,[k,cf])=>t+progLine(k,cf),0);
   const subtotal=productPaidTotal+addonRawTotal+progTotal;
   const productInCart=[...bookingProducts.values()].some(cfg=>qtySum(cfg)>0);
-  const hasItems=productInCart||[...bookingAddons.values()].some(cfg=>qtySum(cfg)>0)||[...bookingPrograms.values()].some(cfg=>qtySum(cfg)>0);
+  const hasItems=productInCart||[...bookingAddons.values()].some(cfg=>qtySum(cfg)>0)||[...bookingPrograms.values()].some(cfg=>qtySum(cfg)>0)||redeemVisitCount>0;
   // ---- discounts: a typed code (any code, not just IND50) + auto-applied ones by cart condition ----
   // per-category qty across a cart entry (products/add-ons store qty per selected slot; programs are flat)
   const catQtys=cf=>{ const out={}; combosOf(cf).forEach(combo=>{ Object.entries(combo.qty||{}).forEach(([c,n])=>{ out[c]=(out[c]||0)+(+n||0); }); }); return out; };
@@ -4114,6 +4114,15 @@ function bookingForm(editing=false){
     combosOf(cfg).forEach((combo,ci)=>{const b=batchFor(key,combo);
       const lines=PCATS.map(c=>{const q=(combo.qty&&combo.qty[c])||0;return q?cartCatLine("prog|"+key+"|"+ci,c,q,b.price||0):"";}).filter(Boolean).join("");
       if(lines) cartRows.push(cartGroup(r.n,b.n||r.cat,lines));});});
+  // membership visits show as their own free cart entry — 1 Child per redeemed visit, plus 1 Adult per accompanying-adult tick
+  if(redeemVisitCount>0){
+    const freeLine=(cat,qty)=>`<div class="cart-line cart-line-redeemed">
+      <div class="cart-line-cat">${cat} <span class="cart-line-note">membership · free</span></div>
+      <span class="cart-line-amt" style="min-width:auto;color:var(--ink3)">×${qty}</span>
+      <span class="cart-line-amt">${money(0)}</span></div>`;
+    const mlines=(redeemAdultCount>0?freeLine("Adult",redeemAdultCount):"")+freeLine("Child",redeemVisitCount);
+    cartRows.push(cartGroup("Membership visit",`${member.tier} · ${redeemVisitCount} visit${redeemVisitCount>1?"s":""}`,mlines));
+  }
   const summaryPay=hasItems?`<div class="summary-pay">
     <div class="summary-pay-lbl">Payment method</div>
     <div class="summary-pay-grid">${["Cash","Card","UPI","Voucher"].map(m=>`<button class="summary-pay-btn" data-book-pay="${escAttr(m)}" aria-pressed="${bookingPay===m}">${m}</button>`).join("")}</div>
@@ -4124,7 +4133,6 @@ function bookingForm(editing=false){
     <div class="booking-discount"><input class="inp mono" id="bookingDiscountCode" placeholder="Discount code" value="${escAttr(bookingDiscountCode)}"><button class="btn" data-apply-book-discount="1">Apply</button></div>
     ${bookingDiscountTried?`<div class="booking-discount-msg${discount?" ok":" bad"}">${discount?`✓ ${codeLabel(discount)} applied — ${discount.v} off`:"Code not recognised or expired."}</div>`:""}
     <div class="booking-summary-row"><span>Subtotal</span><span>${money(subtotal)}</span></div>
-    ${redeemVisitCount>0?`<div class="booking-summary-row" style="color:var(--ok)"><span>Membership visit${redeemVisitCount>1?" ×"+redeemVisitCount:""} <span class="q" style="margin-left:2px">${redeemVisitCount} of ${member.passesTotal}</span> · ${redeemAdultCount?redeemAdultCount+" Adult + ":""}${redeemVisitCount} Child</span><span>${money(0)}</span></div>`:""}
     ${autoDiscs.map(x=>`<div class="booking-summary-row" style="color:var(--ok)"><span>${x.label} <span class="q" style="margin-left:2px">auto</span> · ${x.v}</span><span>− ${money(x.amount)}</span></div>`).join("")}
     ${discount?`<div class="booking-summary-row" style="color:var(--ok)"><span>${codeLabel(discount)} · ${discount.v} off</span><span>− ${money(codeDiscAmt)}</span></div>`:""}
     ${addonDiscountAmt?`<div class="booking-summary-row" style="color:var(--amber)"><span>★ ${member.tier} Add-on Discount (${addonDiscountPct}%)</span><span>− ${money(addonDiscountAmt)}</span></div>`:""}
