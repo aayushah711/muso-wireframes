@@ -1299,7 +1299,8 @@ const SHOP_SALES = [
   {txn:"4948",inv:"MUSO/25-26/0141",date:"27 Feb 2026",phone:"99887 76655",name:"Nisha Rao",email:"",gstin:"27ABCDE1234F1Z5",lines:[{pd:"PD_204",qty:2},{pd:"PD_402",qty:3}],coupon:"",instantPct:0,instantMgr:"",pay:"POS-Card"},
   {txn:"4947",inv:"MUSO/25-26/0140",date:"26 Feb 2026",phone:"90000 11111",name:"Sawood (staff)",email:"",gstin:"",lines:[{pd:"PD_735",qty:1}],coupon:"EMPLOYEE",instantPct:0,instantMgr:"",pay:"POS-UPI"},
   {txn:"4946",inv:"MUSO/25-26/0139",date:"26 Feb 2026",phone:"91234 56789",name:"Kabir Shah",email:"",gstin:"",lines:[{pd:"PD_511",qty:1},{pd:"PD_848",qty:2}],coupon:"STAFF20",instantPct:0,instantMgr:"",pay:"Cash"},
-  {txn:"4945",inv:"MUSO/25-26/0138",date:"25 Feb 2026",phone:"93333 22222",name:"Gift order",email:"",gstin:"",lines:[{pd:"PD_623",qty:1}],coupon:"GIFT",instantPct:0,instantMgr:"",pay:"POS-Card"}
+  {txn:"4945",inv:"MUSO/25-26/0138",date:"25 Feb 2026",phone:"93333 22222",name:"Gift order",email:"",gstin:"",lines:[{pd:"PD_623",qty:1}],coupon:"GIFT",instantPct:0,instantMgr:"",pay:"POS-Card"},
+  {txn:"4944",inv:"MUSO/25-26/0137",date:"25 Feb 2026",phone:"94444 33333",name:"Rhea Kapoor",email:"rhea@example.com",gstin:"",lines:[{pd:"PD_402",qty:2}],coupon:"",instantPct:15,instantMgr:"Ashish · Manager",instantDesc:"Display piece — minor scratch",pay:"POS-Card"}
 ];
 
 /* ---- sale math (shared by the sale form, the invoice detail and the reports) ---- */
@@ -2670,8 +2671,8 @@ let current = "dashboard", selP = 0, tab = "list", sub = "details", pType = "pro
     shopCart = [{pd:"",qty:1}], shopPay = "Cash", shopCustomer = {phone:"",name:"",email:"",gstin:"",member:null},
     shopCouponCode = "", shopCouponTried = false,
     // instant discount — manager-authorised via OTP (demo code shown on screen)
-    shopInstantPct = 0, shopInstantMgr = "", shopInstantSent = false, shopInstantCode = "", shopInstantOtp = "", shopInstantApplied = false, shopInstantErr = false,
-    shopStep1Tried = false, selShopSale = 0, selShopItem = 0, selShopCoupon = 0, shopAddStock = null, shopCostTouched = false;
+    shopInstantPct = 0, shopInstantDesc = "", shopInstantMgr = "", shopInstantSent = false, shopInstantCode = "", shopInstantOtp = "", shopInstantApplied = false, shopInstantErr = false,
+    shopStep1Tried = false, selShopSale = 0, ssub = "details", selShopItem = 0, selShopCoupon = 0, shopAddStock = null, shopCostTouched = false;
 /* Check-in / check-out log, keyed by booking ref → {inTime, outTime}. Persists across renders so
    re-scanning a ticket reflects its real state (expected → checked in → checked out). In-memory only. */
 const CHECKINS = {};
@@ -3664,7 +3665,7 @@ const VIEWS = {
       ${kpi(S('<path d="M3 3v18h18"/><path d="M7 14l3-3 3 3 5-6"/>'),"blue","Avg basket",money(avg),"per sale")}
     </div>`;
     const rows=SHOP_SALES.map((s,i)=>{ const c=shopSaleCompute(s); const nItems=(s.lines||[]).reduce((a,l)=>a+(+l.qty||0),0);
-      return `<tr data-open="shopsale:${i}"><td class="code">${s.txn}</td><td class="code">${s.inv}</td><td>${s.date}</td><td><b style="font-weight:500">${s.name||"Walk-in"}</b><div class="sub code">${s.phone}</div></td><td class="code">${nItems}</td><td>${s.pay}</td><td class="code">${c.discAmt?`<span style="color:var(--ok)">− ${money(Math.round(c.discAmt))}</span>${c.discPct?` <span class="q">${c.discPct}%</span>`:""}`:"—"}</td><td class="code">${money(c.grand)}</td><td><button class="btn" data-open="shopsale:${i}">View invoice</button></td></tr>`;
+      return `<tr data-open="shopsale:${i}"><td class="code">${s.txn}</td><td class="code">${s.inv}</td><td>${s.date}</td><td><b style="font-weight:500">${s.name||"Walk-in"}</b><div class="sub code">${s.phone}</div></td><td class="code">${nItems}</td><td>${s.pay}</td><td class="code">${c.discAmt?`<span style="color:var(--ok)">− ${money(Math.round(c.discAmt))}</span>${c.discPct?` <span class="q">${c.discPct}%</span>`:""}`:"—"}</td><td class="code">${money(c.grand)}</td><td><button class="btn" data-open="shopsale:${i}">View details</button></td></tr>`;
     }).join("");
     const bar=`<div class="toolbar"><span></span><span class="tool-note">${SHOP_SALES.length} sales</span><button class="btn" data-export="shopsales">Export CSV</button></div>`;
     return tiles+bar+`<div class="card"><div class="matrix-wrap"><table class="reclist"><thead><tr><th>Txn</th><th>Invoice</th><th>Date</th><th>Customer</th><th>Items</th><th>Payment</th><th>Discount</th><th>Grand total</th><th></th></tr></thead><tbody>${rows}
@@ -4686,7 +4687,7 @@ function programForm(){
 }
 const MEMBER_SUBS = [["summary","Summary"],["purchases","Purchase history"],["redemptions","Redemptions & visits"]];
 /* ---- Shop / Merchandise: sale form, invoice, detail pages, restock, reset ---- */
-function resetShopSale(){ shopCart=[{pd:"",qty:1}]; shopPay="Cash"; shopCustomer={phone:"",name:"",email:"",gstin:"",member:null}; shopCouponCode=""; shopCouponTried=false; shopInstantPct=0; shopInstantMgr=""; shopInstantSent=false; shopInstantCode=""; shopInstantOtp=""; shopInstantApplied=false; shopInstantErr=false; shopStep1Tried=false; }
+function resetShopSale(){ shopCart=[{pd:"",qty:1}]; shopPay="Cash"; shopCustomer={phone:"",name:"",email:"",gstin:"",member:null}; shopCouponCode=""; shopCouponTried=false; shopInstantPct=0; shopInstantDesc=""; shopInstantMgr=""; shopInstantSent=false; shopInstantCode=""; shopInstantOtp=""; shopInstantApplied=false; shopInstantErr=false; shopStep1Tried=false; }
 
 function shopAddStockCard(){ const it=SHOP_ITEMS[shopAddStock]; if(!it) return "";
   return `<div class="drawer-layer"><div class="drawer-backdrop" data-shop-addstock-close></div><div class="drawer-panel" style="max-width:360px">
@@ -4821,10 +4822,11 @@ function shopSaleForm(){
   const canSend=(+shopInstantPct>0)&&!!shopInstantMgr;
   let instantBlock;
   if(shopInstantApplied){
-    instantBlock=`<div class="booking-discount-msg ok">✓ ${+shopInstantPct}% instant discount applied — authorised by ${escAttr(shopInstantMgr)}</div>
+    instantBlock=`<div class="booking-discount-msg ok">✓ ${+shopInstantPct}% instant discount applied — authorised by ${escAttr(shopInstantMgr)}${shopInstantDesc?` · ${escAttr(shopInstantDesc)}`:""}</div>
       <button class="btn" data-shop-instant-clear style="margin-top:6px">Remove instant discount</button>`;
   } else {
-    instantBlock=`<div class="shop-instant-row">
+    instantBlock=`<input class="inp" id="shopInstantDesc" value="${escAttr(shopInstantDesc)}" placeholder="Discount description (reason, e.g. damaged item)" style="margin-bottom:8px">
+      <div class="shop-instant-row">
         <div class="inp-suffix" style="width:96px;flex:none"><input class="inp mono" id="shopInstantPct" type="number" min="0" max="100" value="${shopInstantPct||""}" placeholder="0"><span>%</span></div>
         <div class="selwrap" style="flex:1;min-width:0"><select class="inp" id="shopInstantMgr"><option value="">Authorising manager…</option>${SHOP_MANAGERS.map(m=>`<option${shopInstantMgr===m.name?" selected":""}>${m.name}</option>`).join("")}</select></div>
       </div>
@@ -4864,12 +4866,37 @@ function shopSaleForm(){
 function shopSaleDetail(){ const s=SHOP_SALES[selShopSale]; if(!s) return ""; const c=shopSaleCompute(s);
   const eInv=!!(s.gstin&&s.gstin.trim());
   const partRows=c.lines.map((l,idx)=>{ const it=l.it; return `<tr><td>${idx+1}</td><td>${it.n}</td><td class="code">${it.hsn||"—"}</td><td class="code">${l.qty}</td><td class="code">${money(shopSellingOf(it))}</td><td>Nos</td><td class="code">${money(Math.round(l.selling))}</td></tr>`; }).join("");
-  const discRow=c.discAmt?`<tr class="inv-tax"><td colspan="6" style="text-align:right">Less: Discount${c.discPct?` @ ${c.discPct}%`:""}${s.instantMgr?` · authorised by ${s.instantMgr}`:""}</td><td class="code">− ${money(Math.round(c.discAmt))}</td></tr>`:"";
+  const discRow=c.discAmt?`<tr class="inv-tax"><td colspan="6" style="text-align:right">Less: Discount${c.discPct?` @ ${c.discPct}%`:""}</td><td class="code">− ${money(Math.round(c.discAmt))}</td></tr>`:"";
   const rateMap={}; c.lines.forEach(l=>{ const r=rateMap[l.halfPct]||(rateMap[l.halfPct]={taxable:0,half:l.halfPct}); r.taxable+=l.taxable; });
   const taxRows=Object.values(rateMap).filter(r=>r.half>0).map(r=>`<tr class="inv-tax"><td colspan="6" style="text-align:right">CGST ${r.half}% Output</td><td class="code">${money(Math.round(r.taxable*r.half/100))}</td></tr><tr class="inv-tax"><td colspan="6" style="text-align:right">SGST ${r.half}% Output</td><td class="code">${money(Math.round(r.taxable*r.half/100))}</td></tr>`).join("");
   const hsnMap={}; c.lines.forEach(l=>{ const it=l.it; if(!it.hsn) return; const cg=l.taxable*l.halfPct/100; const m=hsnMap[it.hsn]||(hsnMap[it.hsn]={hsn:it.hsn,taxable:0,cgst:0,sgst:0,half:l.halfPct}); m.taxable+=l.taxable; m.cgst+=cg; m.sgst+=cg; });
   const hsnRows=Object.values(hsnMap).map(m=>`<tr><td class="code">${m.hsn}</td><td class="code">${money(Math.round(m.taxable))}</td><td class="code">${m.half}%</td><td class="code">${money(Math.round(m.cgst))}</td><td class="code">${m.half}%</td><td class="code">${money(Math.round(m.sgst))}</td><td class="code">${money(Math.round(m.cgst+m.sgst))}</td></tr>`).join("");
-  return `<div class="invoice-actions"><button class="btn btn-primary" data-shop-print>Print</button><span class="muted" style="font-size:11.5px">Wireframe — no PDF / e-invoice API</span></div>
+  // ---- sale details not printed on the invoice (email, coupon, instant-discount reason/authoriser, etc.) ----
+  const drow=(k,v)=>`<tr><td style="color:var(--ink3);width:40%">${k}</td><td>${(v!==undefined&&v!==null&&String(v).trim()!=="")?v:'<span class="muted">—</span>'}</td></tr>`;
+  const couponLbl=s.coupon?((shopPreset(s.coupon)||{}).label||s.coupon):"";
+  const cp=s.coupon?shopCoupon(s.coupon):null;   // Discount type & percentage describe the coupon (blank when there is no coupon)
+  const detailsBody=`<div class="two">
+      <div class="card"><div class="card-head"><span class="card-title">Customer &amp; transaction</span></div><div class="matrix-wrap"><table class="reclist"><tbody>
+        ${drow("Transaction",`<span class="code">${s.txn}</span>`)}
+        ${drow("Date",s.date)}
+        ${drow("Payment mode",s.pay)}
+        ${drow("Customer name",s.name)}
+        ${drow("Customer phone",s.phone?`<span class="code">${s.phone}</span>`:"")}
+        ${drow("Customer email",s.email)}
+        ${drow("Customer GSTIN",s.gstin?`<span class="code">${s.gstin}</span>`:"")}
+      </tbody></table></div></div>
+      <aside class="card"><div class="card-head"><span class="card-title">Discount</span></div><div class="matrix-wrap"><table class="reclist"><tbody>
+        ${drow("Discount type",cp?cp.type:"")}
+        ${(cp&&cp.type==="Percentage")?drow("Discount percentage",`${cp.v}%`):""}
+        ${drow("Coupon code",couponLbl?`<span class="code">${couponLbl}</span>`:"")}
+        ${drow("Instant discount",s.instantPct?`${s.instantPct}%`:"")}
+        ${drow("Discount description",s.instantDesc)}
+        ${drow("Authorised by",s.instantMgr)}
+        ${drow("Total discount",c.discAmt?money(Math.round(c.discAmt)):"")}
+      </tbody></table></div></aside>
+    </div>`;
+  // ---- Tax invoice tab ----
+  const invoiceBody=`<div class="invoice-actions"><button class="btn btn-primary" data-shop-print>Print</button><span class="muted" style="font-size:11.5px">Wireframe — no PDF / e-invoice API</span></div>
   <div class="invoice">
     <div class="inv-top"><div class="inv-kind">${eInv?"Tax Invoice &nbsp;·&nbsp; e-Invoice":"Tax Invoice"}</div>${eInv?`<div class="inv-qr">QR</div>`:""}</div>
     ${eInv?`<div class="inv-irn"><span>IRN: <span class="code">a1b2c3…(generated)</span></span> &nbsp; <span>Ack No.: <span class="code">112010001234</span></span> &nbsp; <span>Ack Date: ${s.date}</span></div>`:""}
@@ -4885,6 +4912,12 @@ function shopSaleDetail(){ const s=SHOP_SALES[selShopSale]; if(!s) return ""; co
     <div class="inv-foot"><div><b>Company's Bank Details</b><div>Bank: ${MUSO_SELLER.bank.name}</div><div>A/c No.: <span class="code">${MUSO_SELLER.bank.ac}</span></div><div>IFSC: ${MUSO_SELLER.bank.ifsc}</div></div><div class="inv-sign"><div>for <b>${MUSO_SELLER.name}</b></div><div class="inv-sign-line"></div><div class="muted">Authorised Signatory</div></div></div>
     <div class="inv-note muted">This is a Computer Generated Invoice</div>
   </div>`;
+  // ---- tabbed detail: Details | Tax invoice ----
+  const subs=[["details","Details"],["invoice","Tax invoice"]];
+  if(!subs.some(([k])=>k===ssub)) ssub="details";
+  const tabs=`<div class="subs">${subs.map(([k,l])=>`<button class="sub-tab" data-ssub="${k}" aria-selected="${ssub===k}">${l}</button>`).join("")}</div>`;
+  const head=`<div class="detailhead"><h2 class="detailname">${s.name||"Walk-in customer"} <span class="code" style="font-size:13px">${s.txn}</span></h2><span class="code">${s.inv}</span></div>`;
+  return head+tabs+`<div class="sub-body">${ssub==="invoice"?invoiceBody:detailsBody}</div>`;
 }
 
 const DETAIL = { products:productDetail, programs:campDetail, events:eventDetail, camps:campDetail, discounts:discountDetail, members:memberDetail, tiers:tierDetail, shopsales:shopSaleDetail, shopitems:shopItemDetail, shopcoupons:shopCouponDetail };
@@ -5284,7 +5317,7 @@ document.addEventListener("click",e=>{
   // ---- open a record's detail page ----
   const od=e.target.closest("[data-open]");
   if(od){ const [kind,i]=od.dataset.open.split(":"); const idx=+i;
-    if(kind==="prod") selP=idx; else if(kind==="camp"){ selW=idx; selB=0; progKind="camp"; } else if(kind==="event"){ selE=idx; progKind="event"; } else if(kind==="disc"){ selD=idx; dsub="summary"; } else if(kind==="member"){ selMember=idx; msub="summary"; } else if(kind==="tier"){ selTier=idx; } else if(kind==="shopitem"){ selShopItem=idx; } else if(kind==="shopsale"){ selShopSale=idx; } else if(kind==="shopcoupon"){ selShopCoupon=idx; }
+    if(kind==="prod") selP=idx; else if(kind==="camp"){ selW=idx; selB=0; progKind="camp"; } else if(kind==="event"){ selE=idx; progKind="event"; } else if(kind==="disc"){ selD=idx; dsub="summary"; } else if(kind==="member"){ selMember=idx; msub="summary"; } else if(kind==="tier"){ selTier=idx; } else if(kind==="shopitem"){ selShopItem=idx; } else if(kind==="shopsale"){ selShopSale=idx; ssub="details"; } else if(kind==="shopcoupon"){ selShopCoupon=idx; }
     tab="detail"; sub="details"; esub="details"; csub="details"; addOpen=null; render(); $(".stage").scrollTop=0; return; }
   // ---- Shop / Merchandise handlers ----
   const shAdd=e.target.closest("[data-shop-addstock]");
@@ -5305,7 +5338,7 @@ document.addEventListener("click",e=>{
   // instant discount — manager OTP authorisation
   if(e.target.closest("[data-shop-instant-send]")){ if((+shopInstantPct>0)&&shopInstantMgr){ shopInstantSent=true; shopInstantErr=false; shopInstantOtp=""; shopInstantCode=String(Math.floor(100000+Math.random()*900000)); render(); } return; }
   if(e.target.closest("[data-shop-instant-verify]")){ const el=document.getElementById("shopInstantOtp"); const v=el?el.value.trim():shopInstantOtp; if(v===shopInstantCode){ shopInstantApplied=true; shopInstantErr=false; } else { shopInstantErr=true; } render(); return; }
-  if(e.target.closest("[data-shop-instant-clear]")){ shopInstantPct=0; shopInstantMgr=""; shopInstantSent=false; shopInstantCode=""; shopInstantOtp=""; shopInstantApplied=false; shopInstantErr=false; render(); return; }
+  if(e.target.closest("[data-shop-instant-clear]")){ shopInstantPct=0; shopInstantDesc=""; shopInstantMgr=""; shopInstantSent=false; shopInstantCode=""; shopInstantOtp=""; shopInstantApplied=false; shopInstantErr=false; render(); return; }
   const shPay=e.target.closest("[data-shop-pay]");
   if(shPay){ shopPay=shPay.dataset.shopPay; render(); return; }
   const shAppr=e.target.closest("[data-shop-coupon-approve]");
@@ -5315,12 +5348,14 @@ document.addEventListener("click",e=>{
   const shExp=e.target.closest("[data-export]");
   if(shExp){ const kind=shExp.dataset.export; downloadCSV(EXPORT_NAMES[kind]||"export.csv", shopExportRows(kind)); return; }
   if(e.target.closest("[data-shop-print]")){ return; }   // wireframe stub — no PDF
+  const ssTab=e.target.closest("[data-ssub]");
+  if(ssTab){ ssub=ssTab.dataset.ssub; render(); return; }
   if(e.target.closest("[data-shop-save]")){
     if(!String(shopCustomer.phone||"").trim()){ shopStep1Tried=true; render(); return; }
     const lines=shopCart.filter(r=>r.pd).map(r=>({pd:r.pd,qty:+r.qty||0}));
     if(!lines.length){ render(); return; }
     lines.forEach(l=>{ const it=shopItemByPd(l.pd); if(it) it.stock=Math.max(0,it.stock-l.qty); });   // decrement stock
-    SHOP_SALES.unshift({txn:"4950",inv:"MUSO/25-26/0143",date:"27 Feb 2026",phone:shopCustomer.phone,name:shopCustomer.name,email:shopCustomer.email,gstin:shopCustomer.gstin,lines,coupon:shopCouponTried?shopCouponCode:"",instantPct:shopInstantApplied?(+shopInstantPct||0):0,instantMgr:shopInstantApplied?shopInstantMgr:"",pay:shopPay});
+    SHOP_SALES.unshift({txn:"4950",inv:"MUSO/25-26/0143",date:"27 Feb 2026",phone:shopCustomer.phone,name:shopCustomer.name,email:shopCustomer.email,gstin:shopCustomer.gstin,lines,coupon:shopCouponTried?shopCouponCode:"",instantPct:shopInstantApplied?(+shopInstantPct||0):0,instantMgr:shopInstantApplied?shopInstantMgr:"",instantDesc:shopInstantApplied?shopInstantDesc:"",pay:shopPay});
     selShopSale=0; tab="detail"; render(); $(".stage").scrollTop=0; return;
   }
   // ---- inline add forms (open / cancel / submit) ----
@@ -5434,6 +5469,7 @@ document.addEventListener("change",e=>{
   if(e.target.id==="shopInstantPct"){ shopInstantPct=Math.max(0,Math.min(100,+e.target.value||0)); shopInstantSent=false; shopInstantApplied=false; shopInstantErr=false; render(); return; }
   if(e.target.id==="shopInstantMgr"){ shopInstantMgr=e.target.value; shopInstantSent=false; shopInstantApplied=false; shopInstantErr=false; render(); return; }
   if(e.target.id==="shopInstantOtp"){ shopInstantOtp=e.target.value; return; }
+  if(e.target.id==="shopInstantDesc"){ shopInstantDesc=e.target.value; return; }
   if(e.target.id==="shopScan"){ const it=shopItemByBarcode(e.target.value.trim()); if(it){ const ex=shopCart.find(r=>r.pd===it.pd); if(ex) ex.qty=(+ex.qty||0)+1; else { const blank=shopCart.find(r=>!r.pd); if(blank) blank.pd=it.pd; else shopCart.push({pd:it.pd,qty:1}); } render(); } return; }
   refreshDiscountSummaries();
 });
