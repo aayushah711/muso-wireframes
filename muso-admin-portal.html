@@ -737,6 +737,11 @@ tbody tr[aria-selected="true"] td:first-child{box-shadow:inset 2px 0 0 var(--blu
 .shop-seg-btn{padding:6px 14px;font-size:12px;background:#fff;border:0;border-right:1px solid var(--rule2)}
 .shop-seg-btn:last-child{border-right:0}
 .shop-seg-btn.on{background:var(--blue);color:#fff}
+/* helper preset pills (fill the coupon field) + instant-discount row */
+.shop-pills{display:flex;gap:6px;flex-wrap:wrap;margin-top:7px}
+.shop-pill{border:1px dashed var(--rule2);background:#fff;border-radius:20px;padding:4px 11px;font-size:11px;font-weight:500;color:var(--ink2);cursor:pointer}
+.shop-pill:hover{border-style:solid;border-color:var(--blue);color:var(--blue);background:var(--blue-wash)}
+.shop-instant-row{display:flex;gap:8px;align-items:center}
 .shop-sale-table th,.shop-sale-table td{white-space:nowrap;font-size:12px}
 .shop-sale-table .selwrap,.shop-sale-table select.inp{min-width:170px}
 .invoice-actions{display:flex;align-items:center;gap:10px;margin-bottom:12px}
@@ -1268,23 +1273,33 @@ const shopHalfPct = it => hsnHalfPct(it&&it.hsn) || (()=>{ const cg=(it&&it.tax|
 const shopSellingOf = it => +((it&&it.mrp)||0);
 const shopBaseOf = it => { if(!it||!it.pd) return 0; const selling=shopSellingOf(it), gstPct=shopGstPct(it); const gstAmt=(selling&&gstPct)?Math.round(selling*gstPct/(100+gstPct)):0; return selling-gstAmt; };
 /* Employee / Gift preset discount % (wireframe presets; a spot discount can be added on top). */
-const shopTypeDiscPct = t => t==="Employee"?15:t==="Gift"?100:0;
+/* Authorised managers who can approve an instant discount (the OTP goes to their email). Wireframe — mock emails. */
+const SHOP_MANAGERS = [
+  {name:"Chandresh · Store Manager", email:"chandresh@muso.in"},
+  {name:"Ashish · Manager",          email:"ashish@muso.in"},
+  {name:"Shivam · Finance",          email:"shivam@muso.in"}
+];
+const mgrByName = n => SHOP_MANAGERS.find(m=>m.name===n);
+/* Helper preset discounts — quick-fills for the coupon field. They resolve through the coupon path but stay out of the Shop coupons master. */
+const SHOP_PRESETS = [{code:"EMPLOYEE",label:"Employee",pct:15},{code:"GIFT",label:"Gift",pct:100}];
+const shopPreset = code => SHOP_PRESETS.find(p=>p.code===String(code||"").trim().toUpperCase());
 
 /* Shop coupons — a Shop-only master, approval-gated (only Approved coupons apply on a sale). */
 const SHOP_COUPONS = [
-  {code:"STAFF20",type:"%",v:20,desc:"Staff discount",preparedBy:"Sawood",proposedBy:"Ashish",approvedBy:"Chandresh",status:"Approved",from:"01 Apr 2026",to:"31 Mar 2027"},
-  {code:"MUSO50",type:"₹",v:50,desc:"Flat ₹50 off",preparedBy:"Sawood",proposedBy:"Ashish",approvedBy:"",status:"Pending approval",from:"01 Sep 2026",to:"30 Sep 2026"},
-  {code:"DIWALI10",type:"%",v:10,desc:"Festive 10%",preparedBy:"Sawood",proposedBy:"",approvedBy:"",status:"Draft",from:"",to:""}
+  {code:"STAFF20",type:"Percentage",v:20,desc:"Staff discount",preparedBy:"Sawood",proposedBy:"Ashish",approvedBy:"Chandresh",status:"Approved",from:"01 Apr 2026",to:"31 Mar 2027"},
+  {code:"MUSO50",type:"Flat amount",v:50,desc:"Flat ₹50 off",preparedBy:"Sawood",proposedBy:"Ashish",approvedBy:"",status:"Pending approval",from:"01 Sep 2026",to:"30 Sep 2026"},
+  {code:"DIWALI10",type:"Percentage",v:10,desc:"Festive 10%",preparedBy:"Sawood",proposedBy:"",approvedBy:"",status:"Draft",from:"",to:""}
 ];
-const shopCoupon = code => SHOP_COUPONS.find(c=>String(c.code).toUpperCase()===String(code||"").trim().toUpperCase());
+// resolve a code to a real coupon, or to a synthetic Approved coupon for the Employee/Gift presets
+const shopCoupon = code => { const c=SHOP_COUPONS.find(x=>String(x.code).toUpperCase()===String(code||"").trim().toUpperCase()); if(c) return c; const p=shopPreset(code); return p?{code:p.code,type:"Percentage",v:p.pct,status:"Approved",desc:p.label}:undefined; };
 
 /* Past sales (All Muso Sales). Totals are computed from lines × SHOP_ITEMS, not stored. */
 const SHOP_SALES = [
-  {txn:"4949",inv:"MUSO/25-26/0142",date:"27 Feb 2026",phone:"98765 43210",name:"Aarav Mehta",email:"aarav@example.com",gstin:"",lines:[{pd:"PD_116",qty:1}],discType:"",spot:0,coupon:"",pay:"Cash"},
-  {txn:"4948",inv:"MUSO/25-26/0141",date:"27 Feb 2026",phone:"99887 76655",name:"Nisha Rao",email:"",gstin:"27ABCDE1234F1Z5",lines:[{pd:"PD_204",qty:2},{pd:"PD_402",qty:3}],discType:"",spot:0,coupon:"",pay:"POS-Card"},
-  {txn:"4947",inv:"MUSO/25-26/0140",date:"26 Feb 2026",phone:"90000 11111",name:"Sawood (staff)",email:"",gstin:"",lines:[{pd:"PD_735",qty:1}],discType:"Employee",spot:0,coupon:"",pay:"POS-UPI"},
-  {txn:"4946",inv:"MUSO/25-26/0139",date:"26 Feb 2026",phone:"91234 56789",name:"Kabir Shah",email:"",gstin:"",lines:[{pd:"PD_511",qty:1},{pd:"PD_848",qty:2}],discType:"",spot:0,coupon:"STAFF20",pay:"Cash"},
-  {txn:"4945",inv:"MUSO/25-26/0138",date:"25 Feb 2026",phone:"93333 22222",name:"Gift order",email:"",gstin:"",lines:[{pd:"PD_623",qty:1}],discType:"Gift",spot:0,coupon:"",pay:"POS-Card"}
+  {txn:"4949",inv:"MUSO/25-26/0142",date:"27 Feb 2026",phone:"98765 43210",name:"Aarav Mehta",email:"aarav@example.com",gstin:"",lines:[{pd:"PD_116",qty:1}],coupon:"",instantPct:0,instantMgr:"",pay:"Cash"},
+  {txn:"4948",inv:"MUSO/25-26/0141",date:"27 Feb 2026",phone:"99887 76655",name:"Nisha Rao",email:"",gstin:"27ABCDE1234F1Z5",lines:[{pd:"PD_204",qty:2},{pd:"PD_402",qty:3}],coupon:"",instantPct:0,instantMgr:"",pay:"POS-Card"},
+  {txn:"4947",inv:"MUSO/25-26/0140",date:"26 Feb 2026",phone:"90000 11111",name:"Sawood (staff)",email:"",gstin:"",lines:[{pd:"PD_735",qty:1}],coupon:"EMPLOYEE",instantPct:0,instantMgr:"",pay:"POS-UPI"},
+  {txn:"4946",inv:"MUSO/25-26/0139",date:"26 Feb 2026",phone:"91234 56789",name:"Kabir Shah",email:"",gstin:"",lines:[{pd:"PD_511",qty:1},{pd:"PD_848",qty:2}],coupon:"STAFF20",instantPct:0,instantMgr:"",pay:"Cash"},
+  {txn:"4945",inv:"MUSO/25-26/0138",date:"25 Feb 2026",phone:"93333 22222",name:"Gift order",email:"",gstin:"",lines:[{pd:"PD_623",qty:1}],coupon:"GIFT",instantPct:0,instantMgr:"",pay:"POS-Card"}
 ];
 
 /* ---- sale math (shared by the sale form, the invoice detail and the reports) ---- */
@@ -1294,10 +1309,10 @@ function shopSaleCompute(sale){
   const lines=(sale.lines||[]).map(l=>{ const it=shopItemByPd(l.pd)||{}; const qty=+l.qty||0; const base=shopBaseOf(it)*qty, selling=shopSellingOf(it)*qty; return {...l,it,qty,base,selling,gross:selling,gstPct:shopGstPct(it),halfPct:shopHalfPct(it)}; });
   const total=lines.reduce((a,l)=>a+l.selling,0);       // "Total" — the selling price
   const baseTotal=lines.reduce((a,l)=>a+l.base,0);      // pre-tax base (shown per-line in Item details)
-  let discPct=shopTypeDiscPct(sale.discType)+(+sale.spot||0);
+  let discPct=(+sale.instantPct||0);                    // instant discount (manager-authorised)
   const cp=sale.coupon?shopCoupon(sale.coupon):null; const couponOk=cp&&cp.status==="Approved";
   let flat=0;
-  if(couponOk){ if(cp.type==="%") discPct+=(+cp.v||0); else flat+=(+cp.v||0); }
+  if(couponOk){ if(cp.type==="Percentage") discPct+=(+cp.v||0); else flat+=(+cp.v||0); }
   discPct=Math.min(100,discPct);
   const discAmt=Math.min(total, total*discPct/100+flat);   // discount is taken off the Selling price (Total)
   const subtotal=Math.max(0, total-discAmt);            // "Sub total" — the taxable value
@@ -1675,7 +1690,7 @@ const SCHEMAS = {
   shopcoupons:[
     ["Coupon code|code","string","What is typed at the counter, e.g. STAFF20."],
     ["Description|desc","string","What the coupon is for, e.g. Staff discount."],
-    ["Discount type|type","enum","% · ₹","Percentage or flat amount off."],
+    ["Discount type|type","enum","Percentage · Flat amount","Percentage takes a % off; flat amount takes a fixed ₹ off."],
     ["Value|v","int","20 for 20% off, or a rupee amount for flat, e.g. 20."],
     ["Valid|valid_from / valid_to","date","When the coupon can be used."],
     ["Proposed by|proposedBy","string","Who proposed it to management, e.g. Ashish."],
@@ -1748,7 +1763,7 @@ const SCHEMAS = {
     ["All of these, or any one|match_mode","enum","all conditions must hold · any one condition","All, for a family price. Any, for a broad promotion."],
     ["What the discount comes off|effect_target","enum","whole cart · the chosen items","§1.6 needs both “add-ons only” and “combined total”."],
     ["Which items|effect_products[]","fk[]","→ Products & add-ons. Add-ons appear in this list alongside products, so a discount can be written for Mini Golf alone, or for an activity bought on its own where there is no ticket to bundle with."],
-    ["Type of discount|value_type","enum","percentage · flat amount","Percentage takes a % off; flat amount takes a fixed ₹ off."],
+    ["Discount type|value_type","enum","Percentage · Flat amount","Percentage takes a % off; flat amount takes a fixed ₹ off."],
     ["How much|value","decimal","A single figure, where the discount does not vary by quantity."],
     ["Quantity tiers|tiers","rows","at least this many · discount","Use instead of a single figure where the discount grows with quantity — two units at 10%, four at 20%. The highest tier the order reaches is the one that applies, and only that one: four units get 20%, not 10% and then 20% on top."],
     ["Cannot be combined with|cannot_combine_with[]","fk[]","→ Discounts & offers. Tick the ones this cannot be used alongside. <b>The reverse is written for you</b> — mark a new offer as not combinable with two existing ones and those two show it back, so adding a discount is one edit rather than one on every other row."],
@@ -1873,7 +1888,7 @@ discounts:[["Discounts & offers",[
  ["All of these, or any one|match_mode","Whether all conditions must hold or any one.","All, for a family price.","Every discount named in the scope uses “all”. “Any” is there for a broad promotion nobody has asked for yet."],
  ["What the discount comes off|effect_target","Which lines the discount lands on.","Add-on lines only, versus the whole cart — §1.6 needs both.","The two differ in money. 10% of the add-ons is not 10% of the total, and precedence decides which the visitor gets."],
  ["Which items|effect_products[]","Named products, when the target is not the whole cart.","Mini Golf alone.","Add-ons appear in this list too, which is how a discount is written for an activity bought on its own."],
- ["Type of discount|value_type","Either a percentage off or a flat amount off.","Percentage takes a % off; flat amount takes a fixed ₹ off.","A flat amount larger than the line takes it to zero, never below."],
+ ["Discount type|value_type","Either a percentage off or a flat amount off.","Percentage takes a % off; flat amount takes a fixed ₹ off.","A flat amount larger than the line takes it to zero, never below."],
  ["Quantity tiers|tiers","A table of minimum quantity against discount, for offers that grow with volume.","Two workshop places at 10%, four at 20%. A parent booking four gets 20% — not 10% compounded with 20%.","Without tiers this needs two separate discounts marked as not combinable with each other, which works but is three records to maintain instead of one, and six for three tiers."],
  ["How much|value","The number, where the discount does not vary by quantity.","10, or 3000.","Percentages compound against the running total, so 10% after another 10% saves less than the second 10% suggests. A flat amount larger than the line takes it to zero and no further — the floor is zero, never a negative."],
  ["Cannot be combined with|cannot_combine_with[]","The other discounts this cannot be used alongside. Everything not listed stacks, and stacking is allowed — §1.10\u2019s no-clubbing rule is superseded.","Mark a new summer offer as not combinable with membership and the quantity break, and both of those show it back without anyone editing them.","Where a set of offers are all meant to be mutually exclusive, every pair between them must be marked — four such offers is six pairs. Miss one and two offers quietly combine. The <i>stacks with</i> count on the resolution table is where that shows up."],
@@ -2582,7 +2597,7 @@ function discDetailBody(d){
         <tbody>${items.length?items.map(p=>`<tr><td><b style="font-weight:500">${p}</b></td><td class="ctr code">${c.op||"at least"} ${qtyOf(p)}</td></tr>`).join("")
           :'<tr><td colspan="2" class="muted">Any item — no specific items required</td></tr>'}</tbody></table></div>
         <div class="card-body" style="border-top:1px solid var(--rule);display:flex;gap:30px;font-size:12.5px">
-          <span><span class="f-k">Type of discount</span><br><b>${d.value||"—"}</b></span>
+          <span><span class="f-k">Discount type</span><br><b>${d.value||"—"}</b></span>
           <span><span class="f-k">How much</span><br><b class="code" style="font-size:13px">${d.v||"—"}</b></span></div>
       </div>`;
   }
@@ -2653,7 +2668,9 @@ let current = "dashboard", selP = 0, tab = "list", sub = "details", pType = "pro
     tierDraft = null, tierItemsOpen = false, tierSaveTried = false,   // membership tier: products + per-product time slots (flyout draft)
     checkinRef = null,   // reception: booking ref currently on the scanner (null = waiting for a scan)
     shopCart = [{pd:"",qty:1}], shopPay = "Cash", shopCustomer = {phone:"",name:"",email:"",gstin:"",member:null},
-    shopDiscType = "", shopSpot = 0, shopCouponCode = "", shopCouponTried = false,
+    shopCouponCode = "", shopCouponTried = false,
+    // instant discount — manager-authorised via OTP (demo code shown on screen)
+    shopInstantPct = 0, shopInstantMgr = "", shopInstantSent = false, shopInstantCode = "", shopInstantOtp = "", shopInstantApplied = false, shopInstantErr = false,
     shopStep1Tried = false, selShopSale = 0, selShopItem = 0, selShopCoupon = 0, shopAddStock = null, shopCostTouched = false;
 /* Check-in / check-out log, keyed by booking ref → {inTime, outTime}. Persists across renders so
    re-scanning a ticket reflects its real state (expected → checked in → checked out). In-memory only. */
@@ -3655,7 +3672,7 @@ const VIEWS = {
   },
   shopcoupons(){
     const rows=SHOP_COUPONS.map((c,i)=>{ const pill=c.status==="Approved"?'<span class="pill pill-ok"><i class="dot"></i>Approved</span>':'<span class="pill pill-draft"><i class="dot"></i>'+c.status+'</span>';
-      return `<tr data-open="shopcoupon:${i}"><td class="code">${c.code}</td><td>${c.desc||""}</td><td class="code">${c.type==="%"?c.v+"%":money(c.v)}</td><td class="sub">${c.proposedBy||"—"}</td><td>${pill}</td><td><button class="btn" data-open="shopcoupon:${i}">View</button></td></tr>`;
+      return `<tr data-open="shopcoupon:${i}"><td class="code">${c.code}</td><td>${c.desc||""}</td><td class="code">${c.type==="Percentage"?c.v+"%":money(c.v)}</td><td class="sub">${c.proposedBy||"—"}</td><td>${pill}</td><td><button class="btn" data-open="shopcoupon:${i}">View</button></td></tr>`;
     }).join("");
     const bar=`<div class="toolbar"><label class="search"><span>&#8981;</span><input placeholder="Search shop coupons" aria-label="Search shop coupons"></label><span class="tool-note">${SHOP_COUPONS.length} coupons</span><button class="btn" data-export="shopcoupons">Export CSV</button></div>`;
     return bar+`<div class="card"><div class="matrix-wrap"><table class="reclist"><thead><tr><th>Code</th><th>Description</th><th>Value</th><th>Proposed by</th><th>Status</th><th></th></tr></thead><tbody>${rows}
@@ -4669,7 +4686,7 @@ function programForm(){
 }
 const MEMBER_SUBS = [["summary","Summary"],["purchases","Purchase history"],["redemptions","Redemptions & visits"]];
 /* ---- Shop / Merchandise: sale form, invoice, detail pages, restock, reset ---- */
-function resetShopSale(){ shopCart=[{pd:"",qty:1}]; shopPay="Cash"; shopCustomer={phone:"",name:"",email:"",gstin:"",member:null}; shopDiscType=""; shopSpot=0; shopCouponCode=""; shopCouponTried=false; shopStep1Tried=false; }
+function resetShopSale(){ shopCart=[{pd:"",qty:1}]; shopPay="Cash"; shopCustomer={phone:"",name:"",email:"",gstin:"",member:null}; shopCouponCode=""; shopCouponTried=false; shopInstantPct=0; shopInstantMgr=""; shopInstantSent=false; shopInstantCode=""; shopInstantOtp=""; shopInstantApplied=false; shopInstantErr=false; shopStep1Tried=false; }
 
 function shopAddStockCard(){ const it=SHOP_ITEMS[shopAddStock]; if(!it) return "";
   return `<div class="drawer-layer"><div class="drawer-backdrop" data-shop-addstock-close></div><div class="drawer-panel" style="max-width:360px">
@@ -4756,7 +4773,7 @@ function shopCouponDetail(){ const c=SHOP_COUPONS[selShopCoupon]; if(!c) return 
   const pill=c.status==="Approved"?'<span class="pill pill-ok"><i class="dot"></i>Approved</span>':'<span class="pill pill-draft"><i class="dot"></i>'+c.status+'</span>';
   return `<div class="detailhead"><h2 class="detailname">${c.code}</h2>${pill}</div>
   <div class="two"><div class="card"><div class="card-head"><span class="card-title">Coupon</span></div><div class="matrix-wrap"><table class="reclist"><tbody>
-    ${row("Description",c.desc||"—")}${row("Discount",c.type==="%"?c.v+"%":money(c.v))}${row("Valid",(c.from||"—")+" → "+(c.to||"—"))}
+    ${row("Description",c.desc||"—")}${row("Discount",c.type==="Percentage"?c.v+"%":money(c.v))}${row("Valid",(c.from||"—")+" → "+(c.to||"—"))}
   </tbody></table></div></div>
   <div class="card"><div class="card-head"><span class="card-title">Approval</span><span class="card-note">a code cannot apply until Approved</span></div><div class="matrix-wrap"><table class="reclist"><tbody>
     ${row("Created by",c.preparedBy||"—")}${row("Proposed by",c.proposedBy||"—")}${row("Approved by",c.approvedBy||'<span class="muted">—</span>')}${row("Status",pill)}
@@ -4764,7 +4781,7 @@ function shopCouponDetail(){ const c=SHOP_COUPONS[selShopCoupon]; if(!c) return 
 }
 
 function shopSaleForm(){
-  const comp=shopSaleCompute({lines:shopCart.filter(r=>r.pd),discType:shopDiscType,spot:shopSpot,coupon:shopCouponTried?shopCouponCode:""});
+  const comp=shopSaleCompute({lines:shopCart.filter(r=>r.pd),instantPct:shopInstantApplied?shopInstantPct:0,coupon:shopCouponTried?shopCouponCode:""});
   const miss=f=>shopStep1Tried&&!String(shopCustomer[f]||"").trim();
   const reqMark=f=>miss(f)?'<span class="lab-req" style="color:var(--stop)">Required</span>':'<span class="lab-req">Required</span>';
   const opt=(sel)=>`<option value="">— Select —</option>`+SHOP_ITEMS.map(x=>`<option value="${x.pd}"${x.pd===sel?" selected":""}>${x.pd} · ${x.n}</option>`).join("");
@@ -4796,20 +4813,32 @@ function shopSaleForm(){
     <div class="matrix-wrap"><table class="reclist shop-sale-table"><thead><tr><th>S.No</th><th>Barcode</th><th>Product (PD)</th><th>Name</th><th>HSN/SAC</th><th>Avail</th><th>Base</th><th>GST</th><th>Selling price</th><th>Units</th><th>Total</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>
     <button class="rep-add" data-shop-addrow>+ Add row</button>
   </div></section>`;
-  const couponMsg=shopCouponTried?(comp.couponOk?`<div class="booking-discount-msg ok">✓ ${comp.coupon.code} applied</div>`:`<div class="booking-discount-msg bad">${shopCoupon(shopCouponCode)?"Coupon not approved yet.":"Code not recognised."}</div>`):"";
-  const typePct=shopTypeDiscPct(shopDiscType);
-  const discTypeMsg=shopDiscType?`<div class="booking-discount-msg ok">✓ ${shopDiscType} discount applied${typePct?` — ${typePct}% off`:""}</div>`:"";
-  const spotMsg=(+shopSpot>0)?`<div class="booking-discount-msg ok">✓ ${+shopSpot}% on-the-spot discount applied</div>`:"";
+  const couponMsg=shopCouponTried?(comp.couponOk?`<div class="booking-discount-msg ok" style="display:flex;align-items:center;gap:8px">✓ ${(shopPreset(comp.coupon.code)||{}).label||comp.coupon.code} applied<button data-shop-coupon-clear aria-label="Remove coupon" style="border:0;background:none;color:var(--stop);font-size:11px;font-weight:600;text-decoration:underline;cursor:pointer;padding:0">Remove</button></div>`:`<div class="booking-discount-msg bad">${shopCoupon(shopCouponCode)?"Coupon not approved yet.":"Code not recognised."}</div>`):"";
+  // ---- helper preset pills (fill the coupon field; Apply then applies) ----
+  const presetPills=`<div class="shop-pills">${SHOP_PRESETS.map(p=>`<button class="shop-pill" data-shop-preset="${p.code}">${p.label} · ${p.pct}%</button>`).join("")}</div>`;
+  // ---- instant discount — manager-authorised via OTP (demo code shown; wireframe) ----
+  const mgr=mgrByName(shopInstantMgr);
+  const canSend=(+shopInstantPct>0)&&!!shopInstantMgr;
+  let instantBlock;
+  if(shopInstantApplied){
+    instantBlock=`<div class="booking-discount-msg ok">✓ ${+shopInstantPct}% instant discount applied — authorised by ${escAttr(shopInstantMgr)}</div>
+      <button class="btn" data-shop-instant-clear style="margin-top:6px">Remove instant discount</button>`;
+  } else {
+    instantBlock=`<div class="shop-instant-row">
+        <div class="inp-suffix" style="width:96px;flex:none"><input class="inp mono" id="shopInstantPct" type="number" min="0" max="100" value="${shopInstantPct||""}" placeholder="0"><span>%</span></div>
+        <div class="selwrap" style="flex:1;min-width:0"><select class="inp" id="shopInstantMgr"><option value="">Authorising manager…</option>${SHOP_MANAGERS.map(m=>`<option${shopInstantMgr===m.name?" selected":""}>${m.name}</option>`).join("")}</select></div>
+      </div>
+      ${shopInstantSent
+        ? `<div class="muted" style="font-size:11px;margin-top:6px">OTP sent to <b>${mgr?escAttr(mgr.email):""}</b> · <span class="code">Demo OTP: ${shopInstantCode}</span> — wireframe, no email is sent</div>
+           <div class="booking-discount" style="margin:6px 0 0"><input class="inp mono" id="shopInstantOtp" maxlength="6" style="letter-spacing:.3em" placeholder="6-digit code" value="${escAttr(shopInstantOtp)}"><button class="btn" data-shop-instant-verify>Verify &amp; apply</button></div>
+           ${shopInstantErr?`<div class="booking-discount-msg bad">OTP does not match — check the code and try again.</div>`:""}`
+        : `<button class="btn" data-shop-instant-send ${canSend?"":"disabled"} style="margin-top:6px">Send OTP to manager</button>`}`;
+  }
   const payBtns=["Cash","POS-UPI","POS-Card","None"].map(m=>`<button class="summary-pay-btn" data-shop-pay="${escAttr(m)}" aria-pressed="${shopPay===m}">${m}</button>`).join("");
   // Totals & payment — a sticky box on the right, mirroring the Orders page summary aside
   const totalsBox=`<div class="card-head"><span class="card-title">Totals &amp; payment</span><span class="card-note" style="margin-left:auto">${nItems} item${nItems===1?"":"s"}</span></div><div class="card-body shop-totals-body">
-    <div class="fld"><div class="lab"><span class="lab-n">Discount type</span><span class="lab-req">Optional</span></div><div class="shop-seg">
-      <button class="shop-seg-btn${shopDiscType==="Employee"?" on":""}" data-shop-disctype="Employee">Employee</button>
-      <button class="shop-seg-btn${shopDiscType==="Gift"?" on":""}" data-shop-disctype="Gift">Gift</button>
-      <button class="shop-seg-btn${shopDiscType===""?" on":""}" data-shop-disctype="">None</button>
-    </div>${discTypeMsg}</div>
-    <div class="fld"><div class="lab"><span class="lab-n">On-the-spot discount %</span><span class="lab-req">Optional</span></div><input class="inp mono" id="shopSpot" type="number" min="0" max="100" value="${shopSpot||""}" placeholder="0">${spotMsg}</div>
-    <div class="fld"><div class="lab"><span class="lab-n">Coupon code</span><span class="lab-req">Optional</span></div><div class="booking-discount" style="margin:0"><input class="inp mono" id="shopCouponCode" value="${escAttr(shopCouponCode)}" placeholder="Approved coupon"><button class="btn" data-shop-coupon-apply>Apply</button></div>${couponMsg}</div>
+    <div class="fld"><div class="lab"><span class="lab-n">Coupon code</span><span class="lab-req">Optional</span></div><div class="booking-discount" style="margin:0"><input class="inp mono" id="shopCouponCode" value="${escAttr(shopCouponCode)}" placeholder="Enter a coupon or pick a preset"><button class="btn" data-shop-coupon-apply>Apply</button></div>${presetPills}${couponMsg}</div>
+    <div class="fld"><div class="lab"><span class="lab-n">Instant discount</span><span class="lab-req">Optional</span></div>${instantBlock}</div>
     <div class="shop-total-rows">
       <div class="booking-summary-row"><span>Total</span><span>${money(comp.total)}</span></div>
       ${comp.discAmt?`<div class="booking-summary-row" style="color:var(--ok)"><span>Discount${comp.discPct?` <span class="q">${comp.discPct}%</span>`:""}</span><span>− ${money(Math.round(comp.discAmt))}</span></div>`:""}
@@ -4835,7 +4864,7 @@ function shopSaleForm(){
 function shopSaleDetail(){ const s=SHOP_SALES[selShopSale]; if(!s) return ""; const c=shopSaleCompute(s);
   const eInv=!!(s.gstin&&s.gstin.trim());
   const partRows=c.lines.map((l,idx)=>{ const it=l.it; return `<tr><td>${idx+1}</td><td>${it.n}</td><td class="code">${it.hsn||"—"}</td><td class="code">${l.qty}</td><td class="code">${money(shopSellingOf(it))}</td><td>Nos</td><td class="code">${money(Math.round(l.selling))}</td></tr>`; }).join("");
-  const discRow=c.discAmt?`<tr class="inv-tax"><td colspan="6" style="text-align:right">Less: Discount${c.discPct?` @ ${c.discPct}%`:""}</td><td class="code">− ${money(Math.round(c.discAmt))}</td></tr>`:"";
+  const discRow=c.discAmt?`<tr class="inv-tax"><td colspan="6" style="text-align:right">Less: Discount${c.discPct?` @ ${c.discPct}%`:""}${s.instantMgr?` · authorised by ${s.instantMgr}`:""}</td><td class="code">− ${money(Math.round(c.discAmt))}</td></tr>`:"";
   const rateMap={}; c.lines.forEach(l=>{ const r=rateMap[l.halfPct]||(rateMap[l.halfPct]={taxable:0,half:l.halfPct}); r.taxable+=l.taxable; });
   const taxRows=Object.values(rateMap).filter(r=>r.half>0).map(r=>`<tr class="inv-tax"><td colspan="6" style="text-align:right">CGST ${r.half}% Output</td><td class="code">${money(Math.round(r.taxable*r.half/100))}</td></tr><tr class="inv-tax"><td colspan="6" style="text-align:right">SGST ${r.half}% Output</td><td class="code">${money(Math.round(r.taxable*r.half/100))}</td></tr>`).join("");
   const hsnMap={}; c.lines.forEach(l=>{ const it=l.it; if(!it.hsn) return; const cg=l.taxable*l.halfPct/100; const m=hsnMap[it.hsn]||(hsnMap[it.hsn]={hsn:it.hsn,taxable:0,cgst:0,sgst:0,half:l.halfPct}); m.taxable+=l.taxable; m.cgst+=cg; m.sgst+=cg; });
@@ -5268,9 +5297,15 @@ document.addEventListener("click",e=>{
   if(shRm){ shopCart.splice(+shRm.dataset.shopRemoverow,1); if(!shopCart.length) shopCart=[{pd:"",qty:1}]; render(); return; }
   const shQty=e.target.closest("[data-shop-qty]");
   if(shQty){ const [i,d]=shQty.dataset.shopQty.split("|"); const r=shopCart[+i]; if(r) r.qty=Math.max(1,(+r.qty||0)+ +d); render(); return; }
-  const shDt=e.target.closest("[data-shop-disctype]");
-  if(shDt){ shopDiscType=shDt.dataset.shopDisctype; render(); return; }
+  // preset pill fills the coupon input (does not apply — Apply does)
+  const shPreset=e.target.closest("[data-shop-preset]");
+  if(shPreset){ shopCouponCode=shPreset.dataset.shopPreset; shopCouponTried=false; render(); return; }
   if(e.target.closest("[data-shop-coupon-apply]")){ const el=document.getElementById("shopCouponCode"); shopCouponCode=el?el.value.trim():shopCouponCode; shopCouponTried=!!shopCouponCode; render(); return; }
+  if(e.target.closest("[data-shop-coupon-clear]")){ shopCouponCode=""; shopCouponTried=false; render(); return; }
+  // instant discount — manager OTP authorisation
+  if(e.target.closest("[data-shop-instant-send]")){ if((+shopInstantPct>0)&&shopInstantMgr){ shopInstantSent=true; shopInstantErr=false; shopInstantOtp=""; shopInstantCode=String(Math.floor(100000+Math.random()*900000)); render(); } return; }
+  if(e.target.closest("[data-shop-instant-verify]")){ const el=document.getElementById("shopInstantOtp"); const v=el?el.value.trim():shopInstantOtp; if(v===shopInstantCode){ shopInstantApplied=true; shopInstantErr=false; } else { shopInstantErr=true; } render(); return; }
+  if(e.target.closest("[data-shop-instant-clear]")){ shopInstantPct=0; shopInstantMgr=""; shopInstantSent=false; shopInstantCode=""; shopInstantOtp=""; shopInstantApplied=false; shopInstantErr=false; render(); return; }
   const shPay=e.target.closest("[data-shop-pay]");
   if(shPay){ shopPay=shPay.dataset.shopPay; render(); return; }
   const shAppr=e.target.closest("[data-shop-coupon-approve]");
@@ -5285,7 +5320,7 @@ document.addEventListener("click",e=>{
     const lines=shopCart.filter(r=>r.pd).map(r=>({pd:r.pd,qty:+r.qty||0}));
     if(!lines.length){ render(); return; }
     lines.forEach(l=>{ const it=shopItemByPd(l.pd); if(it) it.stock=Math.max(0,it.stock-l.qty); });   // decrement stock
-    SHOP_SALES.unshift({txn:"4950",inv:"MUSO/25-26/0143",date:"27 Feb 2026",phone:shopCustomer.phone,name:shopCustomer.name,email:shopCustomer.email,gstin:shopCustomer.gstin,lines,discType:shopDiscType,spot:+shopSpot||0,coupon:shopCouponTried?shopCouponCode:"",pay:shopPay});
+    SHOP_SALES.unshift({txn:"4950",inv:"MUSO/25-26/0143",date:"27 Feb 2026",phone:shopCustomer.phone,name:shopCustomer.name,email:shopCustomer.email,gstin:shopCustomer.gstin,lines,coupon:shopCouponTried?shopCouponCode:"",instantPct:shopInstantApplied?(+shopInstantPct||0):0,instantMgr:shopInstantApplied?shopInstantMgr:"",pay:shopPay});
     selShopSale=0; tab="detail"; render(); $(".stage").scrollTop=0; return;
   }
   // ---- inline add forms (open / cancel / submit) ----
@@ -5395,7 +5430,10 @@ document.addEventListener("change",e=>{
   if(shPick){ const i=+shPick.dataset.shopPick; if(shopCart[i]) shopCart[i].pd=e.target.value; render(); return; }
   if(e.target.id==="shopHsn"){ shopRecalcForm(); return; }   // new-product form: HSN drives GST + Base price
   if(e.target.id==="shopCat"){ const pd=document.getElementById("shopPd"); if(pd) pd.value=shopPdFor(e.target.value); return; }   // PD auto-generated from category
-  if(e.target.id==="shopSpot"){ shopSpot=Math.max(0,+e.target.value||0); render(); return; }
+  // instant discount inputs — changing the % or manager voids any prior authorisation
+  if(e.target.id==="shopInstantPct"){ shopInstantPct=Math.max(0,Math.min(100,+e.target.value||0)); shopInstantSent=false; shopInstantApplied=false; shopInstantErr=false; render(); return; }
+  if(e.target.id==="shopInstantMgr"){ shopInstantMgr=e.target.value; shopInstantSent=false; shopInstantApplied=false; shopInstantErr=false; render(); return; }
+  if(e.target.id==="shopInstantOtp"){ shopInstantOtp=e.target.value; return; }
   if(e.target.id==="shopScan"){ const it=shopItemByBarcode(e.target.value.trim()); if(it){ const ex=shopCart.find(r=>r.pd===it.pd); if(ex) ex.qty=(+ex.qty||0)+1; else { const blank=shopCart.find(r=>!r.pd); if(blank) blank.pd=it.pd; else shopCart.push({pd:it.pd,qty:1}); } render(); } return; }
   refreshDiscountSummaries();
 });
