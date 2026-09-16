@@ -4730,8 +4730,7 @@ function shopItemForm(editing){
     <div class="card-head"><span class="card-title">${editing?"Edit "+it.n:"New shop product"}</span></div>
     <div class="form-body product-form">
       ${sec("Basics",
-        fld("Category",`<div class="selwrap"><select class="inp" id="shopCat"><option value="">Select…</option>${catOpts.map(c=>`<option${it.cat===c?" selected":""}>${c}</option>`).join("")}</select></div>`,"Merchandise department — the Product ID is generated from this.",true)
-        +fld("Product ID (PD)",`<input class="inp mono" id="shopPd" value="${escAttr(editing?(it.pd||""):(it.cat?shopPdFor(it.cat):""))}" placeholder="Auto — select a category" disabled>`,"Auto-generated from the category, e.g. Books → BK-00001. Read-only.",false)
+        fld("Category",`<div class="selwrap"><select class="inp" id="shopCat"><option value="">Select…</option>${catOpts.map(c=>`<option${it.cat===c?" selected":""}>${c}</option>`).join("")}</select></div>`,"Merchandise department — the Product ID is auto-generated from this on create.",true)
         +fld("Name",`<input class="inp" id="shopName2" value="${escAttr(it.n||"")}" placeholder="Ceramic Mug">`,"Shown on the receipt and reports.",true,true)
         +fld("Description",`<input class="inp" id="shopDesc" value="${escAttr(it.desc||"")}" placeholder="MuSo branded mug">`,"Optional short description.",false,true))}
       ${sec("Pricing & tax",
