@@ -742,6 +742,8 @@ tbody tr[aria-selected="true"] td:first-child{box-shadow:inset 2px 0 0 var(--blu
 .shop-pill{border:1px dashed var(--rule2);background:#fff;border-radius:20px;padding:4px 11px;font-size:11px;font-weight:500;color:var(--ink2);cursor:pointer}
 .shop-pill:hover{border-style:solid;border-color:var(--blue);color:var(--blue);background:var(--blue-wash)}
 .shop-instant-row{display:flex;gap:8px;align-items:center}
+/* decorative barcode label on the product Barcodes tab */
+.barcode-strip{display:inline-block;width:150px;height:26px;background-image:repeating-linear-gradient(90deg,var(--ink) 0 1px,transparent 1px 3px,var(--ink) 3px 5px,transparent 5px 8px,var(--ink) 8px 9px,transparent 9px 12px);opacity:.85}
 .shop-sale-table th,.shop-sale-table td{white-space:nowrap;font-size:12px}
 .shop-sale-table .selwrap,.shop-sale-table select.inp{min-width:170px}
 .invoice-actions{display:flex;align-items:center;gap:10px;margin-bottom:12px}
@@ -1246,14 +1248,14 @@ const MUSO_SELLER = {name:"MuSo Foundation", addr:["5A, Jindal Mansion, Dr G Des
 /* Merchandise inventory. GST + HSN are references into the existing Tax-rate / HSN masters (a 0% item
    simply carries no rate codes). Prices are flat (not per visitor-category like a ticket). */
 const SHOP_ITEMS = [
-  {pd:"PD_116",barcode:"8901234500116",n:"Emotional First Aid",desc:"Illustrated card deck for feelings",cat:"Books",base:1937,tax:["CGST-6","SGST-6","IGST-12"],hsn:"49011010",mrp:1937,stock:12},
-  {pd:"PD_204",barcode:"8901234500204",n:"MuSo Puzzle Cube",desc:"3×3 logic cube",cat:"Toys",base:499,tax:["CGST-6","SGST-6","IGST-12"],hsn:"95030090",mrp:599,stock:3},
-  {pd:"PD_318",barcode:"8901234500318",n:"Kids Explorer Tee",desc:"Cotton t-shirt (kids)",cat:"Apparel",base:699,tax:["CGST-2.5","SGST-2.5","IGST-5"],hsn:"61091000",mrp:799,stock:0},
-  {pd:"PD_402",barcode:"8901234500402",n:"Doodle Notebook",desc:"A5 blank notebook",cat:"Stationery",base:150,tax:[],hsn:"48201090",mrp:150,stock:40},
-  {pd:"PD_511",barcode:"8901234500511",n:"Science Kit — Volcano",desc:"DIY chemistry kit",cat:"Games",base:1299,tax:["CGST-9","SGST-9","IGST-18"],hsn:"95030090",mrp:1499,stock:7},
-  {pd:"PD_623",barcode:"8901234500623",n:"MuSo Mascot Plush",desc:"Soft toy mascot",cat:"Toys",base:899,tax:["CGST-6","SGST-6","IGST-12"],hsn:"95030090",mrp:999,stock:2},
-  {pd:"PD_735",barcode:"8901234500735",n:"Ceramic Mug",desc:"MuSo branded mug",cat:"Home",base:349,tax:["CGST-9","SGST-9","IGST-18"],hsn:"69120040",mrp:399,stock:18},
-  {pd:"PD_848",barcode:"8901234500848",n:"Colour Pencil Set",desc:"24 shades",cat:"Stationery",base:249,tax:["CGST-6","SGST-6","IGST-12"],hsn:"96091000",mrp:299,stock:25}
+  {pd:"PD_116",n:"Emotional First Aid",desc:"Illustrated card deck for feelings",cat:"Books",base:1937,tax:["CGST-6","SGST-6","IGST-12"],hsn:"49011010",mrp:1937,stock:12},
+  {pd:"PD_204",n:"MuSo Puzzle Cube",desc:"3×3 logic cube",cat:"Toys",base:499,tax:["CGST-6","SGST-6","IGST-12"],hsn:"95030090",mrp:599,stock:3},
+  {pd:"PD_318",n:"Kids Explorer Tee",desc:"Cotton t-shirt (kids)",cat:"Apparel",base:699,tax:["CGST-2.5","SGST-2.5","IGST-5"],hsn:"61091000",mrp:799,stock:0},
+  {pd:"PD_402",n:"Doodle Notebook",desc:"A5 blank notebook",cat:"Stationery",base:150,tax:[],hsn:"48201090",mrp:150,stock:40},
+  {pd:"PD_511",n:"Science Kit — Volcano",desc:"DIY chemistry kit",cat:"Games",base:1299,tax:["CGST-9","SGST-9","IGST-18"],hsn:"95030090",mrp:1499,stock:7},
+  {pd:"PD_623",n:"MuSo Mascot Plush",desc:"Soft toy mascot",cat:"Toys",base:899,tax:["CGST-6","SGST-6","IGST-12"],hsn:"95030090",mrp:999,stock:2},
+  {pd:"PD_735",n:"Ceramic Mug",desc:"MuSo branded mug",cat:"Home",base:349,tax:["CGST-9","SGST-9","IGST-18"],hsn:"69120040",mrp:399,stock:18},
+  {pd:"PD_848",n:"Colour Pencil Set",desc:"24 shades",cat:"Stationery",base:249,tax:["CGST-6","SGST-6","IGST-12"],hsn:"96091000",mrp:299,stock:25}
 ];
 const SHOP_CATS = [...new Set(SHOP_ITEMS.map(x=>x.cat))];
 /* Product ID is auto-generated from the category: <prefix>-<5-digit running number>, e.g. Books → BK-00001. */
@@ -1265,7 +1267,12 @@ const SHOP_CATEGORIES = [
 const shopCatByName = n => SHOP_CATEGORIES.find(c=>c.name===n);
 function shopPdFor(cat){ const c=shopCatByName(cat); if(!c) return ""; const n=SHOP_ITEMS.filter(x=>x.cat===cat).length+1; return c.code+"-"+String(n).padStart(5,"0"); }
 const shopItemByPd = pd => SHOP_ITEMS.find(x=>x.pd===pd);
-const shopItemByBarcode = bc => SHOP_ITEMS.find(x=>String(x.barcode)===String(bc));
+/* Barcodes live per unit, not per product: a 13-digit EAN-style code "89" + 5-digit PD + 6-digit unit number. */
+function shopUnitBarcode(pd,n){ const num=String(pd).replace(/\D/g,"").padStart(5,"0").slice(-5); return "89"+num+String(n).padStart(6,"0"); }
+/* Ensure an item carries one barcode per unit on hand — tops up when stock grows (create / Add stock). */
+function ensureShopBarcodes(it){ it.barcodes=it.barcodes||[]; const need=Math.max(0,+it.stock||0); while(it.barcodes.length<need) it.barcodes.push(shopUnitBarcode(it.pd,it.barcodes.length+1)); return it.barcodes; }
+SHOP_ITEMS.forEach(ensureShopBarcodes);   // seed each product's unit barcodes from its opening stock
+const shopItemByBarcode = bc => SHOP_ITEMS.find(x=>(x.barcodes||[]).some(b=>String(b)===String(bc).trim()));
 /* GST% for an item comes from its HSN / SAC code, which carries the tax-rate components (intra-state = CGST + SGST); falls back to any rate rows on the item itself. */
 const shopGstPct = it => hsnTotalPct(it&&it.hsn) || (it&&it.tax||[]).filter(c=>/^(CGST|SGST)/.test(c)).reduce((a,c)=>a+((RATE(c)||{}).pct||0),0);
 const shopHalfPct = it => hsnHalfPct(it&&it.hsn) || (()=>{ const cg=(it&&it.tax||[]).find(c=>/^CGST/.test(c)); return (RATE(cg)||{}).pct||0; })();  // CGST (= SGST) half
@@ -1342,7 +1349,7 @@ function amountInWords(num){
 
 /* ---- CSV export for the Shop tables ---- */
 function shopExportRows(kind){
-  if(kind==="shopitems") return [["PD","Barcode","Name","Category","Base price","GST %","MRP","Stock"]].concat(SHOP_ITEMS.map(x=>[x.pd,x.barcode,x.n,x.cat,x.base,shopGstPct(x),x.mrp,x.stock]));
+  if(kind==="shopitems") return [["PD","Name","Category","Base price","GST %","MRP","Stock","Barcodes"]].concat(SHOP_ITEMS.map(x=>[x.pd,x.n,x.cat,x.base,shopGstPct(x),x.mrp,x.stock,(x.barcodes||[]).length]));
   if(kind==="shopcoupons") return [["Code","Description","Type","Value","Proposed by","Status","Valid from","Valid to"]].concat(SHOP_COUPONS.map(c=>[c.code,c.desc,c.type,c.v,c.proposedBy,c.status,c.from,c.to]));
   if(kind==="shopsales") return [["Txn","Invoice","Date","Customer","Phone","GSTIN","Items","Payment","Subtotal","Discount","GST","Grand total"]].concat(SHOP_SALES.map(s=>{const c=shopSaleCompute(s);const n=(s.lines||[]).reduce((a,l)=>a+(+l.qty||0),0);return [s.txn,s.inv,s.date,s.name,s.phone,s.gstin||"",n,s.pay,Math.round(c.subtotal),Math.round(c.discAmt),Math.round(c.gst),c.grand];}));
   if(kind==="shopreports-pay"){ const byPay={}; SHOP_SALES.forEach(s=>{const c=shopSaleCompute(s);byPay[s.pay]=(byPay[s.pay]||0)+c.grand;}); return [["Payment mode","Amount"]].concat(Object.entries(byPay).map(([k,v])=>[k,Math.round(v)])); }
@@ -1679,7 +1686,6 @@ const SCHEMAS = {
   products: PROD_SCHEMA,
   shopitems:[
     ["Product ID (PD)|pd","string","The PD code on the shelf label, e.g. PD_116."],
-    ["Barcode|barcode","string","EAN/UPC scanned at the counter, e.g. 8901234500116."],
     ["Name|name","string","Shown on the receipt and reports, e.g. Ceramic Mug."],
     ["Description|description","string","Optional short description, e.g. MuSo branded mug."],
     ["Category|cat","enum","Books · Toys · Apparel · Stationery · Games · Home","Merchandise department."],
@@ -2568,7 +2574,7 @@ function discountDetail(){
   return `<div class="detailhead"><h2 class="detailname">${codeLabel(d)}</h2>${isSeries(d)?`<span class="q">series · ${seriesCount(d.series)}</span>`:""}${applyBadge(d)}</div>
     <div class="two">
       <div>${tabs}<div class="sub-body">${discDetailBody(d)}</div></div>
-      <aside>${discApprovalBox(d)}</aside>
+      <aside class="disc-summary-col">${discApprovalBox(d)}</aside>
     </div>`;
 }
 /* The approval card — created/approved by, status, and the Approve button while pending. Shown beside every detail tab. */
@@ -2672,7 +2678,7 @@ let current = "dashboard", selP = 0, tab = "list", sub = "details", pType = "pro
     shopCouponCode = "", shopCouponTried = false,
     // instant discount — manager-authorised via OTP (demo code shown on screen)
     shopInstantPct = 0, shopInstantDesc = "", shopInstantMgr = "", shopInstantSent = false, shopInstantCode = "", shopInstantOtp = "", shopInstantApplied = false, shopInstantErr = false,
-    shopStep1Tried = false, selShopSale = 0, ssub = "details", selShopItem = 0, selShopCoupon = 0, shopAddStock = null, shopCostTouched = false;
+    shopStep1Tried = false, selShopSale = 0, ssub = "details", selShopItem = 0, sitab = "details", selShopCoupon = 0, shopAddStock = null, shopCostTouched = false;
 /* Check-in / check-out log, keyed by booking ref → {inTime, outTime}. Persists across renders so
    re-scanning a ticket reflects its real state (expected → checked in → checked out). In-memory only. */
 const CHECKINS = {};
@@ -3635,17 +3641,17 @@ const VIEWS = {
       ${kpi(S('<circle cx="12" cy="12" r="9"/><path d="M15 9l-6 6M9 9l6 6"/>'),"blue","Out of stock",out,"needs restock")}
     </div>`;
     const rows=SHOP_ITEMS.map((x,i)=>{
-      const hay=`${x.pd} ${x.barcode} ${x.n} ${x.cat}`.toLowerCase();
+      const hay=`${x.pd} ${x.n} ${x.cat}`.toLowerCase();
       const st=x.stock<=0?'<span class="pill pill-off">Out</span>':x.stock<=3?'<span class="pill pill-warn">Low · '+x.stock+'</span>':'<span class="pill pill-ok"><i class="dot"></i>'+x.stock+'</span>';
       return `<tr data-open="shopitem:${i}" data-shop-row data-search="${escAttr(hay)}">
-        <td class="code">${x.pd}</td><td class="code">${x.barcode}</td>
+        <td class="code">${x.pd}</td><td class="code">${(x.barcodes||[]).length}</td>
         <td><b style="font-weight:500">${x.n}</b><div class="sub">${x.cat}</div></td>
         <td class="code">${money(x.base)}</td><td class="code">${shopGstPct(x)}%</td><td class="code">${money(x.mrp)}</td>
         <td>${st}</td>
         <td><div style="display:flex;gap:8px"><button class="btn" data-open="shopitem:${i}">View</button><button class="btn" data-shop-addstock="${i}">Add stock</button></div></td></tr>`;
     }).join("");
-    const searchbar=`<div class="toolbar"><label class="search"><span>&#8981;</span><input data-shop-search placeholder="Search by PD, barcode, name or category" aria-label="Search products" autocomplete="off"></label><span class="tool-note" id="shopCount">${SHOP_ITEMS.length} products</span><button class="btn" data-export="shopitems">Export CSV</button></div>`;
-    return tiles+searchbar+`<div class="card"><div class="matrix-wrap"><table class="reclist" id="shopItemsTable"><thead><tr><th>PD</th><th>Barcode</th><th>Product</th><th>Base</th><th>GST</th><th>MRP</th><th>Stock</th><th>Actions</th></tr></thead><tbody>${rows}
+    const searchbar=`<div class="toolbar"><label class="search"><span>&#8981;</span><input data-shop-search placeholder="Search by PD, name or category" aria-label="Search products" autocomplete="off"></label><span class="tool-note" id="shopCount">${SHOP_ITEMS.length} products</span><button class="btn" data-export="shopitems">Export CSV</button></div>`;
+    return tiles+searchbar+`<div class="card"><div class="matrix-wrap"><table class="reclist" id="shopItemsTable"><thead><tr><th>PD</th><th>Barcodes</th><th>Product</th><th>Base</th><th>GST</th><th>MRP</th><th>Stock</th><th>Actions</th></tr></thead><tbody>${rows}
       <tr data-shop-newrow><td colspan="8"><button class="rep-add" data-tab="new" style="border-radius:4px">+ New product</button></td></tr>
       <tr data-shop-empty style="display:none"><td colspan="8" class="muted" style="text-align:center;padding:16px">No products match that search.</td></tr>
     </tbody></table></div></div>${shopAddStock!=null?shopAddStockCard():""}`;
@@ -3816,7 +3822,7 @@ function createForm(schema,label,footNote,values={},editing=false){
     headings=secs.map(s=>s[0]); groups=secs.map(s=>byName(s[1]));
   } else if(label==="product"){   // Shop product — group by field so sections are meaningful, not chunks of 3
     const byName=names=>names.map(n=>schema.find(f=>(f[0].split("|")[1]||f[0])===n)).filter(Boolean);
-    const secs=[["Basics",["pd","barcode","name","description","cat"]],["Pricing & tax",["base","mrp","tax_rate_ids[]","hsn_sac_id"]],["Inventory",["stock"]]];
+    const secs=[["Basics",["pd","name","description","cat"]],["Pricing & tax",["base","mrp","tax_rate_ids[]","hsn_sac_id"]],["Inventory",["stock"]]];
     headings=secs.map(s=>s[0]); groups=secs.map(s=>byName(s[1]));
   } else if(label==="coupon"){   // Shop coupon
     const byName=names=>names.map(n=>schema.find(f=>(f[0].split("|")[1]||f[0])===n)).filter(Boolean);
@@ -4714,7 +4720,7 @@ function shopRecalcForm(){
 }
 function shopItemForm(editing){
   shopCostTouched=false;   // fresh form — Cost price follows Base price until manually edited
-  const it=editing?SHOP_ITEMS[selShopItem]:{pd:"",barcode:"",n:"",desc:"",cat:"",mrp:"",hsn:"",stock:""};
+  const it=editing?SHOP_ITEMS[selShopItem]:{pd:"",n:"",desc:"",cat:"",mrp:"",hsn:"",stock:""};
   const sec=(title,body)=>`<section class="form-sec"><div class="form-sec-head"><span class="form-sec-title">${title}</span></div><div class="form-sec-body">${body}</div></section>`;
   const fld=(label,inner,hint,req,wide)=>`<div class="fld${wide?" wide":""}"><div class="lab"><span class="lab-n">${label}</span>${hint?tip(hint):""}<span class="lab-req">${req?"Required":"Optional"}</span></div>${inner}</div>`;
   const h=hsnByCode(it.hsn), gstPct=h?h.gst:0, selling=+it.mrp||0;
@@ -4726,7 +4732,6 @@ function shopItemForm(editing){
       ${sec("Basics",
         fld("Category",`<div class="selwrap"><select class="inp" id="shopCat"><option value="">Select…</option>${catOpts.map(c=>`<option${it.cat===c?" selected":""}>${c}</option>`).join("")}</select></div>`,"Merchandise department — the Product ID is generated from this.",true)
         +fld("Product ID (PD)",`<input class="inp mono" id="shopPd" value="${escAttr(editing?(it.pd||""):(it.cat?shopPdFor(it.cat):""))}" placeholder="Auto — select a category" disabled>`,"Auto-generated from the category, e.g. Books → BK-00001. Read-only.",false)
-        +fld("Barcode",`<input class="inp mono" id="shopBarcode" value="${escAttr(it.barcode||"")}" placeholder="8901234500116">`,"EAN/UPC scanned at the counter.",false)
         +fld("Name",`<input class="inp" id="shopName2" value="${escAttr(it.n||"")}" placeholder="Ceramic Mug">`,"Shown on the receipt and reports.",true,true)
         +fld("Description",`<input class="inp" id="shopDesc" value="${escAttr(it.desc||"")}" placeholder="MuSo branded mug">`,"Optional short description.",false,true))}
       ${sec("Pricing & tax",
@@ -4736,10 +4741,10 @@ function shopItemForm(editing){
         +fld("Base price",`<div class="mono readval" id="shopBaseOut">${base?money(base):"—"}</div>`,"Auto-calculated: Selling price − GST. Read-only.",false)
         +fld("Cost price",`<div class="inp-suffix"><input class="inp mono" id="shopCost" type="number" min="0" value="${base?base:""}" placeholder="0"><span>₹</span></div>`,"Defaults to the Base price (Selling − GST); edit to record the actual purchase cost.",false))}
       ${sec("Inventory",
-        fld("Available units",`<input class="inp mono" id="shopStock2" type="number" min="0" value="${escAttr(it.stock||"")}" placeholder="0">`,"Units on hand.",false)
+        fld("Available units",`<input class="inp mono" id="shopStock2" type="number" min="0" value="${escAttr(it.stock||"")}" placeholder="0">`,"Units on hand — a unique barcode is generated for each unit on create.",false)
         +fld("Unit",`<div class="selwrap"><select class="inp" id="shopUqc">${["NOS","PCS","SET","KGS","MTR","PAC"].map(u=>`<option${(it.uqc||"NOS")===u?" selected":""}>${u}</option>`).join("")}</select></div>`,"Unit quantity code (UQC) for the GST return.",false))}
     </div>
-    <div class="form-foot"><span></span><button class="btn" data-tab="list">Cancel</button><button class="btn btn-primary" data-tab="list">${editing?"Save changes":"Create product"}</button></div>
+    <div class="form-foot"><span></span><button class="btn" data-tab="list">Cancel</button><button class="btn btn-primary" data-shop-item-save="${editing?selShopItem:-1}">${editing?"Save changes":"Create product"}</button></div>
   </div></div>`;
 }
 function shopItemDetail(){ const it=SHOP_ITEMS[selShopItem]; if(!it) return "";
@@ -4749,10 +4754,11 @@ function shopItemDetail(){ const it=SHOP_ITEMS[selShopItem]; if(!it) return "";
   const gstAmt=(selling&&gstPct)?Math.round(selling*gstPct/(100+gstPct)):0, base=(h&&selling)?selling-gstAmt:selling;
   const cost=(it.cost!=null&&it.cost!=="")?+it.cost:base, uqc=it.uqc||"NOS";
   const stPill=it.stock<=0?'<span class="pill pill-off">Out of stock</span>':it.stock<=3?'<span class="pill pill-warn">Low stock</span>':'<span class="pill pill-ok"><i class="dot"></i>'+it.stock+' in stock</span>';
-  return `<div class="detailhead"><h2 class="detailname">${it.n}</h2><span class="code">${it.pd}</span>${stPill}</div>
-  <div class="two"><div>
-    <div class="card"><div class="card-head"><span class="card-title">Basics</span></div><div class="matrix-wrap"><table class="reclist"><tbody>
-      ${row("Product ID (PD)",`<span class="code">${it.pd}</span>`)}${row("Category",it.cat||"—")}${row("Barcode",`<span class="code">${it.barcode||"—"}</span>`)}${row("Name",it.n)}${row("Description",it.desc||"—")}
+  ensureShopBarcodes(it);
+  const bars=it.barcodes||[];
+  // ---- Details tab (left-column cards only; Actions box is rendered beside every tab) ----
+  const detailsBody=`<div class="card"><div class="card-head"><span class="card-title">Basics</span></div><div class="matrix-wrap"><table class="reclist"><tbody>
+      ${row("Product ID (PD)",`<span class="code">${it.pd}</span>`)}${row("Category",it.cat||"—")}${row("Name",it.n)}${row("Description",it.desc||"—")}
     </tbody></table></div></div>
     <div class="card"><div class="card-head"><span class="card-title">Pricing &amp; tax</span></div><div class="matrix-wrap"><table class="reclist"><tbody>
       ${row("HSN / SAC code",`<span class="code">${it.hsn||"—"}</span>${h?" · "+h.desc:""}`)}
@@ -4760,13 +4766,26 @@ function shopItemDetail(){ const it=SHOP_ITEMS[selShopItem]; if(!it) return "";
       ${row("Selling price",money(selling))}${row("Base price",money(base))}${row("Cost price",money(cost))}
     </tbody></table></div></div>
     <div class="card"><div class="card-head"><span class="card-title">Inventory</span></div><div class="matrix-wrap"><table class="reclist"><tbody>
-      ${row("Available units",`<b>${it.stock}</b>`)}${row("Unit",uqc)}
-    </tbody></table></div></div>
-  </div>
-  <div class="card"><div class="card-head"><span class="card-title">Actions</span></div><div class="card-body" style="display:flex;flex-direction:column;gap:8px">
+      ${row("Available units",`<b>${it.stock}</b>`)}${row("Unit",uqc)}${row("Barcodes generated",`<b>${bars.length}</b>`)}
+    </tbody></table></div></div>`;
+  // ---- Barcodes tab — one barcode per unit ----
+  const barRows=bars.map((b,i)=>`<tr><td class="code">${i+1}</td><td class="code">${b}</td><td style="text-align:right"><button class="btn" data-shop-print>Print</button></td></tr>`).join("");
+  const barcodesBody=`<div class="card"><div class="card-head"><span class="card-title">Unit barcodes</span><span class="card-note" style="margin-left:auto">${bars.length} of ${it.stock} unit${it.stock===1?"":"s"}</span>${bars.length?`<button class="btn" data-shop-print style="margin-left:10px">Print all</button>`:""}</div>
+    ${bars.length?`<div class="matrix-wrap"><table class="reclist"><thead><tr><th style="width:60px">#</th><th>Barcode</th><th></th></tr></thead><tbody>${barRows}</tbody></table></div>`:`<div class="card-body muted">No units in stock — add stock to generate barcodes.</div>`}</div>`;
+  // ---- Actions box — persistent beside every tab ----
+  const actionsBox=`<aside class="disc-summary-col"><div class="card"><div class="card-head"><span class="card-title">Actions</span></div><div class="card-body" style="display:flex;flex-direction:column;gap:8px">
     <button class="btn btn-primary" data-shop-addstock="${selShopItem}">Add stock</button>
     <button class="btn" data-tab="edit">Edit product</button>
-  </div></div></div>${shopAddStock!=null?shopAddStockCard():""}`;
+  </div></div></aside>`;
+  // ---- tabbed: Details | Barcodes — tabs + content on the left, Actions box on the right across every tab ----
+  const subs=[["details","Details"],["barcodes",`Barcodes · ${bars.length}`]];
+  if(!subs.some(([k])=>k===sitab)) sitab="details";
+  const tabs=`<div class="subs">${subs.map(([k,l])=>`<button class="sub-tab" data-sitab="${k}" aria-selected="${sitab===k}">${l}</button>`).join("")}</div>`;
+  return `<div class="detailhead"><h2 class="detailname">${it.n}</h2><span class="code">${it.pd}</span>${stPill}</div>
+  <div class="two">
+    <div>${tabs}<div class="sub-body">${sitab==="barcodes"?barcodesBody:detailsBody}</div></div>
+    ${actionsBox}
+  </div>${shopAddStock!=null?shopAddStockCard():""}`;
 }
 
 function shopCouponDetail(){ const c=SHOP_COUPONS[selShopCoupon]; if(!c) return "";
@@ -4789,7 +4808,6 @@ function shopSaleForm(){
   const rows=shopCart.map((r,i)=>{ const it=shopItemByPd(r.pd)||{}; const gst=it.pd?shopGstPct(it):0; const base=shopBaseOf(it); const total=base*(+r.qty||0);
     return `<tr>
       <td class="code">${i+1}</td>
-      <td class="code">${it.barcode||"—"}</td>
       <td><div class="selwrap"><select class="inp" data-shop-pick="${i}">${opt(r.pd)}</select></div></td>
       <td>${it.n||'<span class="muted">—</span>'}</td>
       <td class="code">${it.pd?(it.hsn||"—"):"—"}</td>
@@ -4811,7 +4829,7 @@ function shopSaleForm(){
   </div></section>`;
   const itemsSec=`<section class="form-sec"><div class="form-sec-head"><span class="form-sec-title">Item details</span></div><div class="form-sec-body" style="grid-template-columns:1fr">
     <div class="fld wide"><div class="lab"><span class="lab-n">Scan barcode</span><span class="lab-req">Optional</span></div><input class="inp mono" id="shopScan" placeholder="Scan or type a barcode, then Enter (wireframe)" data-shop-scan></div>
-    <div class="matrix-wrap"><table class="reclist shop-sale-table"><thead><tr><th>S.No</th><th>Barcode</th><th>Product (PD)</th><th>Name</th><th>HSN/SAC</th><th>Avail</th><th>Base</th><th>GST</th><th>Selling price</th><th>Units</th><th>Total</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>
+    <div class="matrix-wrap"><table class="reclist shop-sale-table"><thead><tr><th>S.No</th><th>Product (PD)</th><th>Name</th><th>HSN/SAC</th><th>Avail</th><th>Base</th><th>GST</th><th>Selling price</th><th>Units</th><th>Total</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>
     <button class="rep-add" data-shop-addrow>+ Add row</button>
   </div></section>`;
   const couponMsg=shopCouponTried?(comp.couponOk?`<div class="booking-discount-msg ok" style="display:flex;align-items:center;gap:8px">✓ ${(shopPreset(comp.coupon.code)||{}).label||comp.coupon.code} applied<button data-shop-coupon-clear aria-label="Remove coupon" style="border:0;background:none;color:var(--stop);font-size:11px;font-weight:600;text-decoration:underline;cursor:pointer;padding:0">Remove</button></div>`:`<div class="booking-discount-msg bad">${shopCoupon(shopCouponCode)?"Coupon not approved yet.":"Code not recognised."}</div>`):"";
@@ -5317,14 +5335,24 @@ document.addEventListener("click",e=>{
   // ---- open a record's detail page ----
   const od=e.target.closest("[data-open]");
   if(od){ const [kind,i]=od.dataset.open.split(":"); const idx=+i;
-    if(kind==="prod") selP=idx; else if(kind==="camp"){ selW=idx; selB=0; progKind="camp"; } else if(kind==="event"){ selE=idx; progKind="event"; } else if(kind==="disc"){ selD=idx; dsub="summary"; } else if(kind==="member"){ selMember=idx; msub="summary"; } else if(kind==="tier"){ selTier=idx; } else if(kind==="shopitem"){ selShopItem=idx; } else if(kind==="shopsale"){ selShopSale=idx; ssub="details"; } else if(kind==="shopcoupon"){ selShopCoupon=idx; }
+    if(kind==="prod") selP=idx; else if(kind==="camp"){ selW=idx; selB=0; progKind="camp"; } else if(kind==="event"){ selE=idx; progKind="event"; } else if(kind==="disc"){ selD=idx; dsub="summary"; } else if(kind==="member"){ selMember=idx; msub="summary"; } else if(kind==="tier"){ selTier=idx; } else if(kind==="shopitem"){ selShopItem=idx; sitab="details"; } else if(kind==="shopsale"){ selShopSale=idx; ssub="details"; } else if(kind==="shopcoupon"){ selShopCoupon=idx; }
     tab="detail"; sub="details"; esub="details"; csub="details"; addOpen=null; render(); $(".stage").scrollTop=0; return; }
   // ---- Shop / Merchandise handlers ----
   const shAdd=e.target.closest("[data-shop-addstock]");
   if(shAdd){ shopAddStock=+shAdd.dataset.shopAddstock; render(); return; }
   if(e.target.closest("[data-shop-addstock-close]")){ shopAddStock=null; render(); return; }
   const shAddSave=e.target.closest("[data-shop-addstock-save]");
-  if(shAddSave){ const idx=+shAddSave.dataset.shopAddstockSave, q=Math.max(0,+(document.getElementById("shopStockQty")||{}).value||0); const it=SHOP_ITEMS[idx]; if(it) it.stock+=q; shopAddStock=null; render(); return; }
+  if(shAddSave){ const idx=+shAddSave.dataset.shopAddstockSave, q=Math.max(0,+(document.getElementById("shopStockQty")||{}).value||0); const it=SHOP_ITEMS[idx]; if(it){ it.stock+=q; ensureShopBarcodes(it); if(q>0){ selShopItem=idx; sitab="barcodes"; } } shopAddStock=null; render(); return; }
+  // create / edit a shop product — on create, generate a barcode per unit and open the Barcodes tab
+  const shItemSave=e.target.closest("[data-shop-item-save]");
+  if(shItemSave){
+    const g=id=>{ const el=document.getElementById(id); return el?String(el.value||"").trim():""; };
+    const idx=+shItemSave.dataset.shopItemSave;
+    const cat=g("shopCat"), name=g("shopName2"), fields={n:name,desc:g("shopDesc"),cat,hsn:g("shopHsn"),mrp:+g("shopSelling")||0,cost:+g("shopCost")||0,stock:Math.max(0,+g("shopStock2")||0),uqc:g("shopUqc")||"NOS"};
+    if(idx>=0){ const it=SHOP_ITEMS[idx]; if(it){ Object.assign(it,fields); it.tax=hsnTaxCodes(it.hsn); ensureShopBarcodes(it); selShopItem=idx; } }
+    else { const it=Object.assign({pd:g("shopPd")||shopPdFor(cat),tax:hsnTaxCodes(g("shopHsn")),barcodes:[]},fields); SHOP_ITEMS.unshift(it); selShopItem=0; }
+    tab="detail"; sitab="barcodes"; ensureShopBarcodes(SHOP_ITEMS[selShopItem]); render(); $(".stage").scrollTop=0; return;
+  }
   if(e.target.closest("[data-shop-addrow]")){ shopCart.push({pd:"",qty:1}); render(); return; }
   const shRm=e.target.closest("[data-shop-removerow]");
   if(shRm){ shopCart.splice(+shRm.dataset.shopRemoverow,1); if(!shopCart.length) shopCart=[{pd:"",qty:1}]; render(); return; }
@@ -5350,6 +5378,8 @@ document.addEventListener("click",e=>{
   if(e.target.closest("[data-shop-print]")){ return; }   // wireframe stub — no PDF
   const ssTab=e.target.closest("[data-ssub]");
   if(ssTab){ ssub=ssTab.dataset.ssub; render(); return; }
+  const siTab=e.target.closest("[data-sitab]");
+  if(siTab){ sitab=siTab.dataset.sitab; render(); return; }
   if(e.target.closest("[data-shop-save]")){
     if(!String(shopCustomer.phone||"").trim()){ shopStep1Tried=true; render(); return; }
     const lines=shopCart.filter(r=>r.pd).map(r=>({pd:r.pd,qty:+r.qty||0}));
