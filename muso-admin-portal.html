@@ -53,7 +53,8 @@ button{font:inherit;color:inherit;background:none;border:none;padding:0;cursor:p
 .head-row{display:flex;align-items:flex-start;gap:24px;margin-top:6px}
 .h-title{font-size:21px;font-weight:600;letter-spacing:-.025em;margin:0}
 .h-desc{margin:5px 0 0;color:var(--ink2);max-width:66ch;font-size:12.5px}
-.head-actions{margin-left:auto;display:flex;gap:8px;flex:none;padding-top:3px}
+.head-actions{margin-left:auto;display:flex;gap:8px;flex:none;padding-top:3px;align-items:center}
+.head-actions .form-err{margin:0 2px 0 0;white-space:nowrap}
 .btn{border:1px solid var(--rule2);background:#fff;padding:6px 12px;border-radius:5px;font-size:12px;font-weight:500;transition:border-color .12s,background .12s}
 .btn:hover{border-color:var(--ink3);background:#FAFBF9}
 .btn-primary{background:var(--blue);border-color:var(--blue);color:#fff}
@@ -662,6 +663,82 @@ tbody tr[aria-selected="true"] td:first-child{box-shadow:inset 2px 0 0 var(--blu
 .confirm-box{position:relative;background:#fff;border-radius:10px;padding:22px 24px;max-width:360px;width:90%;box-shadow:0 20px 50px rgba(20,25,20,.28);animation:drawer-in .15s ease-out both}
 .confirm-title{font-size:15px;font-weight:700;letter-spacing:-.01em;margin:0 0 8px}
 .confirm-body{font-size:12.5px;color:var(--ink2);line-height:1.55;margin:0 0 18px}
+/* ---- Careers (admin: listings + routing) ---- */
+.tool-sel .inp{padding:6px 10px;font-size:12px;min-width:158px}
+.toolbar .search{min-width:310px;flex:0 1 340px}
+.tool-sel{position:relative}
+.career-jd-p{margin:0;font-size:12.5px;color:var(--ink2);line-height:1.65}
+.inp[readonly]{background:#FBFCFA;color:var(--ink2);cursor:default}
+.career-acts{display:flex;gap:6px;white-space:nowrap}
+.pill-blue{color:var(--blue);border-color:var(--blue-line);background:var(--blue-wash)}
+/* the ratio reads as one rule, so it takes the row under the pair above it */
+.product-form .fld[data-df="adult_child_ratio"]{grid-column:1/-1}
+.ratio-row{display:flex;align-items:center;gap:9px;flex-wrap:wrap;margin-bottom:7px}
+.ratio-row .chk{flex:none}
+.ratio-n{width:56px;text-align:center;padding:5px 6px;font-size:12.5px}
+.ratio-sel .inp{padding:5px 26px 5px 9px;font-size:12px;min-width:132px}
+.ratio-sel .inp:disabled{background:#FBFCFA;color:var(--ink3)}
+.ratio-n:disabled{background:#FBFCFA;color:var(--ink3)}
+.ratio-x{font-size:12.5px;color:var(--ink2)}
+.ratio-msg{font-size:11.5px;color:var(--ink3);margin-top:3px;min-height:16px}
+.ratio-msg.is-bad{color:var(--stop);font-weight:500}
+.th-sort{font:inherit;letter-spacing:inherit;text-transform:inherit;color:inherit;
+  display:inline-flex;align-items:center;gap:5px;padding:0;white-space:nowrap}
+.th-sort:hover{color:var(--ink)}
+.th-arrow{font-size:8px;line-height:1;color:var(--n-200);position:relative;top:-1px}
+.th-sort:hover .th-arrow{color:var(--ink3)}
+.th-sort.is-on{color:var(--blue)}
+.th-sort.is-on .th-arrow{color:var(--blue);font-size:7px}
+th:has(.th-sort){padding:0}
+th .th-sort{padding:9px 14px}
+.career-title{min-width:210px}
+.career-title b{display:block}
+.career-sub{font-size:11px;color:var(--ink3);margin-top:2px;display:-webkit-box;
+  -webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;line-height:1.45}
+.career-loc{font-size:12px;min-width:150px}
+.career-left{font-size:10.5px;font-family:var(--mono);color:var(--ink3);margin-top:3px}
+.career-left.is-soon{color:var(--warn);font-weight:600}
+.career-left.is-past{color:var(--stop);font-weight:600}
+.career-tmpl{font-family:var(--mono);font-size:11.5px;line-height:1.65;white-space:pre-wrap;
+  margin:0;padding:12px 13px;border:1px solid var(--rule);border-radius:5px;background:#FBFCFA;
+  max-height:none;overflow:auto;color:var(--ink2)}
+.career-subj{font-size:12.5px;padding:8px 11px;border:1px solid var(--rule);border-radius:5px;
+  background:#FBFCFA;word-break:break-word}
+.career-hint{font-size:11px;color:var(--ink3);margin-top:2px}
+.career-file{padding:7px 10px;font-size:12px;cursor:pointer;background:#fff}
+.career-file::file-selector-button{font:inherit;font-size:11.5px;font-weight:500;margin-right:10px;
+  padding:4px 11px;border:1px solid var(--rule2);border-radius:5px;background:#FBFCFA;
+  color:var(--ink);cursor:pointer}
+.career-file::file-selector-button:hover{border-color:var(--ink3)}
+.form-err{color:var(--stop);font-size:12px;margin-right:auto}
+.fld.is-miss .lab-n{color:var(--stop)}
+.fld.is-miss .inp{border-color:var(--stop)}
+.career-mail-h{grid-column:1/-1;font-family:var(--mono);font-size:9.5px;letter-spacing:.09em;
+  text-transform:uppercase;color:var(--ink3);border-top:1px solid var(--rule);
+  padding-top:15px;margin-top:5px}
+.app-file{font-family:var(--mono);font-size:11px;background:var(--blue-wash);
+  border:1px solid var(--blue-line);color:var(--blue);border-radius:3px;padding:2px 7px;
+  display:inline-block;max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+  vertical-align:bottom;cursor:pointer;text-align:left}
+.app-file:hover{background:var(--blue-line);border-color:var(--blue)}
+.app-file:focus-visible{outline:2px solid var(--blue);outline-offset:1px}
+.app-note{font-size:11.5px;color:var(--ink2);min-width:170px;max-width:206px;line-height:1.5}
+/* Every question occupies exactly two lines whether it needs them or not, and the
+   "more" link keeps its line even when hidden — so every collapsed row is the same
+   height and the list stays a list. Only an opened row grows. */
+#qryTable td{vertical-align:top}          /* an opened question grows downward, so the
+                                             rest of the row reads from the top too */
+.qry-text{font-size:12.5px;color:var(--ink2);min-width:340px;max-width:560px;line-height:1.6}
+.qry-q{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;
+  height:3.2em}
+.qry-q.is-open{display:block;height:auto}
+.qry-more{visibility:hidden;font-size:11px;font-weight:500;color:var(--blue);padding:0;
+  margin-top:2px;line-height:1.4;display:inline-block}
+.qry-more.is-shown{visibility:visible}
+.qry-more:hover{text-decoration:underline}
+.app-status{min-width:116px}
+.app-status .inp{font-size:11.5px;padding:5px 8px}
+.drawer-panel .career-tmpl{max-height:260px}
 .confirm-actions{display:flex;justify-content:flex-end;gap:8px}
 .btn-danger{border:1px solid #E8C4C9;background:#FBEFF1;color:var(--stop)}
 .btn-danger:hover{background:#F7D9DD;border-color:#E8C4C9}
@@ -822,18 +899,20 @@ const GROUPS = [
   {name:"4 · Offers", color:"#C2286E"},
   {name:"5 · Checkout & site", color:"#6B3FC4"},
   {name:"6 · Membership", color:"#8A5A00"},
-  {name:"7 · Shop", color:"#B23A8F"}
+  {name:"7 · Shop", color:"#B23A8F"},
+  {name:"8 · People", color:"#0E6B8A"}
 ];
-const ORDER = ["categories","pools","tax","hsn","shopcats","progcats","products","programs","blackout","bookings","checkin",
+const ORDER = ["categories","pools","tax","hsn","shopcats","progcats","departments","products","programs","blackout","bookings","checkin",
                "discounts","sources","scripts","tiers","members",
-               "shopitems","shopsales","shopcoupons"];   // "shopreports", "affiliates", "paymodes" hidden from the rail (code kept)
-const PHASE = {categories:0,pools:0,tax:0,hsn:0,shopcats:0,progcats:0, products:1, programs:1, blackout:2,
+               "shopitems","shopsales","shopcoupons","career"];   // "shopreports", "affiliates", "paymodes" hidden from the rail (code kept)
+const PHASE = {categories:0,pools:0,tax:0,hsn:0,shopcats:0,progcats:0,departments:0, products:1, programs:1, blackout:2,
                discounts:3,affiliates:3,
                paymodes:4,sources:4,scripts:4,bookings:2,checkin:2,
                tiers:5,members:5,
-               shopitems:6,shopsales:6,shopcoupons:6,shopreports:6};
+               shopitems:6,shopsales:6,shopcoupons:6,shopreports:6,
+               career:7};
 const PREREQ = {
-  categories:[], pools:[], tax:[], hsn:[], shopcats:[], paymodes:[], sources:[], scripts:[], progcats:[], bookings:["Products & add-ons"], checkin:["Products & add-ons"],
+  career:[], categories:[], pools:[], tax:[], hsn:[], shopcats:[], departments:[], paymodes:[], sources:[], scripts:[], progcats:[], bookings:["Products & add-ons"], checkin:["Products & add-ons"],
   products:["Visitor categories","Inventory pools","Tax rates","HSN / SAC codes"],
   programs:["Program categories","Visitor categories","Tax rates","HSN / SAC codes"],
   events:["Program categories","Visitor categories","Tax rates","HSN / SAC codes"],
@@ -1113,6 +1192,12 @@ const M = {
             ["Description|description","string","Prints on the tax invoice."],
             ["Tax rates|tax_rate_ids[]","fk[]","→ Tax rates. Every rate component that applies to items under this code — CGST + SGST for a local sale, IGST for one outside the state. Place of supply resolves which fire."],
             ["Active|is_active","bool","Turn it off to retire this code from new products. A code that's currently in use can't be turned off."]]},
+  departments:{g:0,n:"Departments",owner:"People & Culture",perm:"master.department.manage",src:"Scope §14",q:1,
+    d:"The teams a role can belong to. Careers picks its department from this list and the public careers page filters on it, so a team has to exist here before an opening can sit in it.",
+    view:"departments",
+    schema:[["Department|name","string","The team name as it appears on the careers page, e.g. Education."],
+            ["Added on|added","auto","Stamped when the department is saved."]]},
+
   shopcats:{g:0,n:"Shop categories",owner:"Sawood · Shop ops",perm:"shop.manage",src:"Scope §5",q:1,
     d:"The merchandise departments a shop product belongs to — Books, Toys, Apparel and so on. Each carries a short code used to auto-generate the Product ID (e.g. Books → BK-00001).",
     view:"shopcats",
@@ -1184,6 +1269,19 @@ const M = {
     d:"Barcode POS for the shop counter — scan or search items, apply Employee/Gift, on-the-spot, coupon and membership discounts, take payment and print the GST tax invoice.",view:"shopsales"},
   shopcoupons:{g:6,n:"Shop coupons",owner:"Ashish · Manager",perm:"shop.promo.manage",src:"Scope §5",q:1,
     d:"Shop discount codes. A code cannot apply until it is Approved — the form records who prepared, proposed and approved it.",view:"shopcoupons"},
+  career:{g:7,n:"Careers",owner:"People & Culture",perm:"career.manage",src:"Scope §14",q:0,
+    d:"The openings the public careers page lists, and everything that comes back off it — applications against a role, and general queries from the ask-us form. Roles are written and dated here; applications and queries are read and moved along here.",
+    view:"career",
+    schema:[["Role ID|code","auto","Generated from the last role on file — it is not typed."],
+            ["Position|title","string","The position as it appears on the careers page."],
+            ["Department|dept","dept","","Which team the role sits in — from the Departments master. The careers page filters on this."],
+            ["Employment type|type","enum","Full-time · Part-time · Internship · Volunteer","The careers page filters on this too."],
+            ["Listing|active","bool","On puts the role on the careers page once its dates open. Off takes it down without deleting it."],
+            ["Location|loc","string","Where the role is based."],
+            ["Experience|exp","string","A range, e.g. 2–4 years — or “None required” for volunteering."],
+            ["Applications open between|posted / closes","date","From the day the opening goes live on the careers page to the day it stops taking applications."],
+            ["About the role|about","richtext","The paragraph that opens the JD and sits under the title on the careers page."],
+            ["Upload JD|jd","file","The job description file the careers page serves. PDF or Word."]]},
   shopreports:{g:6,n:"Shop reports",owner:"Shivam · Finance & Accounts",perm:"shop.report.view",src:"Scope §12",q:0,
     d:"Shop sales summary and the HSN/SAC-wise quantity + GST breakup for the GST return.",view:"shopreports"},
   dashboard:{n:"Dashboard",owner:"Visitor Experience",perm:"dashboard.view",view:"dashboard"},
@@ -1261,6 +1359,204 @@ const SHOP_ITEMS = [
 const SHOP_CATS = [...new Set(SHOP_ITEMS.map(x=>x.cat))];
 /* Product ID is auto-generated from the category: <prefix>-<5-digit running number>, e.g. Books → BK-00001. */
 /* Shop categories master (Foundations) — each carries the 2-letter code used to auto-generate the Product ID. */
+/* ---- Careers: the openings the public careers page lists, and where an
+   application lands. HR_EMAIL is the single place the recipient is configured. ---- */
+const HR_EMAIL = "careers@museumofsolutions.in";
+
+/* ---- The applications that have come in against those openings. An application is
+   whatever the careers form captured, plus what HR has done with it since. ---- */
+const APP_STATUSES = ["New","Shortlisted","Interviewed","Rejected"];
+const CAREER_APPLICATIONS = [
+  /* ROLE-014 — Visitor Experience Associate */
+  {id:"APP-2071", role:"ROLE-014", name:"Ananya Deshpande", email:"ananya.deshpande@example.com",
+   phone:"98200 41187", on:"12 Sep 2026", status:"Shortlisted", cv:{name:"Ananya-Deshpande-CV.pdf",size:186000},
+   note:"Two summers at the Nehru Science Centre front desk. Happy on weekends."},
+  {id:"APP-2068", role:"ROLE-014", name:"Rohan Kulkarni", email:"rohan.k@example.com",
+   phone:"99301 20554", on:"11 Sep 2026", status:"New", cv:{name:"Rohan-Kulkarni-Resume.pdf",size:142000}, note:""},
+  {id:"APP-2064", role:"ROLE-014", name:"Fatima Shaikh", email:"fatima.shaikh@example.com",
+   phone:"91670 33812", on:"09 Sep 2026", status:"Interviewed", cv:{name:"Fatima-Shaikh-CV.pdf",size:203000},
+   note:"Currently at a bookshop counter in Bandra. Can start immediately."},
+  {id:"APP-2059", role:"ROLE-014", name:"Kabir Menon", email:"kabir.menon@example.com",
+   phone:"98671 90042", on:"07 Sep 2026", status:"Rejected", cv:{name:"Kabir-Menon.pdf",size:97000},
+   note:"Looking for weekdays only."},
+  {id:"APP-2055", role:"ROLE-014", name:"Sneha Iyer", email:"sneha.iyer@example.com",
+   phone:"90040 71265", on:"05 Sep 2026", status:"New", cv:{name:"Sneha-Iyer-CV.pdf",size:221000}, note:""},
+  {id:"APP-2052", role:"ROLE-014", name:"Aditya Rane", email:"aditya.rane@example.com",
+   phone:"98195 55810", on:"03 Sep 2026", status:"Shortlisted", cv:{name:"Aditya-Rane-CV.pdf",size:175000},
+   note:"Ran the ticket counter at a film festival for three years."},
+
+  /* ROLE-015 — Workshop Facilitator, Robotics */
+  {id:"APP-2066", role:"ROLE-015", name:"Meera Raghavan", email:"meera.raghavan@example.com",
+   phone:"90290 18874", on:"10 Sep 2026", status:"Shortlisted", cv:{name:"Meera-Raghavan-CV.pdf",size:264000},
+   note:"Teaches an after-school robotics club. Arduino and micro:bit."},
+  {id:"APP-2061", role:"ROLE-015", name:"Siddharth Nair", email:"sid.nair@example.com",
+   phone:"98923 40117", on:"08 Sep 2026", status:"New", cv:{name:"Siddharth-Nair-Portfolio.pdf",size:412000},
+   note:"Mechatronics final year. Free on weekends."},
+  {id:"APP-2057", role:"ROLE-015", name:"Tanvi Joshi", email:"tanvi.joshi@example.com",
+   phone:"93211 76004", on:"06 Sep 2026", status:"Interviewed", cv:{name:"Tanvi-Joshi-CV.pdf",size:158000}, note:""},
+  {id:"APP-2050", role:"ROLE-015", name:"Imran Qureshi", email:"imran.q@example.com",
+   phone:"98337 02291", on:"02 Sep 2026", status:"New", cv:{name:"Imran-Qureshi-CV.pdf",size:131000},
+   note:"Ex-FIRST Robotics mentor."},
+
+  /* ROLE-016 — Retail Shop Supervisor */
+  {id:"APP-2073", role:"ROLE-016", name:"Pooja Bhatt", email:"pooja.bhatt@example.com",
+   phone:"98204 66319", on:"14 Sep 2026", status:"New", cv:{name:"Pooja-Bhatt-CV.pdf",size:198000},
+   note:"Five years at a museum shop in Delhi, three supervising."},
+  {id:"APP-2070", role:"ROLE-016", name:"Vikram Salvi", email:"vikram.salvi@example.com",
+   phone:"99676 12048", on:"13 Sep 2026", status:"Shortlisted", cv:{name:"Vikram-Salvi-CV.pdf",size:172000}, note:""},
+  {id:"APP-2065", role:"ROLE-016", name:"Nikhil Patil", email:"nikhil.patil@example.com",
+   phone:"90823 44170", on:"10 Sep 2026", status:"Rejected", cv:{name:"Nikhil-Patil.pdf",size:88000},
+   note:"No supervisory experience yet."},
+
+  /* ROLE-017 — Marketing Intern */
+  {id:"APP-2075", role:"ROLE-017", name:"Priya Sharma", email:"priya.sharma@example.com",
+   phone:"98200 11223", on:"15 Sep 2026", status:"Shortlisted", cv:{name:"Priya-Sharma-CV.pdf",size:214000},
+   note:"Available from October. Portfolio at priya.example.com."},
+  {id:"APP-2074", role:"ROLE-017", name:"Arjun Verma", email:"arjun.verma@example.com",
+   phone:"98336 71902", on:"15 Sep 2026", status:"New", cv:{name:"Arjun-Verma-CV.pdf",size:167000}, note:""},
+  {id:"APP-2072", role:"ROLE-017", name:"Ishita Bose", email:"ishita.bose@example.com",
+   phone:"93242 05518", on:"14 Sep 2026", status:"New", cv:{name:"Ishita-Bose-CV.pdf",size:189000},
+   note:"Ran the social handles for her college fest."},
+  {id:"APP-2069", role:"ROLE-017", name:"Dhruv Agarwal", email:"dhruv.agarwal@example.com",
+   phone:"98111 30276", on:"12 Sep 2026", status:"Interviewed", cv:{name:"Dhruv-Agarwal-CV.pdf",size:154000}, note:""},
+  {id:"APP-2067", role:"ROLE-017", name:"Sara DSouza", email:"sara.dsouza@example.com",
+   phone:"98670 81143", on:"11 Sep 2026", status:"New", cv:{name:"Sara-DSouza-CV.pdf",size:206000},
+   note:"Writes a weekly newsletter on Mumbai's museums."},
+  {id:"APP-2063", role:"ROLE-017", name:"Yash Gandhi", email:"yash.gandhi@example.com",
+   phone:"99204 55031", on:"10 Sep 2026", status:"Rejected", cv:{name:"Yash-Gandhi.pdf",size:112000},
+   note:"Wants remote."},
+  {id:"APP-2060", role:"ROLE-017", name:"Aisha Khan", email:"aisha.khan@example.com",
+   phone:"90048 27760", on:"09 Sep 2026", status:"New", cv:{name:"Aisha-Khan-CV.pdf",size:178000}, note:""},
+
+  /* ROLE-018 — Weekend Gallery Volunteer */
+  {id:"APP-2076", role:"ROLE-018", name:"Rhea Kapoor", email:"rhea.kapoor@example.com",
+   phone:"98195 63308", on:"15 Sep 2026", status:"New", cv:{name:"Rhea-Kapoor-Intro.pdf",size:74000},
+   note:"Class 12. One Sunday a month works for me."},
+  {id:"APP-2071B", role:"ROLE-018", name:"Manav Thakur", email:"manav.thakur@example.com",
+   phone:"93726 10094", on:"13 Sep 2026", status:"Shortlisted", cv:{name:"Manav-Thakur.pdf",size:69000}, note:""},
+  {id:"APP-2062", role:"ROLE-018", name:"Zoya Merchant", email:"zoya.merchant@example.com",
+   phone:"98209 74425", on:"09 Sep 2026", status:"New", cv:{name:"Zoya-Merchant-CV.pdf",size:121000},
+   note:"Volunteered at the Kala Ghoda festival last two years."},
+  {id:"APP-2058", role:"ROLE-018", name:"Harsh Vora", email:"harsh.vora@example.com",
+   phone:"99878 33162", on:"07 Sep 2026", status:"New", cv:{name:"Harsh-Vora.pdf",size:83000}, note:""},
+  {id:"APP-2054", role:"ROLE-018", name:"Leena Pillai", email:"leena.pillai@example.com",
+   phone:"90045 60219", on:"06 Sep 2026", status:"Interviewed", cv:{name:"Leena-Pillai-CV.pdf",size:144000},
+   note:"Retired schoolteacher, free Saturdays."},
+
+  /* ROLE-012 — Membership Executive (closed) */
+  {id:"APP-2011", role:"ROLE-012", name:"Nandini Rao", email:"nandini.rao@example.com",
+   phone:"98860 41207", on:"12 Aug 2026", status:"Rejected", cv:{name:"Nandini-Rao-CV.pdf",size:191000}, note:""},
+  {id:"APP-2007", role:"ROLE-012", name:"Farhan Ali", email:"farhan.ali@example.com",
+   phone:"98334 90015", on:"09 Aug 2026", status:"Interviewed", cv:{name:"Farhan-Ali-CV.pdf",size:163000},
+   note:"Four years in CRM at a gym chain."},
+  {id:"APP-2003", role:"ROLE-012", name:"Gauri Shinde", email:"gauri.shinde@example.com",
+   phone:"90287 15544", on:"05 Aug 2026", status:"Rejected", cv:{name:"Gauri-Shinde.pdf",size:105000}, note:""}
+];
+const CAREER_OPENINGS = [
+  {id:"ROLE-014", jd:{name:"Visitor-Experience-Associate-JD.pdf",size:148000}, title:"Visitor Experience Associate", dept:"Operations",
+   loc:"Museum of Solutions, Mumbai", type:"Full-time", exp:"0-2 years", active:true,
+   posted:"02 Sep 2026", closes:"10 Oct 2026",
+   about:"Front-of-house for every visitor who walks in - ticketing, orientation, and running the floor during peak sessions.",},
+
+  {id:"ROLE-015", jd:{name:"Workshop-Facilitator-Robotics-JD.pdf",size:132000}, title:"Workshop Facilitator - Robotics", dept:"Education",
+   loc:"Museum of Solutions, Mumbai", type:"Part-time", exp:"1-3 years", active:true,
+   posted:"28 Aug 2026", closes:"30 Sep 2026",
+   about:"Runs the robotics and kinetic-machines workshops for 9+ age groups, including weekend camps.",},
+
+  {id:"ROLE-016", jd:{name:"Retail-Shop-Supervisor-JD.pdf",size:141000}, title:"Retail Shop Supervisor", dept:"Operations",
+   loc:"Museum of Solutions, Mumbai", type:"Full-time", exp:"3-5 years", active:true,
+   posted:"11 Sep 2026", closes:"20 Oct 2026",
+   about:"Owns the museum shop floor - stock, coupons, daily sales reconciliation and the counter team.",},
+
+  {id:"ROLE-017", jd:{name:"Marketing-Intern-JD.pdf",size:119000}, title:"Marketing Intern", dept:"Marketing",
+   loc:"Museum of Solutions, Mumbai", type:"Internship", exp:"Student / fresher", active:true,
+   posted:"09 Sep 2026", closes:"28 Sep 2026",
+   about:"A six-month internship supporting campaigns for exhibitions, camps and membership drives.",},
+
+  {id:"ROLE-018", jd:{name:"Weekend-Gallery-Volunteer-JD.pdf",size:96000}, title:"Weekend Gallery Volunteer", dept:"Education",
+   loc:"Museum of Solutions, Mumbai", type:"Volunteer", exp:"None required", active:false,
+   posted:"05 Sep 2026", closes:"31 Oct 2026",
+   about:"Weekend support on the galleries - helping children through exhibits and keeping activity stations stocked.",},
+
+  {id:"ROLE-019", title:"Accessibility Programmes Lead", dept:"Education",
+   loc:"Museum of Solutions, Mumbai", type:"Full-time", exp:"4-6 years", active:true,
+   posted:"01 Oct 2026", closes:"30 Nov 2026",
+   about:"Builds the museum's programming for children with disabilities, and trains the floor team to run it.",},
+
+  {id:"ROLE-012", jd:{name:"Membership-Executive-JD.pdf",size:127000}, title:"Membership Executive", dept:"Marketing",
+   loc:"Museum of Solutions, Mumbai", type:"Full-time", exp:"2-4 years", active:true,
+   posted:"14 Jul 2026", closes:"20 Aug 2026",
+   about:"Grows and renews the Silver / Gold / Platinum membership base.",}
+];
+
+/* ---- Departments: the teams a role can sit in. A Foundations master because the
+   careers page filters on it and every opening has to pick one. ---- */
+const DEPARTMENTS = [
+  {name:"Education",          added:"04 Apr 2026"},
+  {name:"Operations",         added:"04 Apr 2026"},
+  {name:"Marketing",          added:"04 Apr 2026"},
+  {name:"Finance & Accounts", added:"19 Apr 2026"},
+  {name:"Reception",          added:"22 May 2026"}
+];
+const deptNames = () => DEPARTMENTS.map(d=>d.name);
+const deptByName = n => DEPARTMENTS.find(d=>d.name===n);
+
+/* ---- Careers queries: the "ask us something" form on the careers page. Name,
+   email, number and the question itself — no CV, no position. They land here and
+   as a mail to HR, the same way an application does. ---- */
+const QUERY_STATUSES = ["New","Answered","Closed"];
+const CAREER_QUERIES = [
+  {id:"QRY-0419", name:"Sharmila Bhagat", email:"sharmila.bhagat@example.com", phone:"98673 24019",
+   on:"16 Sep 2026", status:"New",
+   q:"I have been following the museum since it opened and I would like to work with your education team, but I am not sure which of the current openings actually fits me. My background is in primary teaching, six years with children between five and nine, and for the last two years I have been running weekend science clubs at a community centre in Andheri. I can facilitate, I can write session plans, and I am comfortable with large groups. Should I apply for the workshop facilitator role even though the listing asks for robotics experience I do not have?"},
+
+  {id:"QRY-0418", name:"Nikita Menon", email:"nikita.menon@example.com", phone:"98204 77310",
+   on:"15 Sep 2026", status:"New",
+   q:"Is the Marketing Intern position paid, and does the six months count towards a college internship credit? My university needs a letter at the end of it."},
+  {id:"QRY-0417", name:"Aryan Shetty", email:"aryan.shetty@example.com", phone:"99302 41186",
+   on:"15 Sep 2026", status:"New",
+   q:"Do you take volunteers who can only come during school holidays rather than one weekend a month?"},
+  {id:"QRY-0416", name:"Divya Ramachandran", email:"divya.r@example.com", phone:"90040 22815",
+   on:"14 Sep 2026", status:"Answered",
+   q:"I am a special educator with eight years in inclusive classrooms. You do not have a role listed for accessibility programming — do you hire for that, or should I write in anyway?"},
+  {id:"QRY-0415", name:"Mohsin Ansari", email:"mohsin.ansari@example.com", phone:"98334 60027",
+   on:"14 Sep 2026", status:"New",
+   q:"I applied for the Visitor Experience Associate role on the 9th but have not had anything back. Could you confirm it reached you?"},
+  {id:"QRY-0414", name:"Kavya Nambiar", email:"kavya.nambiar@example.com", phone:"93245 18809",
+   on:"13 Sep 2026", status:"Answered",
+   q:"Is there a minimum age for the Weekend Gallery Volunteer role? My daughter is fifteen and very keen."},
+  {id:"QRY-0413", name:"Rajat Malhotra", email:"rajat.malhotra@example.com", phone:"98111 74452",
+   on:"13 Sep 2026", status:"New",
+   q:"Could you send the robotics facilitator JD as a Word file? The PDF will not open on my office machine."},
+  {id:"QRY-0412", name:"Sushmita Pal", email:"sushmita.pal@example.com", phone:"90298 33170",
+   on:"12 Sep 2026", status:"Closed",
+   q:"Do you have a centre in Pune, or is Mumbai the only location you hire for?"},
+  {id:"QRY-0411", name:"Aakash Bhandari", email:"aakash.bhandari@example.com", phone:"98673 09924",
+   on:"12 Sep 2026", status:"Answered",
+   q:"What notice period do you expect for the Retail Shop Supervisor role? I am on ninety days at the moment."},
+  {id:"QRY-0410", name:"Ritika Sen", email:"ritika.sen@example.com", phone:"93721 55048",
+   on:"11 Sep 2026", status:"New",
+   q:"Are there any part-time roles that are weekends only? I teach on weekdays and cannot change that."},
+  {id:"QRY-0409", name:"Devang Trivedi", email:"devang.trivedi@example.com", phone:"98209 61137",
+   on:"10 Sep 2026", status:"Closed",
+   q:"Can I email my CV directly instead of using the form? The upload keeps failing on my phone."},
+  {id:"QRY-0408", name:"Laila Contractor", email:"laila.contractor@example.com", phone:"99876 20043",
+   on:"09 Sep 2026", status:"Answered",
+   q:"Do you run a summer internship for architecture students? I am interested in how the galleries are designed rather than in programming."},
+  {id:"QRY-0407", name:"Praveen Kumar", email:"praveen.kumar@example.com", phone:"90043 88261",
+   on:"08 Sep 2026", status:"New",
+   q:"I am relocating from Chennai in November. Would you consider an application now for a role that closes in October?"},
+  {id:"QRY-0406", name:"Sanya Grewal", email:"sanya.grewal@example.com", phone:"98195 40772",
+   on:"06 Sep 2026", status:"Answered",
+   q:"Is there any scope for a photography or documentation role? I have shot for two museums in Delhi."},
+  {id:"QRY-0405", name:"Harith Menon", email:"harith.menon@example.com", phone:"98923 11560",
+   on:"04 Sep 2026", status:"Closed",
+   q:"Does the museum sponsor work visas? I am an Indian passport holder currently working in Singapore."}
+];
+
+/* The count on an opening is whatever has actually come in against it. */
+CAREER_OPENINGS.forEach(r => r.applicants = CAREER_APPLICATIONS.filter(a=>a.role===r.id).length);
+
 const SHOP_CATEGORIES = [
   {name:"Books", code:"BK"}, {name:"Toys", code:"TY"}, {name:"Apparel", code:"AP"},
   {name:"Stationery", code:"ST"}, {name:"Games", code:"GM"}, {name:"Home", code:"HM"}
@@ -1659,7 +1955,8 @@ const OPTIONS = {
   "Tax rates":TAXRATES.map(t=>t.name+" "+t.pct+"% · "+t.op+" "+t.val),
   "HSN / SAC codes":HSNCODES.map(h=>h.kind+" "+h.code),
   "Referral sources":SOURCES,
-  "Shop products":SHOP_ITEMS.map(x=>x.pd+" · "+x.n)
+  "Shop products":SHOP_ITEMS.map(x=>x.pd+" · "+x.n),
+  "Departments":deptNames()
 };
 
 /* ---- create-form schemas ---- */
@@ -2667,6 +2964,14 @@ function discDetailBody(d){
 const $ = s => document.querySelector(s);
 let addOpen = null;   // which inline add-form is open: "slot"|"batch"|"day"|"addon"|"rate"|"block"|null
 let editSlot = -1;    // index of the time slot being edited in the slot flyout (-1 = adding a new one)
+// Careers: which opening the apply form is open for (-1 = closed), the composed
+// email shown after a successful send, and whether submit has been attempted.
+let carsub = "openings", selCareer = "";
+let appFRole = "", appFStatus = "", appQ = "", careerQ = "";
+let qryQ = "";
+let qryExpanded = new Set();
+let deptEditing = "", deptDeleting = "";
+let careerFDept = "", careerFType = "", careerFStatus = "all";
 let current = "dashboard", selP = 0, tab = "list", sub = "details", pType = "product",
     selW = 0, selB = 0, selE = 0, esub = "details", eventCats = new Set(), selBooking = 0, bookingProduct = 0, bookingSlot = "", bookingDiscountCode = "", csub = "details", copyFrom = 0, copyTo = new Set(), copyWhat = new Set(["price","seats"]), editD = -1,
     progKind = "event", progCat = "Event", prodBuildingPool = false,
@@ -2724,8 +3029,27 @@ function head(){
       <span class="chip"><span class="chip-k">Today</span><b>${DASH.today}</b></span>`;
     return;
   }
-  if(addBtn) addBtn.style.display="";
-  if(histBtn) histBtn.style.display="";
+  /* On a role's detail page the two generic header buttons make no sense — History and
+     "New role" belong to the list. Swap in the actions for the record being looked at. */
+  /* Careers pages carry their own actions: a role's own buttons on its detail page, and
+     the form's Cancel / Save at the top, where every other page keeps its actions. */
+  const roleOnScreen = current==="career" && tab==="detail" && roleById(selCareer);
+  const roleForm     = current==="career" && (tab==="edit" || tab==="new");
+  document.getElementById("hRecActions")?.remove();
+  if(addBtn) addBtn.style.display=(roleOnScreen||roleForm)?"none":"";
+  if(histBtn) histBtn.style.display=(roleOnScreen||roleForm)?"none":"";
+  if(roleOnScreen || roleForm){
+    const holder=document.createElement("span");
+    holder.id="hRecActions";
+    holder.style.display="contents";
+    holder.innerHTML = roleOnScreen
+      ? `<button class="btn btn-primary" data-career-edit="${roleOnScreen.id}">Edit role</button>`
+      : `<span class="form-err" id="roleErr"></span>
+         <button class="btn" ${tab==="edit"?'data-career-back="1"':'data-tab="list"'}>Cancel</button>
+         <button class="btn btn-primary" ${tab==="edit"?'data-career-save="1"':'data-career-create="1"'}>${
+           tab==="new"?"Create role":"Save changes"}</button>`;
+    document.querySelector(".head-actions").appendChild(holder);
+  }
   $("#crumbGrp").textContent=GROUPS[m.g].name.replace(/^\d+ · /,"");
   $("#hTitle").textContent=m.n;
   $("#hDesc").textContent="";
@@ -3028,6 +3352,71 @@ function fauxQR(seed, cls){
     const finder=(x<2&&y<2)||(x>N-3&&y<2)||(x<2&&y>N-3);   // solid squares in three corners, like a real QR
     if(finder||((h>>>16)&1)) rects+=`<rect x="${x}" y="${y}" width="1" height="1"/>`; }
   return `<svg class="qr${cls?" "+cls:""}" viewBox="0 0 ${N} ${N}" shape-rendering="crispEdges" aria-hidden="true">${rects}</svg>`;
+}
+
+/* A rename has to follow through to every role sitting on the old name, or the role
+   is left pointing at a department that no longer exists. */
+function deptSave(){
+  const d=deptByName(deptEditing), el=document.getElementById("deptEditName");
+  if(!d||!el) return;
+  const name=el.value.trim(), box=document.getElementById("deptEditErr");
+  const fld=document.getElementById("deptEditFld");
+  const bad = !name ? "Give the department a name."
+    : DEPARTMENTS.some(x=>x!==d && x.name.toLowerCase()===name.toLowerCase())
+      ? `\u201C${name}\u201D is already on the list.` : "";
+  if(bad){ if(fld) fld.classList.add("is-miss"); if(box) box.textContent=bad; return; }
+  if(name!==d.name){
+    CAREER_OPENINGS.forEach(r=>{ if(r.dept===d.name) r.dept=name; });
+    d.name=name;
+  }
+  deptEditing=""; render();
+}
+
+/* Renaming a department is one field, so it happens in the same right-side flyout the
+   role editor uses rather than a page of its own. The rename follows through to every
+   role sitting on it — nothing is left pointing at a name that no longer exists. */
+function deptEditLayer(){
+  const d=deptByName(deptEditing);
+  if(!d) return "";
+  const used=CAREER_OPENINGS.filter(r=>r.dept===d.name).length;
+  return `<div class="drawer-layer" id="deptEditCard">
+    <button class="drawer-backdrop" data-dept-cancel="1" aria-label="Close"></button>
+    <aside class="drawer-panel" role="dialog" aria-modal="true" aria-label="Edit department">
+      <div class="card-head"><span class="card-title">Edit department</span>
+        <span class="card-note">added ${d.added||"—"}</span>
+        <button class="drawer-close" data-dept-cancel="1" aria-label="Close">&times;</button></div>
+      <div class="form-body" style="grid-template-columns:1fr">
+        <div class="fld" id="deptEditFld"><div class="lab"><span class="lab-n">Department</span>
+          <span class="lab-req">Required</span></div>
+          <input class="inp mono" id="deptEditName" value="${escAttr(d.name)}">
+          <span class="career-hint">${used
+            ? `${used} role${used===1?"":"s"} sit${used===1?"s":""} on this. Renaming moves ${used===1?"it":"them"} with it.`
+            : "No role uses this yet."}</span></div>
+        <div class="form-err" id="deptEditErr" style="margin:0"></div>
+      </div>
+      <div class="form-foot"><span class="career-foot-note">${escHtml(d.name)}</span>
+        <button class="btn" data-dept-cancel="1">Cancel</button>
+        <button class="btn btn-primary" data-dept-save="1">Save department</button></div>
+    </aside></div>`;
+}
+
+/* Deleting says what it will cost before it does it. A role on a deleted department
+   keeps the name — the dropdown flags it rather than blanking the field. */
+function deptDeleteLayer(){
+  const d=deptByName(deptDeleting);
+  if(!d) return "";
+  const used=CAREER_OPENINGS.filter(r=>r.dept===d.name).length;
+  return `<div class="confirm-layer">
+    <button class="confirm-backdrop" data-dept-del-dismiss="1" aria-label="Keep it"></button>
+    <div class="confirm-box" role="dialog" aria-modal="true" aria-labelledby="deptDelTitle">
+      <div class="confirm-title" id="deptDelTitle">Delete ${escHtml(d.name)}?</div>
+      <div class="confirm-body">${used
+        ? `<b>${used} role${used===1?"":"s"}</b> sit${used===1?"s":""} on this department. ${used===1?"It":"They"} will keep the name, flagged <i>no longer on file</i> until ${used===1?"it is":"they are"} moved to another one. New roles will not be able to pick it.`
+        : "No role uses it, so nothing else changes."} This can't be undone.</div>
+      <div class="confirm-actions">
+        <button class="btn btn-primary" data-dept-del-dismiss="1">Keep it</button>
+        <button class="btn btn-danger" data-dept-del-confirm="1">Delete department</button></div>
+    </div></div>`;
 }
 
 const VIEWS = {
@@ -3431,6 +3820,40 @@ const VIEWS = {
         ${addRowNew("Add code")}</tbody></table></div>
     </div>`;
   },
+  career(){
+    /* Applications received is built and working — it is simply not offered yet. */
+    const CARSUBS=[["openings","Openings"],["queries","Queries"]];
+    if(carsub==="applications") carsub="openings";
+    const tabs=`<div class="subs">${CARSUBS.map(([k,l])=>
+      `<button class="sub-tab" data-carsub="${k}" aria-selected="${carsub===k}">${l}</button>`).join("")}</div>`;
+    return tabs + (carsub==="queries" ? careerQueries()
+                 : carsub==="applications" ? careerApplications()
+                 : careerOpenings());
+  },
+  departments(){
+    return `<div class="note note-scope"><span class="note-mark">Structure</span><div>
+      The teams a <b>role</b> can belong to. An opening picks one of these and the careers page
+      filters its list on them, so the wording here is what a candidate reads.
+    </div></div>
+    <div class="card">
+      <div class="card-head"><span class="card-title">Departments</span>
+        <span class="card-note">${DEPARTMENTS.length} on file</span></div>
+      <div class="matrix-wrap"><table><thead><tr>
+        <th>Department</th><th>Added on</th><th class="ctr">Roles on it</th><th>Actions</th></tr></thead>
+      <tbody>${DEPARTMENTS.map(d=>{
+        const used=CAREER_OPENINGS.filter(r=>r.dept===d.name).length;
+        return `<tr>
+        <td><b style="font-weight:500">${escHtml(d.name)}</b></td>
+        <td class="code" style="white-space:nowrap">${d.added||"—"}</td>
+        <td class="code" style="text-align:center">${used}</td>
+        <td><div class="career-acts">
+          <button class="btn" data-dept-edit="${escAttr(d.name)}">Edit</button>
+          <button class="btn btn-danger" data-dept-del="${escAttr(d.name)}">Delete</button>
+        </div></td></tr>`;}).join("")}
+        ${addRowNew("Add department")}</tbody></table></div>
+    </div>` + deptEditLayer() + deptDeleteLayer();
+  },
+
   shopcats(){
     return `<div class="note note-scope"><span class="note-mark">Structure</span><div>
       Each shop category carries a short <b>code</b> — the prefix of the auto-generated Product ID (Books → <span class="code">BK-00001</span>). A product picks its category from this list.
@@ -3751,6 +4174,95 @@ function inventoryFields(noun="product"){
       <button class="sw" data-on="${prodBuildingPool?1:0}" data-prodpool="1"><i></i><span>${prodBuildingPool?"Yes — Building Pool":"No — own capacity"}</span></button></div>
     <div class="fld"><div class="lab"><span class="lab-n">Capacity</span>${tip(capTip)}<span class="lab-req">${prodBuildingPool?"Optional":"Required"}</span></div><input class="inp mono" placeholder="12"></div>`;
 }
+/* ---- Ratio between two visitor categories, on the product --------------------
+   The Visitor categories master can only say "an Adult must also be on the booking" —
+   a presence test, so one adult with twenty children passes it. Supervision is a
+   ratio, and it belongs to the product because a gallery and a workshop do not
+   supervise alike. The two sides are whatever categories this product actually sells
+   to, so the rule is built from the selection made above it rather than assuming
+   Adult and Child. */
+let prodRatio = { a:"", b:"", min:"1", max:"5" };
+
+const ratioInt = v => /^\d+$/.test(String(v).trim()) ? parseInt(v,10) : NaN;
+const isAdultCat = n => /adult/i.test(String(n));
+
+/* The categories ticked on the form right now — the rule can only speak about these. */
+function ratioPickedCats(){
+  const fld=document.querySelector('.fld[data-df="visitor_categories[]"]');
+  if(!fld) return [];
+  return [...fld.querySelectorAll('.chip-opt[data-on="1"]')].map(c=>c.textContent.trim().split(" · ")[0]);
+}
+
+/* Keep the two sides pointing at categories that are still selected. */
+function ratioFix(cats){
+  if(!cats.includes(prodRatio.a)) prodRatio.a = cats.find(isAdultCat) || cats[0] || "";
+  if(!cats.includes(prodRatio.b) || prodRatio.b===prodRatio.a)
+    prodRatio.b = cats.find(n=>n!==prodRatio.a && !isAdultCat(n)) || cats.find(n=>n!==prodRatio.a) || "";
+}
+
+function ratioProblems(cats){
+  const r=prodRatio, out=[];
+  if(cats.length<2){ out.push("Select at least two visitor categories above to set a ratio."); return out; }
+  if(!r.a||!r.b){ out.push("Pick both sides of the ratio."); return out; }
+  if(r.a===r.b){ out.push("The two sides have to be different categories."); return out; }
+  const mn=ratioInt(r.min), mx=ratioInt(r.max);
+  if(!(mn>=0)||!(mx>=0)) out.push("Min and max need whole numbers.");
+  else if(mx<mn) out.push(`Max is below min — ${mx} cannot be fewer than ${mn}.`);
+  else if(mx===0) out.push(`A max of 0 means no ${r.b} can be booked with this at all.`);
+  return out;
+}
+
+/* The rule restated against a party you can picture. */
+function ratioExample(){
+  const r=prodRatio, mn=ratioInt(r.min), mx=ratioInt(r.max);
+  const one=`1 ${r.a} may bring ${mn} to ${mx} ${r.b}`;
+  return `${one}  ·  12 ${r.b} need at least ${Math.ceil(12/mx)} ${r.a}`;
+}
+
+/* Message and disabled states, updated in place so typing never loses the caret. */
+function syncRatio(){
+  const box=document.getElementById("ratioMsg");
+  if(!box) return;
+  const cats=ratioPickedCats();
+  document.querySelectorAll("[data-ratio],[data-ratio-cat]").forEach(el=>{
+    el.disabled = cats.length<2;
+  });
+  const problems=ratioProblems(cats);
+  box.className = "ratio-msg" + (problems.length?" is-bad":"");
+  box.textContent = problems.length ? problems[0] : ratioExample();
+}
+
+/* Rebuilt whenever the category selection changes, so the two dropdowns always
+   offer exactly what this product is sold to. */
+function ratioInner(cats){
+  ratioFix(cats);
+  const pick=(side,val)=>`<div class="selwrap ratio-sel"><select class="inp" data-ratio-cat="${side}">
+    ${cats.length?cats.map(c=>`<option${c===val?" selected":""}>${escAttr(c)}</option>`).join("")
+                 :`<option value="">No category selected</option>`}
+  </select></div>`;
+  return `<div class="lab"><span class="lab-n">Visitor category ratio</span>${tip("Supervision as a ratio rather than a presence test. Pick the two categories it holds between, then how many of the second one each of the first may bring. The sides come from the categories selected for this product.")}
+      <span class="lab-req">Optional</span></div>
+    <div class="ratio-row">
+      ${pick("a",prodRatio.a)}
+      <span class="ratio-x">allow</span>
+      ${pick("b",prodRatio.b)}
+      <span class="ratio-x">min</span>
+      <input class="inp mono ratio-n" data-ratio="min" value="${escAttr(prodRatio.min)}" inputmode="numeric" aria-label="Minimum">
+      <span class="ratio-x">max</span>
+      <input class="inp mono ratio-n" data-ratio="max" value="${escAttr(prodRatio.max)}" inputmode="numeric" aria-label="Maximum">
+    </div>
+    <div class="ratio-msg" id="ratioMsg"></div>`;
+}
+function ratioField(cats){
+  return `<div class="fld wide" data-df="adult_child_ratio">${ratioInner(cats||[])}</div>`;
+}
+function rebuildRatio(){
+  const fld=document.querySelector('.fld[data-df="adult_child_ratio"]');
+  if(!fld) return;
+  fld.innerHTML = ratioInner(ratioPickedCats());
+  syncRatio();
+}
+
 function productForm(editing=false){
   const record=editing?P[selP]:null;
   const cutoff=record&&record.cutoff.match(/(?:(\d+)\s*days?\s*)?(\d+)\s*hours?/i);
@@ -3767,7 +4279,8 @@ function productForm(editing=false){
       <div class="form-sec-body">${fields.join("")}</div></section>`;
   const basic=PROD_BASE.map(f=>f[0].split("|")[1]==="type"?typeField():field(f,values)).concat(field(PROD_REST[4],values));
   const typeSettings=(isProd?PROD_PRODUCT_ONLY:PROD_ADDON_ONLY).map(f=>field(f,values));
-  const booking=PROD_REST.slice(0,2).map(f=>field(f,values));
+  const booking=[field(PROD_REST[0],values), field(PROD_REST[1],values),
+                 ratioField(values["visitor_categories[]"]||[])];
   const finance=PROD_REST.slice(2,4).map(f=>field(f,values));
   const inventory=inventoryFields("product");
   const listing=LISTING_FIELDS.map(f=>field(f,values));
@@ -3826,6 +4339,13 @@ function createForm(schema,label,footNote,values={},editing=false){
     const byName=names=>names.map(n=>schema.find(f=>(f[0].split("|")[1]||f[0])===n)).filter(Boolean);
     const secs=[["Basics",["code","kind","description"]],["Tax",["tax_rate_ids[]"]],["Status",["is_active"]]];
     headings=secs.map(s=>s[0]); groups=secs.map(s=>byName(s[1]));
+  } else if(label==="role"){   // Careers opening — group by field, not catalogue chunks
+    const byName=names=>names.map(n=>schema.find(f=>(f[0].split("|")[1]||f[0])===n)).filter(Boolean);
+    const secs=[["The opening",["title","dept","type","active"]],
+                ["Where and who",["loc","exp"]],
+                ["Dates",["posted / closes"]],
+                ["Job description",["about","jd"]]];
+    headings=secs.map(x=>x[0]); groups=secs.map(x=>byName(x[1]));
   } else if(label==="tax rate"){   // Tax rate — group by field so sections aren't catalogue chunks
     const byName=names=>names.map(n=>schema.find(f=>(f[0].split("|")[1]||f[0])===n)).filter(Boolean);
     const secs=[["Basics",["code","name"]],["Rate & validity",["percentage","is_active"]]];
@@ -3853,7 +4373,7 @@ function createForm(schema,label,footNote,values={},editing=false){
     <div class="card">
       <div class="card-head"><span class="card-title">${editing?"Edit":"New"} ${label}</span></div>
       <div class="form-body product-form">${secHTML.join("")}</div>
-      <div class="form-foot"><button class="btn" data-tab="list">Cancel</button><button class="btn btn-primary"${label==="event"?' data-save-event="1"':''}>${editing?"Save changes":"Create "+label}</button></div>
+      ${current==="career"?"":`<div class="form-foot">${current==="departments"&&!editing?`<span class="form-err" id="deptErr"></span>`:""}<button class="btn" data-tab="list">Cancel</button><button class="btn btn-primary"${label==="event"?' data-save-event="1"':current==="departments"&&!editing?' data-dept-create="1"':''}>${editing?"Save changes":"Create "+label}</button></div>`}
     </div>
   </div>`;
 }
@@ -4230,7 +4750,7 @@ function bookingForm(editing=false){
 const SING={blackout:"blackout date",affiliates:"affiliate link",
   sources:"source",paymodes:"payment mode",scripts:"script",categories:"category",pools:"pool",
   tax:"tax rate",hsn:"code",discounts:"discount",products:"product or add-on",
-  programs:"program",progcats:"program category",events:"event",camps:"camp or workshop",bookings:"order"};
+  programs:"program",progcats:"program category",departments:"department",events:"event",camps:"camp or workshop",bookings:"order",career:"role"};
 const singular=(k,n)=>SING[k]||n.toLowerCase().replace(/s$/,"");
 const TYPE_LABEL={media:"Files",string:"Text",int:"Number",decimal:"Number",money:"Amount",
   date:"Date",datetime:"Date and time",time:"Time",bool:"Yes or no",enum:"Choose one",
@@ -4303,6 +4823,59 @@ function egPlaceholder(ex){
 }
 /* Prefer an explicit "e.g. X" inside a note as the input placeholder. */
 function egFromNote(note){ const m=String(note||"").match(/e\.g\.\s*([^.,;]+)/i); return m?m[1].trim():""; }
+/* The careers schema is small and its own thing, so it renders its own fields rather
+   than inheriting the catalogue's required-field heuristics. */
+function careerField(f,values,label,name,type,required){
+  const val=values[name];
+  let note=f.length>3?f[3]:(f[2]||"");
+  const opts=(f.length>3?f[2]:"").split("·").map(x=>x.trim()).filter(Boolean);
+  const wide=["richtext","bool","file"].includes(type)||name==="loc"||name.includes(" / ");
+  let ctl;
+  if(type==="auto")
+    ctl=`<input class="inp mono" value="${escAttr(val||autoValue())}" readonly tabindex="-1">`;
+  else if(type==="bool"){
+    const on = val===undefined ? true : !!val;   // a new role is listed unless told otherwise
+    ctl=`<button class="sw" data-on="${on?1:0}"><i></i><span>${on?"On":"Off"}</span></button>`;
+  }
+  else if(type==="dept"){
+    /* The list comes from the Departments master, not from the schema. */
+    const live=deptNames();
+    const list=(val && !live.includes(val)) ? live.concat(val) : live;   // a role keeps a team since removed
+    ctl=`<div class="selwrap"><select class="inp"><option>Select&#8230;</option>${list.map(o=>
+      `<option${String(val||"")===o?" selected":""}>${escAttr(o)}${live.includes(o)?"":" — no longer on file"}</option>`).join("")}</select></div>`;
+  }
+  else if(type==="enum")
+    ctl=`<div class="selwrap"><select class="inp"><option>Select&#8230;</option>${opts.map(o=>
+      `<option${String(val||"").toLowerCase()===o.toLowerCase()?" selected":""}>${escAttr(o)}</option>`).join("")}</select></div>`;
+  else if(type==="file"){
+    /* The uploaded file replaces the generated JD. The name of whatever is already on the
+       role is shown beside it, because a file input cannot be given a value. */
+    ctl=`<input class="inp career-file" type="file" accept=".pdf,.doc,.docx,.rtf,.odt">` +
+      (val&&val.name?`<span class="career-hint" style="margin-top:6px">On file:
+        <span class="app-file">${escAttr(val.name)}</span>
+        ${val.size?humanSize(val.size):""} — choosing a file replaces it.</span>`:"");
+  }
+  else if(type==="richtext")
+    ctl=`<textarea class="inp" rows="${name==="about"?3:5}" style="resize:vertical"${
+      name!=="about"?' placeholder="One per line"':""}>${escAttr(val==null?"":val)}</textarea>`;
+  else if(name.includes(" / ")){
+    /* Same shape as the discount form's "Offer runs between": one label, two dates. */
+    const parts=name.split(" / ");
+    ctl=`<div class="row2">${parts.map((k,i)=>{
+      const v=Array.isArray(val)?val[i]:(values[k]!=null?values[k]:"");
+      return `<input class="inp mono" data-dpart="${escAttr(k)}" placeholder="${i?"Closes — DD Mon YYYY":"Opens — DD Mon YYYY"}" value="${escAttr(v==null?"":v)}">`;
+    }).join("")}</div>`;
+  }
+  else
+    ctl=`<input class="inp mono"${type==="date"?' placeholder="DD Mon YYYY"':""} value="${escAttr(val==null?"":val)}">`;
+  if(type==="auto") note = val ? "Set when the role was created. It never changes."
+                              : "Reserved for this role and assigned when you save.";
+  return `<div class="fld${wide?" wide":""}" data-df="${escAttr(name)}">
+    <div class="lab"><span class="lab-n">${label}</span>
+      <span class="lab-req">${type==="auto"?"Generated":required?"Required":"Optional"}</span></div>
+    ${ctl}${note?`<span class="career-hint">${note}</span>`:""}</div>`;
+}
+
 function field(f,values={}){
   const [label,name] = f[0].includes("|") ? f[0].split("|") : [f[0],f[0]];
   const val=values[name];
@@ -4313,7 +4886,18 @@ function field(f,values={}){
   const opts=optRaw?optRaw.split("·").map(x=>x.trim()).filter(Boolean):[];
   const parts=name.includes(" / ")?name.split(" / "):[name];
   const wide=(!NARROW.includes(type)||parts.length>1)?" wide":"";
+  const CAREER_REQ=["title","dept","type","loc","posted / closes","about"];
+  if(current==="career"){
+    if(name==="code") return "";   // generated, and shown on the role itself — never a form field
+    return careerField(f,values,label,name,type,CAREER_REQ.includes(name));
+  }
   const req=(/^code$|^name$|^label$|^title$|^date$|^trigger$|^channel$|^price$|^percentage$|^min_age$|^start_time$|_id$/.test(name)||name==="valid_from / valid_to"||name==="start_time / end_time")&&type!=="bool"&&!/override/.test(name)?"Required":"Optional";
+  /* A value the panel writes itself. On a new record there is nothing to show yet and
+     nothing to fill in, so the field stays off the form and only appears on the record. */
+  if(type==="auto") return !val ? "" : `<div class="fld" data-df="${escAttr(name)}">
+    <div class="lab"><span class="lab-n">${label}</span><span class="lab-req">Generated</span></div>
+    <input class="inp mono" value="${escAttr(val)}" readonly tabindex="-1">
+    ${note?`<span class="career-hint">${note}</span>`:""}</div>`;
   const hint=fieldHint(name);
   const isFk=type==="fk"||type==="fk[]";
   // schema note is authoritative for the description (fk fields carry a "→ target" note, so use the FAQ text there)
@@ -4947,7 +5531,608 @@ function shopSaleDetail(){ const s=SHOP_SALES[selShopSale]; if(!s) return ""; co
   return head+tabs+`<div class="sub-body">${ssub==="invoice"?invoiceBody:detailsBody}</div>`;
 }
 
-const DETAIL = { products:productDetail, programs:campDetail, events:eventDetail, camps:campDetail, discounts:discountDetail, members:memberDetail, tiers:tierDetail, shopsales:shopSaleDetail, shopitems:shopItemDetail, shopcoupons:shopCouponDetail };
+const DETAIL = { career:()=>careerDetail(), products:productDetail, programs:campDetail, events:eventDetail, camps:campDetail, discounts:discountDetail, members:memberDetail, tiers:tierDetail, shopsales:shopSaleDetail, shopitems:shopItemDetail, shopcoupons:shopCouponDetail };
+/* ================= Careers =====================================================
+   Admin side only. The public careers page is what a candidate sees — the list, the
+   View JD link and the apply form all live there. What the panel owns is the master
+   behind it: writing the openings, setting the closing date, listing or unlisting a
+   role, and configuring where a submitted application is routed and what the two
+   automatic mails say. The JD itself is a file an admin uploads against the role; the
+   panel lists it and opens it, and the careers page serves that same file. */
+
+const escHtml = s => String(s).replace(/[&<>]/g, ch => ({"&":"&amp;","<":"&lt;",">":"&gt;"}[ch]));
+const roleById = id => CAREER_OPENINGS.find(r=>r.id===id);
+
+/* Whole days from today to the closing date — negative once it has passed. */
+function careerDaysLeft(r){
+  const d=parseDMY(r.closes); if(!d) return null;
+  const today=new Date(); today.setHours(0,0,0,0);
+  return Math.round((d-today)/86400000);
+}
+
+/* ---- PDF -------------------------------------------------------------------
+   Helvetica and Helvetica-Bold are base-14, so nothing has to be embedded — but
+   that means widths have to come from the AFM tables to wrap text. Codes 32..126. */
+const PDF_W = {
+  reg:[278,278,355,556,556,889,667,191,333,333,389,584,278,333,278,278,
+       556,556,556,556,556,556,556,556,556,556,278,278,584,584,584,556,1015,
+       667,667,722,722,667,611,778,722,278,500,667,556,833,722,778,667,778,722,667,611,722,667,944,667,667,611,
+       278,278,278,469,556,333,
+       556,556,500,556,556,278,556,556,222,222,500,222,833,556,556,556,556,333,500,278,556,500,722,500,500,500,
+       334,260,334,584],
+  bold:[278,333,474,556,556,889,722,238,333,333,389,584,278,333,278,278,
+        556,556,556,556,556,556,556,556,556,556,333,333,584,584,584,611,975,
+        722,722,722,722,667,611,778,722,278,556,722,611,833,722,778,667,778,722,667,611,722,667,944,667,667,611,
+        333,278,333,584,556,333,
+        556,611,556,611,556,333,611,611,278,278,556,278,889,611,611,611,611,389,556,333,611,556,778,556,556,500,
+        389,280,389,584]
+};
+/* WinAnsi is a byte encoding — fold the typographic characters the copy uses down
+   to their ASCII equivalents rather than emitting bytes the viewer would mangle. */
+const pdfAscii = s => String(s)
+  .replace(/[‘’]/g,"'").replace(/[“”]/g,'"')
+  .replace(/[–—]/g,"-").replace(/[·•]/g,"-")
+  .replace(/₹/g,"Rs.").replace(/…/g,"...")
+  .replace(/[^\x20-\x7E]/g,"");
+const pdfEsc = s => pdfAscii(s).replace(/[\\()]/g,"\\$&");
+function pdfWidth(t,size,bold){
+  const tab=PDF_W[bold?"bold":"reg"]; let w=0;
+  for(let i=0;i<t.length;i++){ const c=t.charCodeAt(i); w += (c>=32&&c<=126)?tab[c-32]:556; }
+  return w*size/1000;
+}
+function pdfWrap(t,size,bold,maxw){
+  const words=pdfAscii(t).split(/\s+/).filter(Boolean), lines=[]; let cur="";
+  words.forEach(w=>{
+    const test=cur?cur+" "+w:w;
+    if(pdfWidth(test,size,bold)<=maxw) cur=test;
+    else { if(cur) lines.push(cur); cur=w; }
+  });
+  if(cur) lines.push(cur);
+  return lines.length?lines:[""];
+}
+/* Assemble the object table. Byte offsets in the xref must be exact, so the body is
+   built once as a string and the offsets read off it as it grows. */
+function pdfAssemble(pages,title){
+  const objs=[null,
+    "<</Type/Catalog/Pages 2 0 R>>",
+    "",                                                        /* 2 - page tree */
+    "<</Type/Font/Subtype/Type1/BaseFont/Helvetica/Encoding/WinAnsiEncoding>>",
+    "<</Type/Font/Subtype/Type1/BaseFont/Helvetica-Bold/Encoding/WinAnsiEncoding>>",
+    "<</Title("+pdfEsc(title)+")/Producer(MuSo admin panel)>>"];
+  const first=objs.length, ids=[];
+  pages.forEach((c,i)=>{
+    const cid=first+i*2, pid=cid+1; ids.push(pid);
+    objs[cid]="<</Length "+c.length+">>\nstream\n"+c+"\nendstream";
+    objs[pid]="<</Type/Page/Parent 2 0 R/MediaBox[0 0 595 842]"+
+              "/Resources<</Font<</F1 3 0 R/F2 4 0 R>>>>/Contents "+cid+" 0 R>>";
+  });
+  objs[2]="<</Type/Pages/Count "+pages.length+"/Kids["+ids.map(i=>i+" 0 R").join(" ")+"]>>";
+  let out="%PDF-1.4\n"; const off=[];
+  for(let i=1;i<objs.length;i++){ off[i]=out.length; out+=i+" 0 obj\n"+objs[i]+"\nendobj\n"; }
+  const xref=out.length;
+  out+="xref\n0 "+objs.length+"\n0000000000 65535 f \n";
+  for(let i=1;i<objs.length;i++) out+=String(off[i]).padStart(10,"0")+" 00000 n \n";
+  out+="trailer\n<</Size "+objs.length+"/Root 1 0 R/Info 5 0 R>>\nstartxref\n"+xref+"\n%%EOF";
+  return out;
+}
+
+
+/* Preview the JD the site serves; if the browser blocks the popup, download it. */
+function careerOpenJd(id){
+  const role=roleById(id);
+  if(role && role.jd && role.jd.name) careerOpenPdf(careerUploadStub(role), role.jd.name);
+}
+
+/* The JD is whatever an admin uploaded — there is nothing generated behind it. This
+   build has no file store, so opening one serves a page that says what would be served
+   rather than inventing a document. */
+function careerUploadStub(role){
+  const W=595,H=842,ML=56,MR=56, CW=W-ML-MR;
+  const BLUE="0.184 0.467 0.737", INK="0.082 0.102 0.118",
+        INK2="0.353 0.388 0.420", INK3="0.541 0.576 0.612";
+  let ops=[], y=H-64;
+  const line=(t,x,size,bold,rgb,tc)=>ops.push(
+    "BT "+(tc||0)+" Tc /F"+(bold?2:1)+" "+size+" Tf "+(rgb||INK)+" rg "+
+    "1 0 0 1 "+x.toFixed(1)+" "+y.toFixed(1)+" Tm ("+pdfEsc(t)+") Tj ET");
+  const para=(t,size,bold,lead,rgb)=>pdfWrap(t,size,bold,CW).forEach(l=>{ line(l,ML,size,bold,rgb); y-=lead; });
+  line("MUSEUM OF SOLUTIONS  /  JOB DESCRIPTION",ML,8,true,BLUE,1.4); y-=22;
+  para(role.jd.name,18,true,24,INK); y-=4;
+  para(role.title+"  -  "+role.id+"  -  "+role.dept,11,false,16,INK2); y-=12;
+  ops.push("q "+BLUE+" RG 1.6 w "+ML+" "+y.toFixed(1)+" m "+(W-MR)+" "+y.toFixed(1)+" l S Q"); y-=26;
+  para("Uploaded on the role form"+(role.jd.size?"  -  "+humanSize(role.jd.size):""),10.5,false,17,INK2); y-=10;
+  para("This is the file an admin uploaded for this opening. In the live panel the careers "+
+       "page serves this document itself in place of the generated JD.",10.5,false,15.5,INK2); y-=8;
+  para("This build has no file store behind it, so it serves this page rather than the "+
+       "uploaded document.",10.5,false,15.5,INK3);
+  ops.push("q 0.878 0.898 0.918 RG 0.8 w "+ML+" 56 m "+(W-MR)+" 56 l S Q");
+  ops.push("BT 0 Tc /F1 8 Tf "+INK3+" rg 1 0 0 1 "+ML+" 40 Tm ("+
+    pdfEsc("Museum of Solutions  -  "+role.id+"  -  "+role.jd.name)+") Tj ET");
+  return pdfAssemble([ops.join("\n")], role.jd.name);
+}
+
+/* ---- Openings: the listings master ----------------------------------------- */
+/* Where a role stands is two things read together: the admin's own on/off switch, and
+   whether today sits inside its dates. Off is Inactive whatever the dates say; on, it is
+   Live inside the window, Ended past it, and Active while it waits for the window. */
+const ROLE_STATES = ["Live","Active","Inactive","Ended"];
+function roleState(r){
+  if(!r.active) return "Inactive";
+  const today=new Date(); today.setHours(0,0,0,0);
+  const from=parseDMY(r.posted), to=parseDMY(r.closes);
+  if(to && today>to) return "Ended";
+  if(from && today<from) return "Active";
+  return (from||to) ? "Live" : "Active";
+}
+const ROLE_PILL = { Live:"pill-ok", Active:"pill-blue", Inactive:"pill-warn", Ended:"pill-off" };
+const rolePill = r => `<span class="pill ${ROLE_PILL[roleState(r)]}"><i class="dot"></i>${roleState(r)}</span>`;
+
+/* ---- Sorting, shared by the three careers tables -----------------------------
+   A column says what value it sorts on and how to read it, so a date sorts as a date,
+   a count as a number, and a status in its own order rather than alphabetically. */
+let careerSort = {key:"", dir:1}, appSort = {key:"", dir:1}, querySort = {key:"", dir:1};
+
+const SORTERS = { career:()=>careerSort, app:()=>appSort, qry:()=>querySort };
+
+function sortRows(rows, spec, sort){
+  const col = sort && sort.key && spec[sort.key];
+  if(!col) return rows;
+  const read = v => {
+    const raw = col.get(v);
+    if(col.type==="date"){ const d=parseDMY(raw); return d?d.getTime():-Infinity; }
+    if(col.type==="num")  return +raw||0;
+    if(col.type==="rank"){ const i=col.rank.indexOf(raw); return i<0?col.rank.length:i; }
+    return String(raw==null?"":raw).toLowerCase();
+  };
+  return [...rows].sort((a,b)=>{
+    const x=read(a), y=read(b);
+    return (x<y ? -1 : x>y ? 1 : 0) * sort.dir;
+  });
+}
+
+/* A sortable header cell. The arrow shows which way, and which column is doing it. */
+function sortTh(label, key, sort, cls){
+  const on = sort.key===key;
+  return `<th${cls?` class="${cls}"`:""}><button class="th-sort${on?" is-on":""}" data-sort="${key}"
+    aria-label="Sort by ${label}">${label}<span class="th-arrow">${
+      on ? (sort.dir>0 ? "▲" : "▼") : "⇅"}</span></button></th>`;
+}
+
+const CAREER_SORT = {
+  id:{get:r=>r.id}, title:{get:r=>r.title}, dept:{get:r=>r.dept}, type:{get:r=>r.type},
+  loc:{get:r=>r.loc},
+  posted:{get:r=>r.posted, type:"date"}, closes:{get:r=>r.closes, type:"date"},
+  applicants:{get:r=>r.applicants, type:"num"},
+  status:{get:r=>roleState(r), type:"rank", rank:ROLE_STATES},
+  jd:{get:r=>(r.jd&&r.jd.name)||""}
+};
+const APP_SORT = {
+  id:{get:a=>a.id}, name:{get:a=>a.name}, phone:{get:a=>a.phone},
+  role:{get:a=>{ const r=roleById(a.role); return r?r.title:a.role; }},
+  on:{get:a=>a.on, type:"date"}, cv:{get:a=>(a.cv&&a.cv.name)||""}, note:{get:a=>a.note},
+  status:{get:a=>a.status, type:"rank", rank:["New","Shortlisted","Interviewed","Rejected"]}
+};
+const QRY_SORT = {
+  id:{get:q=>q.id}, name:{get:q=>q.name}, phone:{get:q=>q.phone}, q:{get:q=>q.q},
+  on:{get:q=>q.on, type:"date"},
+};
+
+function careerOpenings(){
+  const depts=[...new Set(deptNames().concat(CAREER_OPENINGS.map(r=>r.dept)))].sort();
+  const types=["Full-time","Part-time","Internship","Volunteer"]
+                .filter(t=>CAREER_OPENINGS.some(r=>r.type===t));
+  const unsorted=CAREER_OPENINGS.filter(r=>
+    (!careerFDept || r.dept===careerFDept) &&
+    (!careerFType || r.type===careerFType) &&
+    (careerFStatus==="all" || roleState(r)===careerFStatus));
+  const rows=sortRows(unsorted, CAREER_SORT, careerSort);
+
+  const pick=(k,cur,all,opts)=>`<div class="selwrap tool-sel"><select class="inp" data-career-filter="${k}">
+    <option value="">${all}</option>
+    ${opts.map(o=>`<option${o===cur?" selected":""}>${o}</option>`).join("")}
+  </select></div>`;
+
+  return `<div class="note note-scope"><span class="note-mark">Scope</span><div>
+    The panel owns the <b>listings</b>; the careers page on the site renders them.
+    A role takes applications between the two dates on it — past the closing date the site
+    keeps the JD readable but stops accepting them. Click a role to open it.
+  </div></div>
+
+  <div class="toolbar">
+    <label class="search"><span>&#8981;</span>
+      <input data-career-search value="${escAttr(careerQ)}" autocomplete="off"
+        placeholder="Search by role ID, position, department or location" aria-label="Search roles"></label>
+    ${pick("dept",careerFDept,"All departments",depts)}
+    ${pick("type",careerFType,"All types",types)}
+    <div class="selwrap tool-sel"><select class="inp" data-career-filter="status">
+      ${[["all","All statuses"]].concat(ROLE_STATES.map(st=>[st,st]))
+        .map(([v,l])=>`<option value="${v}"${careerFStatus===v?" selected":""}>${l}</option>`).join("")}
+    </select></div>
+    <span class="tool-note" id="careerCount">${rows.length===CAREER_OPENINGS.length
+      ?CAREER_OPENINGS.length+" roles":rows.length+" of "+CAREER_OPENINGS.length+" roles"}</span>
+  </div>
+
+  <div class="card">
+    <div class="matrix-wrap"><table class="reclist" id="careerTable" data-sorttable="career"><thead><tr>
+      ${sortTh("Role ID","id",careerSort)}${sortTh("Position","title",careerSort)}
+      ${sortTh("Department","dept",careerSort)}${sortTh("Employment type","type",careerSort)}
+      ${sortTh("Location","loc",careerSort)}${sortTh("Opens","posted",careerSort)}
+      ${sortTh("Closes","closes",careerSort)}${sortTh("Applicants","applicants",careerSort,"ctr")}
+      ${sortTh("Status","status",careerSort)}${sortTh("JD","jd",careerSort)}
+      <th>Actions</th></tr></thead>
+    <tbody>${rows.map(r=>{
+      const n=careerDaysLeft(r);
+      const cls=n==null?"":n<0?" is-past":n<=21?" is-soon":"";
+      const left=n==null?"No date set":n<0?"Closed "+Math.abs(n)+"d ago":n===0?"Closes today":n+" days left";
+      const hay=`${r.id} ${r.title} ${r.dept} ${r.type} ${r.loc} ${r.exp}`.toLowerCase();
+      return `<tr data-career-open="${r.id}" data-career-row data-search="${escAttr(hay)}">
+      <td class="code" style="white-space:nowrap">${r.id}</td>
+      <td class="career-title"><b style="font-weight:500">${escHtml(r.title)}</b>
+        <div class="career-sub">${escHtml(r.about)}</div></td>
+      <td>${r.dept}</td>
+      <td><span class="tag tag-t">${r.type}</span></td>
+      <td class="career-loc">${escHtml(r.loc)}</td>
+      <td class="code" style="white-space:nowrap">${r.posted}</td>
+      <td class="code" style="white-space:nowrap">${r.closes}
+        <div class="career-left${cls}">${left}</div></td>
+      <td class="code" style="text-align:center">${r.applicants}</td>
+      <td>${rolePill(r)}</td>
+      <td>${r.jd&&r.jd.name
+        ? `<button class="app-file" data-career-jd="${r.id}" title="Open ${escAttr(r.jd.name)}">${escHtml(r.jd.name)}</button>
+           <div class="career-left">${r.jd.size?humanSize(r.jd.size):""}</div>`
+        : '<span class="muted">—</span>'}</td>
+      <td><div class="career-acts">
+        <button class="btn" data-career-open="${r.id}">View</button>
+      </div></td></tr>`;}).join("")}
+      <tr data-career-newrow><td colspan="11"><button class="rep-add" data-tab="new" style="border-radius:4px">+ New role</button></td></tr>
+      <tr data-career-empty style="display:none"><td colspan="11" class="muted"
+        style="text-align:center;padding:18px;font-size:12.5px">No role matches that search.</td></tr>
+    </tbody></table></div>
+  </div>`;
+}
+
+/* ---- One role, in full, with what has come in against it. ------------------- */
+/* ---- One role, in full, with what has come in against it. ------------------- */
+function careerDetail(){
+  const r=roleById(selCareer);
+  if(!r) return `<div class="card"><div class="card-body muted">That role is no longer on file.</div></div>`;
+  const row=(k,v)=>`<tr><td style="color:var(--ink3);width:42%">${k}</td><td>${v}</td></tr>`;
+  const n=careerDaysLeft(r);
+  const cls=n==null?"":n<0?" is-past":n<=21?" is-soon":"";
+  const left=n==null?"no date set":n<0?"closed "+Math.abs(n)+" days ago":n===0?"closes today":n+" days left";
+  const apps=appsForRole(r.id);
+
+  return `<div class="detailhead"><h2 class="detailname">${escHtml(r.title)}</h2>
+    <span class="code">${r.id}</span>
+    ${rolePill(r)}
+</div>
+
+  <div class="card"><div class="card-head"><span class="card-title">The opening</span></div>
+      <div class="matrix-wrap"><table class="reclist"><tbody>
+        ${row("Role ID",`<span class="code">${r.id}</span>`)}
+        ${row("Position",escHtml(r.title))}
+        ${row("Department",r.dept)}
+        ${row("Employment type",`<span class="tag tag-t">${r.type}</span>`)}
+        ${row("Location",escHtml(r.loc))}
+        ${row("Experience",escHtml(r.exp))}
+      </tbody></table></div></div>
+
+  <div class="card"><div class="card-head"><span class="card-title">Dates</span>
+      <span class="card-note">Editable on the role form</span></div>
+      <div class="matrix-wrap"><table class="reclist"><tbody>
+        ${row("Applications open between",`<span class="code">${r.posted}</span> &ndash; <span class="code">${r.closes}</span>`)}
+        ${row("Deadline",`<span class="career-left${cls}" style="display:inline;margin:0;font-size:12.5px">${left[0].toUpperCase()+left.slice(1)}</span>`)}
+      </tbody></table></div></div>
+
+  <div class="card"><div class="card-head"><span class="card-title">Job description</span>
+      <span class="card-note">What the careers page shows under the title</span></div>
+      <div class="card-body career-jd-body">
+        <p class="career-jd-p">${escHtml(r.about)}</p>
+        <div style="margin-top:12px">${r.jd&&r.jd.name
+          ? `<button class="app-file" data-career-jd="${r.id}" style="max-width:100%">${escHtml(r.jd.name)}</button>
+             <span class="career-hint" style="display:inline;margin-left:6px">the JD the careers page serves${r.jd.size?" · "+humanSize(r.jd.size):""}</span>`
+          : `<span class="career-hint">No JD uploaded. The careers page lists this role without one until a file is added on the role form.</span>`}</div>
+      </div></div>
+
+  <div class="card"><div class="card-head"><span class="card-title">Applications</span>
+      <span class="card-note">${apps.length} received</span></div>
+      ${apps.length?appTable(sortRows(apps,APP_SORT,appSort),"roleAppTable",false)
+      :`<div class="card-body muted" style="font-size:12.5px">Nothing has come in against this role yet.</div>`}
+  </div>`;
+}
+
+/* Fields the panel writes itself. What a new record shows is what will be saved. */
+const AUTO_VALUE = {
+  career:      () => nextRoleId(),
+  departments: () => fmtDMY(new Date())
+};
+const autoValue = () => (AUTO_VALUE[current] ? AUTO_VALUE[current]() : "");
+
+/* The next Role ID: the highest ROLE-nnn on file plus one. Never typed. */
+function nextRoleId(){
+  const n=CAREER_OPENINGS.reduce((mx,r)=>{
+    const m=/ROLE-(\d+)/.exec(r.id); return m?Math.max(mx,+m[1]):mx; },0);
+  return "ROLE-"+String(n+1).padStart(3,"0");
+}
+
+/* Map a stored opening onto the field names the role form's schema uses. */
+function careerEditValues(r){
+  if(!r) return {};
+  return { code:r.id, title:r.title, dept:r.dept, type:r.type, loc:r.loc, exp:r.exp,
+           posted:r.posted, closes:r.closes, about:r.about, jd:r.jd, active:!!r.active };
+}
+
+/* ---- Applications received --------------------------------------------------
+   One record per submission off the careers form. The panel is where HR reads them,
+   moves them along, and can see exactly what was mailed out when each one landed. */
+const appById   = id => CAREER_APPLICATIONS.find(a=>a.id===id);
+
+/* Search hides rows in place rather than re-rendering, so the caret stays put — the
+   same thing the products and members lists do. The query is held in state only so a
+   filter dropdown (which does re-render) does not silently drop it. */
+function careerSearchRows(tableId, rowSel, emptySel, newSel, q, total, noun, countId){
+  const tbl=document.getElementById(tableId); if(!tbl) return;
+  const needle=(q||"").trim().toLowerCase(); let shown=0;
+  tbl.querySelectorAll(rowSel).forEach(tr=>{
+    const hit=!needle||(tr.dataset.search||"").includes(needle);
+    tr.style.display=hit?"":"none"; if(hit) shown++;
+  });
+  const empty=tbl.querySelector(emptySel); if(empty) empty.style.display=shown?"none":"";
+  if(newSel){ const nr=tbl.querySelector(newSel); if(nr) nr.style.display=needle?"none":""; }
+  const cnt=countId&&document.getElementById(countId);
+  if(cnt) cnt.textContent=needle?`${shown} of ${total} ${noun}`:`${total} ${noun}`;
+}
+/* The button only earns its place on a question that is actually clipped, so it is
+   rendered for every row and then measured away on the ones that fit in two lines. */
+function syncQueryClamps(){
+  document.querySelectorAll("#qryTable .qry-text").forEach(td=>{
+    const q=td.querySelector(".qry-q"), btn=td.querySelector(".qry-more");
+    if(!q||!btn) return;
+    const open=q.classList.contains("is-open");
+    btn.classList.toggle("is-shown", open || q.scrollHeight > q.clientHeight + 1);
+  });
+}
+
+const syncCareerSearch = () => {
+  careerSearchRows("careerTable","[data-career-row]","[data-career-empty]","[data-career-newrow]",
+    careerQ, CAREER_OPENINGS.length, "roles", "careerCount");
+  careerSearchRows("appTable","[data-app-row]","[data-app-empty]",null,
+    appQ, CAREER_APPLICATIONS.length, "applications", "appCount");
+  careerSearchRows("qryTable","[data-qry-row]","[data-qry-empty]",null,
+    qryQ, CAREER_QUERIES.length, "queries", "qryCount");
+  syncQueryClamps();
+};
+const appsForRole = id => CAREER_APPLICATIONS.filter(a=>a.role===id);
+
+const humanSize = b => b<1024 ? b+" B"
+  : b<1024*1024 ? (b/1024).toFixed(0)+" KB" : (b/1048576).toFixed(1)+" MB";
+
+/* Opening a CV serves the file the candidate attached. There is no file store behind
+   this build, so it serves a stand-in that says so rather than inventing a CV — the
+   wiring, the filename and the route are real, only the bytes are a placeholder. */
+function careerCvPdf(a){
+  const role=roleById(a.role)||{title:"—"};
+  const W=595,H=842,ML=56,MR=56, CW=W-ML-MR;
+  const BLUE="0.184 0.467 0.737", INK="0.082 0.102 0.118",
+        INK2="0.353 0.388 0.420", INK3="0.541 0.576 0.612";
+  let ops=[], y=H-64;
+  const line=(t,x,size,bold,rgb,tc)=>ops.push(
+    "BT "+(tc||0)+" Tc /F"+(bold?2:1)+" "+size+" Tf "+(rgb||INK)+" rg "+
+    "1 0 0 1 "+x.toFixed(1)+" "+y.toFixed(1)+" Tm ("+pdfEsc(t)+") Tj ET");
+  const para=(t,size,bold,lead,rgb)=>pdfWrap(t,size,bold,CW).forEach(l=>{ line(l,ML,size,bold,rgb); y-=lead; });
+  line("MUSEUM OF SOLUTIONS  /  ATTACHMENT",ML,8,true,BLUE,1.4); y-=22;
+  para(a.cv.name,18,true,24,INK); y-=4;
+  para(a.name+"  -  "+a.id+"  -  applied for "+role.title,11,false,16,INK2); y-=12;
+  ops.push("q "+BLUE+" RG 1.6 w "+ML+" "+y.toFixed(1)+" m "+(W-MR)+" "+y.toFixed(1)+" l S Q"); y-=26;
+  para("Uploaded "+a.on+"  -  "+humanSize(a.cv.size),10.5,false,17,INK2); y-=10;
+  para("This is the file the candidate attached to their application. In the live panel this "+
+       "opens the uploaded document itself, served from the application store and also present "+
+       "as the attachment on the mail sent to "+HR_EMAIL+".",10.5,false,15.5,INK2); y-=8;
+  para("This build has no file store behind it, so it serves this page in place of the "+
+       "document rather than showing an invented CV.",10.5,false,15.5,INK3);
+  ops.push("q 0.878 0.898 0.918 RG 0.8 w "+ML+" 56 m "+(W-MR)+" 56 l S Q");
+  ops.push("BT 0 Tc /F1 8 Tf "+INK3+" rg 1 0 0 1 "+ML+" 40 Tm ("+
+    pdfEsc("Museum of Solutions  -  "+a.id+"  -  "+a.cv.name)+") Tj ET");
+  return pdfAssemble([ops.join("\n")], a.cv.name);
+}
+
+function careerOpenPdf(str,file){
+  const bytes=new Uint8Array(str.length);
+  for(let i=0;i<str.length;i++) bytes[i]=str.charCodeAt(i)&0xFF;
+  const url=URL.createObjectURL(new Blob([bytes],{type:"application/pdf"}));
+  const win=window.open(url,"_blank");
+  if(!win){ const el=document.createElement("a"); el.href=url; el.download=file;
+            document.body.appendChild(el); el.click(); el.remove(); }
+  setTimeout(()=>URL.revokeObjectURL(url),60000);
+}
+
+/* One applications table, used by the Applications received tab and by a role's
+   detail page, so the two never drift apart. */
+/* Applications are read in the row: the CV and the status are the controls, and there is
+   nothing behind a row to open. `open` is kept so a row link can be turned back on. */
+function appTable(list, id, open=false){
+  return `<div class="matrix-wrap"><table${open?' class="reclist"':""} id="${id}" data-sorttable="app"><thead><tr>
+    ${sortTh("Application","id",appSort)}${sortTh("Applicant","name",appSort)}
+    ${sortTh("Phone","phone",appSort)}${sortTh("Applied for","role",appSort)}
+    ${sortTh("Received","on",appSort)}${sortTh("CV","cv",appSort)}
+    ${sortTh("Notes","note",appSort)}${sortTh("Status","status",appSort)}</tr></thead>
+  <tbody>${list.length?list.map(a=>{
+    const role=roleById(a.role);
+    const hay=`${a.id} ${a.name} ${a.email} ${a.phone} ${role?role.title:""}`.toLowerCase();
+    return `<tr${open?` data-app-open="${a.id}"`:""} data-app-row data-search="${escAttr(hay)}">
+    <td class="code" style="white-space:nowrap">${a.id}</td>
+    <td class="career-title"><b style="font-weight:500">${escHtml(a.name)}</b>
+      <div class="career-sub">${escHtml(a.email)}</div></td>
+    <td class="code" style="white-space:nowrap">${a.phone}</td>
+    <td class="career-loc"><b style="font-weight:500">${role?escHtml(role.title):a.role}</b>
+      <div class="career-sub">${role?role.dept+" · "+role.type:""}</div></td>
+    <td class="code" style="white-space:nowrap">${a.on}</td>
+    <td>${a.cv?`<button class="app-file" data-app-cv="${a.id}" title="Open ${escAttr(a.cv.name)}">${escHtml(a.cv.name)}</button>
+      <div class="career-left">${humanSize(a.cv.size)}</div>`:'<span class="muted">—</span>'}</td>
+    <td class="app-note">${a.note?escHtml(a.note):'<span class="muted">—</span>'}</td>
+    <td><div class="selwrap app-status">
+      <select class="inp" data-app-status="${a.id}" aria-label="Status for ${escAttr(a.name)}">
+        ${APP_STATUSES.map(st=>`<option${a.status===st?" selected":""}>${st}</option>`).join("")}
+      </select></div></td></tr>`;}).join("")
+    :`<tr><td colspan="8" class="muted" style="padding:26px 14px;text-align:center;font-size:12.5px">
+        No application matches those filters.</td></tr>`}
+    <tr data-app-empty style="display:none"><td colspan="8" class="muted"
+      style="text-align:center;padding:18px;font-size:12.5px">No application matches that search.</td></tr>
+  </tbody></table></div>`;
+}
+
+/* Editing a role happens in a right-side flyout, the same shape the discount form
+   uses for "Items & quantity" — the list or detail page stays put behind it. */
+
+/* Shared by create and save: the three the careers page cannot do without. */
+function roleFormRead(){
+  const form=document.querySelector("#pane .product-form");
+  if(!form) return null;
+  const get=n=>{ const f=form.querySelector(`.fld[data-df="${n}"]`); if(!f) return "";
+    const el=f.querySelector("select,textarea,input"); return el?el.value.trim():""; };
+  const dates=form.querySelector('.fld[data-df="posted / closes"]');
+  const dpart=k=>dates?(dates.querySelector(`[data-dpart="${k}"]`)||{}).value||"":"";
+  const picked=(form.querySelector('.fld[data-df="jd"] input[type=file]')||{}).files;
+  const sw=form.querySelector('.fld[data-df="active"] .sw');
+  const vals={ title:get("title"), dept:get("dept"), type:get("type"), loc:get("loc"),
+               exp:get("exp"), about:get("about"), posted:dpart("posted").trim(), closes:dpart("closes").trim(),
+               jd:(picked&&picked.length)?{name:picked[0].name,size:picked[0].size}:null,
+               active: sw ? sw.dataset.on==="1" : true };
+  const LABEL={title:"Position",loc:"Location",about:"About the role"};
+  const missing=Object.keys(LABEL).filter(n=>!vals[n]);
+  Object.keys(LABEL).forEach(n=>form.querySelector(`.fld[data-df="${n}"]`)?.classList.toggle("is-miss",!vals[n]));
+  const box=document.getElementById("roleErr");
+  if(missing.length){
+    if(box) box.textContent="Still needed: "+missing.map(n=>LABEL[n]).join(", ")+".";
+    return null;
+  }
+  if(box) box.textContent="";
+  return vals;
+}
+
+/* A new opening. The ID is generated here, which is why the form never asked for one. */
+function careerCreate(){
+  const v=roleFormRead();
+  if(!v) return;
+  const clean=x=>(x && !/^Select/.test(x)) ? x : "";
+  CAREER_OPENINGS.unshift({
+    id:nextRoleId(), title:v.title, dept:clean(v.dept)||"—", loc:v.loc,
+    type:clean(v.type)||"Full-time", exp:v.exp||"Not specified", active:v.active,
+    posted:v.posted||fmtDMY(new Date()), closes:v.closes||"", applicants:0,
+    about:v.about, jd:v.jd
+  });
+  tab="list"; carsub="openings"; render(); $(".stage").scrollTop=0;
+}
+
+/* Read the edit page back onto the record. */
+function careerSaveEdit(){
+  const r=roleById(selCareer), v=roleFormRead();
+  if(!r||!v) return;
+  r.active=v.active;
+  const set=(k,val)=>{ if(val && !/^Select/.test(val)) r[k]=val; };
+  ["title","dept","type","loc","exp","about","posted","closes"].forEach(k=>set(k,v[k]));
+  if(v.jd) r.jd=v.jd;                       // a new upload replaces what was there
+  tab="detail"; render(); $(".stage").scrollTop=0;
+}
+
+/* ---- Queries -----------------------------------------------------------------
+   The careers page carries a short "ask us something" form beside the openings —
+   name, email, number and the question. It is not an application: there is no CV
+   and no position attached, so it gets its own list rather than muddying that one. */
+const queryById = id => CAREER_QUERIES.find(q=>q.id===id);
+
+/* The form on the careers page caps a query at 100 words. Anything longer came from
+   somewhere else, so the list shows the first 100 and says it was cut. */
+const QUERY_WORD_CAP = 100;
+function queryWords(t){ return String(t||"").trim().split(/\s+/).filter(Boolean).length; }
+function queryClamp(t){
+  const w=String(t||"").trim().split(/\s+/).filter(Boolean);
+  return w.length<=QUERY_WORD_CAP ? String(t||"").trim() : w.slice(0,QUERY_WORD_CAP).join(" ")+"\u2026";
+}
+
+
+
+function careerQueries(){
+  const rows=sortRows(CAREER_QUERIES, QRY_SORT, querySort);
+
+  return `<div class="note note-scope"><span class="note-mark">Scope</span><div>
+    The careers page carries a short <b>ask us something</b> form beside the openings —
+    name, email, number and the question. It is not an application, so it lands here rather
+    than in the applications list. The form caps a question at <b>${QUERY_WORD_CAP} words</b>, so a
+    whole query fits in its row. Each one also reaches ${HR_EMAIL} as it arrives, so a reply
+    goes out from there; this list is the record of what came in.
+  </div></div>
+
+  <div class="toolbar">
+    <label class="search"><span>&#8981;</span>
+      <input data-qry-search value="${escAttr(qryQ)}" autocomplete="off"
+        placeholder="Search by name, email, phone or query ID" aria-label="Search queries"></label>
+    <span class="tool-note" id="qryCount">${rows.length===CAREER_QUERIES.length
+      ?CAREER_QUERIES.length+" queries":rows.length+" of "+CAREER_QUERIES.length+" queries"}</span>
+  </div>
+
+  <div class="card">
+    <div class="card-head"><span class="card-title">Queries</span>
+      <span class="card-note">Newest first · open a long question with “more”</span></div>
+    <div class="matrix-wrap"><table id="qryTable" data-sorttable="qry"><thead><tr>
+      ${sortTh("Query","id",querySort)}${sortTh("From","name",querySort)}
+      ${sortTh("Phone","phone",querySort)}${sortTh("Question","q",querySort)}
+      ${sortTh("Received","on",querySort)}</tr></thead>
+    <tbody>${rows.length?rows.map(q=>{
+      const hay=`${q.id} ${q.name} ${q.email} ${q.phone} ${q.q}`.toLowerCase();
+      return `<tr data-qry-row data-search="${escAttr(hay)}">
+      <td class="code" style="white-space:nowrap">${q.id}</td>
+      <td class="career-title"><b style="font-weight:500">${escHtml(q.name)}</b>
+        <div class="career-sub">${escHtml(q.email)}</div></td>
+      <td class="code" style="white-space:nowrap">${q.phone}</td>
+      <td class="qry-text">
+        <div class="qry-q${qryExpanded.has(q.id)?" is-open":""}">${escHtml(queryClamp(q.q))}</div>
+        <button class="qry-more" data-qry-more="${q.id}">${qryExpanded.has(q.id)?"less":"more"}</button>
+        ${queryWords(q.q)>QUERY_WORD_CAP?`<div class="career-left is-soon">cut at ${QUERY_WORD_CAP} words</div>`:""}</td>
+      <td class="code" style="white-space:nowrap">${q.on}</td></tr>`;}).join("")
+      :`<tr><td colspan="5" class="muted" style="padding:26px 14px;text-align:center;font-size:12.5px">
+          Nothing has come in yet.</td></tr>`}
+      <tr data-qry-empty style="display:none"><td colspan="5" class="muted"
+        style="text-align:center;padding:18px;font-size:12.5px">No query matches that search.</td></tr>
+    </tbody></table></div>
+  </div>`;
+}
+
+
+function careerApplications(){
+  const rows=sortRows(CAREER_APPLICATIONS.filter(a=>
+    (!appFRole   || a.role===appFRole) &&
+    (!appFStatus || a.status===appFStatus)), APP_SORT, appSort);
+
+  return `<div class="note note-scope"><span class="note-mark">Scope</span><div>
+    Every submission off the careers form lands here <b>and</b> in the HR inbox — the mail
+    carries the CV, this list is where the application is read and moved along. Everything
+    it carries is in the row — the CV opens from there and the status is set there.
+  </div></div>
+
+  <div class="toolbar">
+    <label class="search"><span>&#8981;</span>
+      <input data-app-search value="${escAttr(appQ)}" autocomplete="off"
+        placeholder="Search by name, email, phone or application ID" aria-label="Search applications"></label>
+    <div class="selwrap tool-sel" style="min-width:210px"><select class="inp" data-app-filter="role">
+      <option value="">All positions</option>
+      ${CAREER_OPENINGS.map(r=>`<option value="${r.id}"${appFRole===r.id?" selected":""}>${escHtml(r.title)} — ${appsForRole(r.id).length}</option>`).join("")}
+    </select></div>
+    <div class="selwrap tool-sel"><select class="inp" data-app-filter="status">
+      <option value="">All statuses</option>
+      ${APP_STATUSES.map(st=>`<option${appFStatus===st?" selected":""}>${st}</option>`).join("")}
+    </select></div>
+    <span class="tool-note" id="appCount">${rows.length===CAREER_APPLICATIONS.length
+      ?CAREER_APPLICATIONS.length+" applications":rows.length+" of "+CAREER_APPLICATIONS.length+" applications"}</span>
+  </div>
+
+  <div class="card">
+    <div class="card-head"><span class="card-title">Applications</span>
+      <span class="card-note">Newest first · status and CV are live in the row</span></div>
+    ${appTable(rows,"appTable",false)}
+  </div>`;
+}
+
+
 function render(){
   document.querySelector("body > .drawer-layer")?.remove();
   document.querySelector("body > .confirm-layer")?.remove();
@@ -4976,6 +6161,11 @@ function render(){
   else if(tab==="edit" && current==="events") body = back("Back to events") + createForm(EVENT_SCHEMA,"event","",eventEditValues(EVENTS[selE]),true);
   else if(tab==="edit" && current==="camps") body = back("Back to camps & workshops") + createForm(CAMP_SCHEMA,"camp or workshop","",campEditValues(WORKSHOPS[selW]),true);
   else if(tab==="edit" && current==="bookings") body = back("Back to bookings") + bookingForm(true);
+  else if(tab==="edit" && current==="career"){
+    const role=roleById(selCareer);
+    body = `<button class="pageback" data-career-back="1">&larr; Back to ${role?escHtml(role.title):"the role"}</button>`
+         + createForm(M.career.schema,"role","",careerEditValues(role),true);
+  }
   else if(tab==="hist") body = back("Back to "+m.n.toLowerCase()) + VIEWS.history();
   else if(tab==="detail" && DETAIL[current]) body = back("Back to "+m.n.toLowerCase()) + DETAIL[current]();
   else body = (VIEWS[m.view]||VIEWS.emptyList)();
@@ -4986,6 +6176,8 @@ function render(){
   if(confirmLayer) document.body.appendChild(confirmLayer);
   if(savedScroll.formBody!=null){ const fb=document.querySelector(".booking-main .form-body"); if(fb) fb.scrollTop=savedScroll.formBody; }
   if(savedScroll.summaryBody!=null){ const sb=document.querySelector(".booking-summary-body"); if(sb) sb.scrollTop=savedScroll.summaryBody; }
+  syncCareerSearch();
+  syncRatio();
   $("#rail").innerHTML = railHTML();
   $("#railFoot").innerHTML = ORDER.length+" masters<br>Retail products &amp; pricing";
 }
@@ -5209,6 +6401,62 @@ function recalcBookingSummary(showMessage=false){
 }
 
 document.addEventListener("click",e=>{
+  const qMore=e.target.closest("[data-qry-more]");
+  if(qMore){ const id=qMore.dataset.qryMore;
+    if(qryExpanded.has(id)) qryExpanded.delete(id); else qryExpanded.add(id);
+    render(); return; }
+  const sortBtn=e.target.closest("[data-sort]");
+  if(sortBtn){
+    const which=(sortBtn.closest("table")||{}).dataset;
+    const st=which && SORTERS[which.sorttable] && SORTERS[which.sorttable]();
+    if(st){
+      const k=sortBtn.dataset.sort;
+      if(st.key===k) st.dir=-st.dir; else { st.key=k; st.dir=1; }
+      render(); return;
+    }
+  }
+  const carTab=e.target.closest("[data-carsub]");
+  if(carTab){ carsub=carTab.dataset.carsub; render(); $(".stage").scrollTop=0; return; }
+  const dEdit=e.target.closest("[data-dept-edit]");
+  if(dEdit){ deptEditing=dEdit.dataset.deptEdit; deptDeleting=""; render(); return; }
+  if(e.target.closest("[data-dept-cancel]")){ deptEditing=""; render(); return; }
+  if(e.target.closest("[data-dept-save]")){ deptSave(); return; }
+
+  const dDel=e.target.closest("[data-dept-del]");
+  if(dDel){ deptDeleting=dDel.dataset.deptDel; deptEditing=""; render(); return; }
+  if(e.target.closest("[data-dept-del-dismiss]")){ deptDeleting=""; render(); return; }
+  if(e.target.closest("[data-dept-del-confirm]")){
+    const d=deptByName(deptDeleting);
+    if(d) DEPARTMENTS.splice(DEPARTMENTS.indexOf(d),1);
+    deptDeleting=""; render(); return;
+  }
+
+  if(e.target.closest("[data-dept-create]")){
+    /* The only typed field is the name. "Added on" is stamped right here, from the
+       clock, which is why the form shows it read-only rather than asking for it. */
+    const el=document.querySelector('.fld[data-df="name"] input');
+    const name=(el?el.value:"").trim(), box=document.getElementById("deptErr");
+    const fld=el&&el.closest(".fld");
+    const bad = !name ? "Give the department a name."
+      : DEPARTMENTS.some(d=>d.name.toLowerCase()===name.toLowerCase())
+        ? `\u201C${name}\u201D is already on the list.` : "";
+    if(bad){ if(fld) fld.classList.add("is-miss"); if(box) box.textContent=bad; return; }
+    DEPARTMENTS.push({ name, added: fmtDMY(new Date()) });
+    tab="list"; render(); $(".stage").scrollTop=0; return;
+  }
+  const cJd=e.target.closest("[data-career-jd]");
+  if(cJd){ careerOpenJd(cJd.dataset.careerJd); return; }
+  const cOpen=e.target.closest("[data-career-open]");
+  if(cOpen){ selCareer=cOpen.dataset.careerOpen; tab="detail"; render(); $(".stage").scrollTop=0; return; }
+  const cEdit=e.target.closest("[data-career-edit]");
+  if(cEdit){ selCareer=cEdit.dataset.careerEdit; tab="edit"; render(); $(".stage").scrollTop=0; return; }
+  if(e.target.closest("[data-career-back]")){ tab="detail"; render(); $(".stage").scrollTop=0; return; }
+  if(e.target.closest("[data-career-save]")){ careerSaveEdit(); return; }
+  if(e.target.closest("[data-career-create]")){ careerCreate(); return; }
+  const aCv=e.target.closest("[data-app-cv]");
+  if(aCv){ const a=appById(aCv.dataset.appCv);
+    if(a&&a.cv) careerOpenPdf(careerCvPdf(a), a.cv.name); return; }
+  if(e.target.closest("[data-career-clear]")){ careerFDept=""; careerFType=""; careerFStatus="all"; render(); return; }
   const nav=e.target.closest(".mitem");
   if(nav){ current=nav.dataset.k; selP=0; selW=0; selB=0; selE=0; esub="details"; eventCats=new Set(); selBooking=0; tab="list"; sub="details"; csub="details"; editD=-1; selD=0; dsub="summary"; editCond=-1; condDraft=null; draftDiscount=null; addOpen=null; progKind="event"; progCat="Event"; render(); $(".stage").scrollTop=0; return; }
   const goto=e.target.closest("[data-goto]");
@@ -5486,7 +6734,9 @@ document.addEventListener("click",e=>{
   const tslot=e.target.closest("[data-tierslot]");
   if(tslot){ const [p,sn]=tslot.dataset.tierslot.split("|"); const td=tierDraft; if(td){ td.slots=td.slots||{}; const arr=td.slots[p]=td.slots[p]||[]; const i=arr.indexOf(sn); if(i>=0) arr.splice(i,1); else arr.push(sn); } render(); return; }
   const opt=e.target.closest(".chip-opt");
-  if(opt){ opt.dataset.on = opt.dataset.on==="1"?"0":"1"; refreshDiscountSummaries(); return; }
+  if(opt){ opt.dataset.on = opt.dataset.on==="1"?"0":"1"; refreshDiscountSummaries();
+    if(opt.closest('.fld[data-df="visitor_categories[]"]')) rebuildRatio();
+    return; }
   const row=e.target.closest("[data-row]");
   if(row){ selP=+row.dataset.row; addOpen=null; render(); return; }
   if(e.target.closest("[data-prodpool]")){ prodBuildingPool=!prodBuildingPool; render(); return; }
@@ -5495,6 +6745,19 @@ document.addEventListener("click",e=>{
     sw.querySelector("span").textContent=on?"Off":"On"; }
 });
 document.addEventListener("change",e=>{
+  const rCat=e.target.closest&&e.target.closest("[data-ratio-cat]");
+  if(rCat){ prodRatio[rCat.dataset.ratioCat]=rCat.value; syncRatio(); return; }
+
+  const cFilt=e.target.closest&&e.target.closest("[data-career-filter]");
+  if(cFilt){ const k=cFilt.dataset.careerFilter;
+    if(k==="dept") careerFDept=cFilt.value; else if(k==="type") careerFType=cFilt.value; else careerFStatus=cFilt.value;
+    render(); return; }
+  const aFilt=e.target.closest&&e.target.closest("[data-app-filter]");
+  if(aFilt){ const k=aFilt.dataset.appFilter;
+    if(k==="role") appFRole=aFilt.value; else appFStatus=aFilt.value;
+    render(); return; }
+  const aSt=e.target.closest&&e.target.closest("[data-app-status]");
+  if(aSt){ const a=appById(aSt.dataset.appStatus); if(a) a.status=aSt.value; render(); return; }
   const meth=e.target.closest&&e.target.closest("[data-method]");
   if(meth){ syncDiscountForm(); curDiscount().auto = e.target.value==="auto"; render(); return; }
   const applies=e.target.closest&&e.target.closest("[data-applies-to]");
@@ -5537,6 +6800,25 @@ function ageFromDOB(str){
 }
 function ageLabel(str){ const a=ageFromDOB(str); return a===null?"":(a===0?"Under 1 yr":a+(a===1?" yr":" yrs")); }
 document.addEventListener("input",e=>{
+  if(e.target.matches&&e.target.matches("[data-app-search]")){ appQ=e.target.value; syncCareerSearch(); return; }
+  if(e.target.matches&&e.target.matches("[data-career-search]")){ careerQ=e.target.value; syncCareerSearch(); return; }
+  if(e.target.matches&&e.target.matches("[data-qry-search]")){ qryQ=e.target.value; syncCareerSearch(); return; }
+  if(e.target.matches&&e.target.matches("[data-ratio]")){ prodRatio[e.target.dataset.ratio]=e.target.value; syncRatio(); return; }
+  if(current==="departments" && e.target.closest&&e.target.closest('.fld[data-df="name"]')){
+    e.target.closest(".fld").classList.remove("is-miss");
+    const box=document.getElementById("deptErr"); if(box) box.textContent="";
+  }
+  if(current==="career" && (tab==="edit"||tab==="new") && e.target.closest&&e.target.closest(".fld[data-df]")){
+    const f=e.target.closest(".fld[data-df]");
+    if(e.target.value.trim()) f.classList.remove("is-miss");
+    const box=document.getElementById("roleErr");
+    if(box && !document.querySelector("#pane .fld.is-miss")) box.textContent="";
+  }
+  if(e.target.id==="deptEditName"){
+    document.getElementById("deptEditFld")?.classList.remove("is-miss");
+    const box=document.getElementById("deptEditErr"); if(box) box.textContent="";
+  }
+
   const dob=e.target.closest&&e.target.closest("[data-dob]");
   if(dob){ const el=document.getElementById("age_"+dob.dataset.dob); if(el) el.value=ageLabel(e.target.value); return; }
   if(e.target.classList&&e.target.classList.contains("msel-search")){
