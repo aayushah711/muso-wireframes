@@ -825,8 +825,8 @@ const GROUPS = [
   {name:"7 · Shop", color:"#B23A8F"}
 ];
 const ORDER = ["categories","pools","tax","hsn","shopcats","progcats","products","programs","blackout","bookings","checkin",
-               "discounts","affiliates","paymodes","sources","scripts","tiers","members",
-               "shopitems","shopsales","shopcoupons"];   // "shopreports" hidden from the rail (code kept)
+               "discounts","sources","scripts","tiers","members",
+               "shopitems","shopsales","shopcoupons"];   // "shopreports", "affiliates", "paymodes" hidden from the rail (code kept)
 const PHASE = {categories:0,pools:0,tax:0,hsn:0,shopcats:0,progcats:0, products:1, programs:1, blackout:2,
                discounts:3,affiliates:3,
                paymodes:4,sources:4,scripts:4,bookings:2,checkin:2,
@@ -985,6 +985,7 @@ const PROGRAM_SCHEMA = [
  ["Tax rates|tax_rate_ids[]","fk[]","→ Tax rates"],
  ["HSN / SAC code|hsn_sac_id","fk","→ HSN / SAC codes"],
  STATUS_FIELD,
+ ["Active|is_active","bool","Turn it off to take this program off sale. A program that's currently in use (has bookings) can't be turned off."],
  ...LISTING_FIELDS
 ];
 
@@ -1103,19 +1104,21 @@ const M = {
     schema:[["Short code|code","string","Short code used on reports, e.g. CGST-9."],
             ["Name on the invoice|name","string","Printed on the invoice line, e.g. CGST."],
             ["Rate %|percentage","decimal","The single rate for this row, e.g. 9. CGST 9% and SGST 9% are two rows, not two columns on one."],
-            ["Live|is_active","bool","Turn a rate off to stop it applying to new invoices."]]},
+            ["Active|is_active","bool","Turn it off to stop this rate applying to new invoices. A rate that's currently in use can't be turned off."]]},
   hsn:{g:0,n:"HSN / SAC codes",owner:"Shivam · Finance & Accounts",perm:"master.tax.manage",src:"Scope §12",
     d:"The code each product invoices under. §12 requires an HSN/SAC report with quantity, and notes the current one shows product count rather than quantity sold.",
     view:"hsncodes",
     schema:[["Code|code","string","6 digits for services, 8 for goods."],
             ["Goods or services|kind","enum","hsn · sac","Admission and activities are services, so SAC."],
             ["Description|description","string","Prints on the tax invoice."],
-            ["Tax rates|tax_rate_ids[]","fk[]","→ Tax rates. Every rate component that applies to items under this code — CGST + SGST for a local sale, IGST for one outside the state. Place of supply resolves which fire."]]},
+            ["Tax rates|tax_rate_ids[]","fk[]","→ Tax rates. Every rate component that applies to items under this code — CGST + SGST for a local sale, IGST for one outside the state. Place of supply resolves which fire."],
+            ["Active|is_active","bool","Turn it off to retire this code from new products. A code that's currently in use can't be turned off."]]},
   shopcats:{g:0,n:"Shop categories",owner:"Sawood · Shop ops",perm:"shop.manage",src:"Scope §5",q:1,
     d:"The merchandise departments a shop product belongs to — Books, Toys, Apparel and so on. Each carries a short code used to auto-generate the Product ID (e.g. Books → BK-00001).",
     view:"shopcats",
     schema:[["Category name|name","string","The department shown on the product, e.g. Books."],
-            ["Code|code","string","2-letter prefix for the auto-generated Product ID, e.g. BK."]]},
+            ["Code|code","string","2-letter prefix for the auto-generated Product ID, e.g. BK."],
+            ["Active|is_active","bool","Turn it off to retire this category from new products. A category that's currently in use can't be turned off."]]},
 
   products:{g:1,n:"Products & add-ons",owner:OWN_RETAIL,perm:"master.product.manage",src:"Scope §1.4 · §1.5",q:1,
     d:"Everything sellable, in one table. Type says whether it can be sold on its own. A product carries its own time slots, its own add-on list, its own capacity, its own tax and its own prices.",
@@ -1128,7 +1131,7 @@ const M = {
             ["Format|format","enum","single session · multi-day batches","Whether programs in this category run as one session or a multi-day batch. This is what decides the booking shape — single is an event, multi-day is a camp."],
             ["Description|note","string","A short line describing the category."],
             ["Position in the list|sort_order","int","Order it appears in the dropdown."],
-            ["Offered|is_active","bool","Retiring a category leaves it on programs that already use it."]]},
+            ["Active|is_active","bool","Turn it off to retire this category from new programs. A category that's currently in use can't be turned off."]]},
   programs:{g:1,n:"Programs",owner:"Hitarth · Workshops & Events",perm:"master.program.manage",src:"Scope §2",q:0,
     d:"Events, activities, camps and workshops in one place. The category decides the shape — a single session, or a multi-day run sold by the batch.",
     view:"programs"},
@@ -1166,8 +1169,6 @@ const M = {
     schema:[["What it is|name","string","What it is, so the next person knows what they are looking at."],
             ["Where it goes on the page|placement","enum","head · body open · body close","Where the tag is injected. Each provider states which it needs."],
             ["The code from the provider|script","richtext","Pasted from the provider. Stored as-is, injected as-is."],
-            ["Which pages it runs on|pages","enum","every page · booking pages only · confirmation only","Conversion tags belong on the confirmation page alone, or every visit counts as a purchase."],
-            ["Where it runs|environments[]","enum[]","uat · production","Keeps test traffic out of live analytics."],
             ["Switched on|is_active","bool","Turning one off removes the tag on the next page load."]]},
   sources:{g:4,n:"Referral sources",owner:OWN_RETAIL,perm:"master.crm.manage",src:"Scope §1.7",q:0,
     d:"The options behind the optional “How did you hear about us?” question.",
@@ -1724,7 +1725,7 @@ const SCHEMAS = {
     ["Must be booked with|requires_category_id","fk","→ Visitor categories. Another category that must also be on the booking — a Child 3–11 cannot be booked without an Adult."],
     ["How many of those|requires_min","int","How many of that category. Default 1."],
     ["Position in the list|sort_order","int","Order on the booking page."],
-    ["Available to book|is_active","bool",""]],
+    ["Active|is_active","bool","Turn it off to retire this category. A category that's currently in use (priced on a product) can't be turned off."]],
 
   pools:[
     ["Short code|code","string","BUILDING, MG, LCOP, VROOM"],["Name|name","string",""],
@@ -1732,7 +1733,7 @@ const SCHEMAS = {
     ["How the places are counted|capacity_basis","enum","concurrent · per slot · per day","BUILDING counts heads inside at any moment; MG counts per slot; the Full Day cap counts per day."],
     ["Also uses places from|parent_pool_id","fk","→ Inventory pools. A sale cascades up the chain, which is why a product names only one pool. Mini Golf points at MG, MG points at BUILDING, and one golf sale takes a place in both."],
     ["Which bookings draw on it|included_functions[]","enum[]","museum tours · birthday parties · school visits","§4 names these three. Rentals, events and workshops are excluded. Activities are named in neither — which is the same decision as whether MG's parent is BUILDING."],
-    ["In use|is_active","bool",""]],
+    ["Active|is_active","bool","Turn it off to retire this pool. A pool that's currently in use (named by a live product) can't be turned off."]],
   slot:[
     ["Name for this pattern|name","string","e.g. Summer weekday morning."],
     ["Runs between these dates|valid_from / valid_to","date","Both required. Without an end date a seasonal pattern never expires and next season's hours land on top of it."],
@@ -1786,7 +1787,7 @@ const SCHEMAS = {
     ["Created by|prepared_by","string","Set from the account that created it. Read-only."],
     ["Approved by|approved_by","string","Set when a second person with the approval permission signs it off. A discount cannot go live unaccepted."],
     ["Status|status","enum","Draft · Pending approval","New discounts start as Draft or Pending approval — approve from the discount's detail page. Only Approved discounts apply."],
-    ["Live|is_active","bool","Only settable once the status is approved."]]
+    ["Active|is_active","bool","A discount can be Active while its status is still Pending approval. It only applies once both are true — Active and Approved."]]
 };
 
 /* ---- field guide: what each field does, an example, and where it bites ---- */
@@ -1910,7 +1911,7 @@ discounts:[["Discounts & offers",[
  ["Created by|prepared_by","Set from the account that created it.","Set to Hasmukh when he creates the offer.","Read-only, and it is the name that answers “who wrote this” when finance asks in six months."],
  ["Approved by|approved_by","Set when a second person signs it off.","Suryanarayan signs it off before it can go live.","The system refuses the same account in both fields. Whoever wrote it cannot be the one who approves it."],
  ["Status|status","Draft, pending approval, approved or withdrawn.","§5 requires written management approval for shop discounts; the same applies here.","An unapproved discount cannot be switched on however complete it looks."],
- ["Live|is_active","Whether it is live.","Ending a campaign early without deleting the record.","Switching it off stops new applications. It does not reverse discounts already given on past bookings."]]]],
+ ["Active|is_active","Whether it is live.","Ending a campaign early without deleting the record.","Switching it off stops new applications. It does not reverse discounts already given on past bookings."]]]],
 
 affiliates:[["Affiliate links",[
  ["Partner name|name","The influencer or partner.","“Mumbai Kids Guide”.","It appears in the UTM report, so keep it consistent with however marketing labels the campaign elsewhere."],
@@ -2665,6 +2666,7 @@ function discDetailBody(d){
 /* ---------------- render ---------------- */
 const $ = s => document.querySelector(s);
 let addOpen = null;   // which inline add-form is open: "slot"|"batch"|"day"|"addon"|"rate"|"block"|null
+let editSlot = -1;    // index of the time slot being edited in the slot flyout (-1 = adding a new one)
 let current = "dashboard", selP = 0, tab = "list", sub = "details", pType = "product",
     selW = 0, selB = 0, selE = 0, esub = "details", eventCats = new Set(), selBooking = 0, bookingProduct = 0, bookingSlot = "", bookingDiscountCode = "", csub = "details", copyFrom = 0, copyTo = new Set(), copyWhat = new Set(["price","seats"]), editD = -1,
     progKind = "event", progCat = "Event", prodBuildingPool = false,
@@ -2757,23 +2759,27 @@ function addRowOpen(label,kind){ return `<tr><td colspan="9"><button class="rep-
 function addRowNew(label){ return `<tr><td colspan="9"><button class="rep-add" data-tab="new" style="border-radius:4px">+ ${label}</button></td></tr>`; }
 function slotFormCard(a){
   const DAYS=["Mon","Tue","Wed","Thu","Fri","Sat","Sun"];
+  const s=editSlot>=0?a.slots[editSlot]:null;   // editing an existing slot vs adding a new one
+  const dv=v=>(v!=null&&v!=="—")?escAttr(v):"";
+  const onDays=s?String(s.days||"").split(",").map(d=>d.trim()):[];
   const lab=(t,hint)=>`<div class="lab"><span style="font-size:12px;font-weight:600">${t}</span>${tip(hint)}</div>`;
   const fld=(label,inner,hint,wide)=>`<div class="fld${wide?" wide":""}">${lab(label,hint)}${inner}</div>`;
   return `<div class="drawer-layer" id="slotFormCard">
     <button class="drawer-backdrop" data-addcancel="1" aria-label="Close time slot form"></button>
     <aside class="drawer-panel" role="dialog" aria-modal="true" aria-labelledby="slotFormTitle">
-    <div class="card-head"><span class="card-title" id="slotFormTitle">New time slot</span>
+    <div class="card-head"><span class="card-title" id="slotFormTitle">${s?"Edit time slot":"New time slot"}</span>
       <button class="drawer-close" data-addcancel="1" aria-label="Close">&times;</button></div>
     <div class="form-body">
-      ${fld("Slot name",`<input class="inp" id="slotName" placeholder="e.g. Winter weekday morning">`,"",true)}
-      ${fld("From date",`<input class="inp mono" id="slotFrom" placeholder="01 Apr 2026">`)}
-      ${fld("To date",`<input class="inp mono" id="slotTo" placeholder="31 Mar 2027">`)}
-      ${fld("Days it runs",`<div class="chips" id="slotDays">${DAYS.map(d=>`<button class="chip-add chip-opt" data-day="${d}" data-on="0">${d}</button>`).join("")}</div>`,"Tap each day this slot is open.",true)}
-      ${fld("Start time",`<input class="inp mono" id="slotT1" placeholder="HH:MM">`)}
-      ${fld("End time",`<input class="inp mono" id="slotT2" placeholder="HH:MM">`)}
-      ${fld("Reserved capacity",`<input class="inp mono" id="slotHold" placeholder="0">`,"Places held back from sale whenever this time slot runs. Leave 0 for none.")}
+      ${fld("Slot name",`<input class="inp" id="slotName" value="${s?dv(s.n):""}" placeholder="e.g. Winter weekday morning">`,"",true)}
+      ${fld("From date",`<input class="inp mono" id="slotFrom" value="${s?dv(s.from):""}" placeholder="01 Apr 2026">`)}
+      ${fld("To date",`<input class="inp mono" id="slotTo" value="${s?dv(s.to):""}" placeholder="31 Mar 2027">`)}
+      ${fld("Days it runs",`<div class="chips" id="slotDays">${DAYS.map(d=>`<button class="chip-add chip-opt" data-day="${d}" data-on="${onDays.includes(d)?1:0}">${d}</button>`).join("")}</div>`,"Tap each day this slot is open.",true)}
+      ${fld("Start time",`<input class="inp mono" id="slotT1" value="${s?dv(s.t1):""}" placeholder="HH:MM">`)}
+      ${fld("End time",`<input class="inp mono" id="slotT2" value="${s?dv(s.t2):""}" placeholder="HH:MM">`)}
+      ${fld("Reserved capacity",`<input class="inp mono" id="slotHold" value="${s?escAttr(s.hold||0):""}" placeholder="0">`,"Places held back from sale whenever this time slot runs. Leave 0 for none.")}
+      ${fld("Active",`<button type="button" class="sw" id="slotLive" data-on="${s&&s.is_active===false?0:1}"><i></i><span>${s&&s.is_active===false?"Off":"On"}</span></button>`,"Turn it off to stop selling this slot. A slot that's currently in use (has bookings) can't be turned off.")}
     </div>
-    ${afFoot("","Add slot")}
+    ${afFoot("",s?"Save slot":"Add slot")}
     </aside>
   </div>`;
 }
@@ -2809,6 +2815,7 @@ function batchFormCard(w){
       ${afFld("To date",`<input class="inp mono" id="af_bto" placeholder="05 Sep 2026">`)}
       ${afFld("Capacity",`<input class="inp mono" id="af_bcap" placeholder="${w.cap}">`,"Each batch owns its own.")}
       ${afFld("Price",`<input class="inp mono" id="af_bprice" placeholder="12999">`)}
+      ${afFld("Active",`<button type="button" class="sw" data-on="1"><i></i><span>On</span></button>`,"Turn it off to close the batch to new bookings. A batch that's currently in use (has attendees) can't be turned off.")}
     </div>${afFoot("Dates and days make a batch — its sessions are added next.","Add batch")}`);
 }
 function dayFormCard(b){
@@ -2818,6 +2825,7 @@ function dayFormCard(b){
       ${afFld("Start time",`<input class="inp mono" id="af_dt1" placeholder="10:00">`)}
       ${afFld("End time",`<input class="inp mono" id="af_dt2" placeholder="13:00">`)}
       ${afFld("Note for this day",`<input class="inp" id="af_dnote" placeholder="e.g. Showcase day">`,"Goes out on that day's reminder only.",true)}
+      ${afFld("Active",`<button type="button" class="sw" data-on="1"><i></i><span>On</span></button>`,"Turn it off to drop this session. A day that's currently in use (has attendees) can't be turned off.")}
     </div>${afFoot("","Add day")}`);
 }
 function addonFormCard(a){
@@ -2885,13 +2893,14 @@ const SUB = {
       <div class="card-head card-head-tint"><span class="card-title">Time slots</span>
         <span class="card-note">${a.slots.length} slot${a.slots.length===1?"":"s"}</span></div>
       <div class="matrix-wrap"><table><thead><tr>
-        <th>Slot</th><th>From date</th><th>To date</th><th>Days</th><th>From time</th><th>To time</th><th>Reserved capacity</th></tr></thead>
-      <tbody>${a.slots.map(x=>`<tr>
+        <th>Slot</th><th>From date</th><th>To date</th><th>Days</th><th>From time</th><th>To time</th><th>Reserved capacity</th><th></th></tr></thead>
+      <tbody>${a.slots.map((x,i)=>`<tr>
         <td><b style="font-weight:500">${x.n}</b></td>
         <td class="code">${rq(x.from)}</td><td class="code">${rq(x.to)}</td><td>${nq(x.days)}</td>
         <td class="code">${nq(x.t1)}</td><td class="code">${nq(x.t2)}</td>
-        <td class="code">${x.hold?`<b>${x.hold}</b>`:'<span class="muted">0</span>'}</td></tr>`).join("")}
-        <tr><td colspan="7"><button class="rep-add" data-addopen="slot" style="border-radius:4px">+ Add slot</button></td></tr></tbody></table></div>
+        <td class="code">${x.hold?`<b>${x.hold}</b>`:'<span class="muted">0</span>'}</td>
+        <td style="text-align:right"><button class="btn" data-edit-slot="${i}">Edit</button></td></tr>`).join("")}
+        <tr><td colspan="8"><button class="rep-add" data-addopen="slot" style="border-radius:4px">+ Add slot</button></td></tr></tbody></table></div>
     </div>
     ${addOpen==="slot"?slotFormCard(a):""}
     <div class="note note-scope"><span class="note-mark">Settled</span><div>
@@ -3773,6 +3782,7 @@ function productForm(editing=false){
         ${section("Tax",finance)}
         ${section("Inventory",[inventory])}
         ${section("Listing content",listing)}
+        ${section("Status",[field(["Active|is_active","bool","Turn it off to take this off sale. A product that's currently in use (has bookings or slots on sale) can't be turned off."],{is_active:true})])}
       </div>
       <div class="form-foot"><button class="btn" data-tab="list">Cancel</button><button class="btn btn-primary">${editing?"Save changes":"Create"}</button></div>
     </div>
@@ -3796,7 +3806,7 @@ function createForm(schema,label,footNote,values={},editing=false){
     // group by field name so sections are stable regardless of schema order
     const byName=names=>names.map(n=>schema.find(f=>(f[0].split("|")[1]||f[0])===n)).filter(Boolean);
     const secs = label==="program" ? [
-      ["Basic information",["code","title","category_id","min_age","status"]],
+      ["Basic information",["code","title","category_id","min_age","status","is_active"]],
       ["Booking rules",["visitor_categories[]","cutoff_days / cutoff_hours"]],
       ["Tax",["tax_rate_ids[]","hsn_sac_id"]],
       ["Listing content",["location_text","seo_title","subtitle","description","media[]","seo_description","seo_keywords","url_handle","unaccompanied_allowed"]]
@@ -3814,7 +3824,7 @@ function createForm(schema,label,footNote,values={},editing=false){
     headings=secs.map(s=>s[0]); groups=secs.map(s=>byName(s[1]));
   } else if(current==="hsn"){   // HSN / SAC code — field-based sections, not catalogue chunks
     const byName=names=>names.map(n=>schema.find(f=>(f[0].split("|")[1]||f[0])===n)).filter(Boolean);
-    const secs=[["Basics",["code","kind","description"]],["Tax",["tax_rate_ids[]"]]];
+    const secs=[["Basics",["code","kind","description"]],["Tax",["tax_rate_ids[]"]],["Status",["is_active"]]];
     headings=secs.map(s=>s[0]); groups=secs.map(s=>byName(s[1]));
   } else if(label==="tax rate"){   // Tax rate — group by field so sections aren't catalogue chunks
     const byName=names=>names.map(n=>schema.find(f=>(f[0].split("|")[1]||f[0])===n)).filter(Boolean);
@@ -5014,9 +5024,17 @@ function addSubmit(){
     const e=EVENTS[selE], next={}; CATS.forEach((cat,i)=>{const v=g("efp_"+i); if(v!=="") next[cat.name]=+v||0;}); e.price=next;
   } else if(addOpen==="slot"){
     const days=[...document.querySelectorAll("#slotDays .chip-opt")].filter(c=>c.dataset.on==="1").map(c=>c.dataset.day);
-    a.slots.push({ n:g("slotName")||"New slot", from:g("slotFrom")||"—", to:g("slotTo")||"—",
-      days:days.join(", ")||"—", t1:g("slotT1")||"—", t2:g("slotT2")||"—",
-      pool:g("slotPool"), hold:+g("slotHold")||0, price:{} });
+    const slotLive=(document.getElementById("slotLive")||{}).dataset ? document.getElementById("slotLive").dataset.on!=="0" : true;
+    if(editSlot>=0 && a.slots[editSlot]){   // update the existing slot, preserving fields not on the form (pool, cap, sold, price)
+      const s=a.slots[editSlot];
+      s.n=g("slotName")||s.n; s.from=g("slotFrom")||"—"; s.to=g("slotTo")||"—";
+      s.days=days.join(", ")||"—"; s.t1=g("slotT1")||"—"; s.t2=g("slotT2")||"—"; s.hold=+g("slotHold")||0; s.is_active=slotLive;
+    } else {
+      a.slots.push({ n:g("slotName")||"New slot", from:g("slotFrom")||"—", to:g("slotTo")||"—",
+        days:days.join(", ")||"—", t1:g("slotT1")||"—", t2:g("slotT2")||"—",
+        pool:g("slotPool"), hold:+g("slotHold")||0, is_active:slotLive, price:{} });
+    }
+    editSlot=-1;
   } else if(addOpen==="batch"){
     const bfrom=g("af_bfrom")||"—", bto=g("af_bto")||"—";
     const def=(w.batches[0]&&w.batches[0].days&&w.batches[0].days[0])||{};
@@ -5388,11 +5406,13 @@ document.addEventListener("click",e=>{
     selShopSale=0; tab="detail"; render(); $(".stage").scrollTop=0; return;
   }
   // ---- inline add forms (open / cancel / submit) ----
+  const eslot=e.target.closest("[data-edit-slot]");
+  if(eslot){ editSlot=+eslot.dataset.editSlot; addOpen="slot"; render(); $(".stage").scrollTop=0; return; }
   const ao=e.target.closest("[data-addopen]");
-  if(ao){ addOpen=ao.dataset.addopen; render(); $(".stage").scrollTop=0; return; }
+  if(ao){ if(ao.dataset.addopen==="slot") editSlot=-1; addOpen=ao.dataset.addopen; render(); $(".stage").scrollTop=0; return; }
   const econds=e.target.closest("[data-editconds]");
   if(econds){ syncDiscountForm(); condDraft=condDraftFromDiscount(curDiscount()); condItemsOpen=false; addOpen="cond"; render(); $(".stage").scrollTop=0; return; }
-  if(e.target.closest("[data-addcancel]")){ addOpen=null; editCond=-1; condDraft=null; render(); return; }
+  if(e.target.closest("[data-addcancel]")){ addOpen=null; editCond=-1; condDraft=null; editSlot=-1; render(); return; }
   if(e.target.closest("[data-addsubmit]")){ addSubmit(); return; }
   const repAdd=e.target.closest(".rep-add");
   if(repAdd && !repAdd.dataset.addopen && !repAdd.dataset.tab && !repAdd.dataset.addcond && repAdd.closest(".rep")){
