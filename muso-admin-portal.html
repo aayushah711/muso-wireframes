@@ -2969,7 +2969,7 @@ let editSlot = -1;    // index of the time slot being edited in the slot flyout 
 let editBlock = -1;   // index of the quota block being edited in the block flyout (-1 = adding a new one)
 // Careers: which opening the apply form is open for (-1 = closed), the composed
 // email shown after a successful send, and whether submit has been attempted.
-let carsub = "openings", selCareer = "";
+let carsub = "openings", selCareer = "", carDsub = "details";
 let appFRole = "", appFStatus = "", appQ = "", careerQ = "";
 let qryQ = "";
 let qryExpanded = new Set();
@@ -5804,12 +5804,8 @@ function careerDetail(){
   const left=n==null?"no date set":n<0?"closed "+Math.abs(n)+" days ago":n===0?"closes today":n+" days left";
   const apps=appsForRole(r.id);
 
-  return `<div class="detailhead"><h2 class="detailname">${escHtml(r.title)}</h2>
-    <span class="code">${r.id}</span>
-    ${rolePill(r)}
-</div>
-
-  <div class="card"><div class="card-head"><span class="card-title">The opening</span></div>
+  // ---- Details tab (left-column cards; the Actions box is rendered beside every tab) ----
+  const detailsBody=`<div class="card"><div class="card-head"><span class="card-title">The opening</span></div>
       <div class="matrix-wrap"><table class="reclist"><tbody>
         ${row("Role ID",`<span class="code">${r.id}</span>`)}
         ${row("Position",escHtml(r.title))}
@@ -5834,13 +5830,22 @@ function careerDetail(){
           ? `<button class="app-file" data-career-jd="${r.id}" style="max-width:100%">${escHtml(r.jd.name)}</button>
              <span class="career-hint" style="display:inline;margin-left:6px">the JD the careers page serves${r.jd.size?" · "+humanSize(r.jd.size):""}</span>`
           : `<span class="career-hint">No JD uploaded. The careers page lists this role without one until a file is added on the role form.</span>`}</div>
-      </div></div>
+      </div></div>`;
 
-  <div class="card"><div class="card-head"><span class="card-title">Applications</span>
+  // ---- Applications tab ----
+  const appsBody=`<div class="card"><div class="card-head"><span class="card-title">Applications</span>
       <span class="card-note">${apps.length} received</span></div>
       ${apps.length?appTable(sortRows(apps,APP_SORT,appSort),"roleAppTable",false)
       :`<div class="card-body muted" style="font-size:12.5px">Nothing has come in against this role yet.</div>`}
   </div>`;
+
+  // ---- tabbed: Details | Applications — full-width content ----
+  const subs=[["details","Details"],["applications",`Applications · ${apps.length}`]];
+  if(!subs.some(([k])=>k===carDsub)) carDsub="details";
+  const tabs=`<div class="subs">${subs.map(([k,l])=>`<button class="sub-tab" data-cardsub="${k}" aria-selected="${carDsub===k}">${l}</button>`).join("")}</div>`;
+
+  return `<div class="detailhead"><h2 class="detailname">${escHtml(r.title)}</h2><span class="code">${r.id}</span>${rolePill(r)}</div>
+  ${tabs}<div class="sub-body">${carDsub==="applications"?appsBody:detailsBody}</div>`;
 }
 
 /* Fields the panel writes itself. What a new record shows is what will be saved. */
@@ -5957,7 +5962,7 @@ function appTable(list, id, open=false){
     ${sortTh("Application","id",appSort)}${sortTh("Applicant","name",appSort)}
     ${sortTh("Phone","phone",appSort)}${sortTh("Applied for","role",appSort)}
     ${sortTh("Received","on",appSort)}${sortTh("CV","cv",appSort)}
-    ${sortTh("Notes","note",appSort)}${sortTh("Status","status",appSort)}</tr></thead>
+    ${sortTh("Notes","note",appSort)}</tr></thead>
   <tbody>${list.length?list.map(a=>{
     const role=roleById(a.role);
     const hay=`${a.id} ${a.name} ${a.email} ${a.phone} ${role?role.title:""}`.toLowerCase();
@@ -5971,14 +5976,10 @@ function appTable(list, id, open=false){
     <td class="code" style="white-space:nowrap">${a.on}</td>
     <td>${a.cv?`<button class="app-file" data-app-cv="${a.id}" title="Open ${escAttr(a.cv.name)}">${escHtml(a.cv.name)}</button>
       <div class="career-left">${humanSize(a.cv.size)}</div>`:'<span class="muted">—</span>'}</td>
-    <td class="app-note">${a.note?escHtml(a.note):'<span class="muted">—</span>'}</td>
-    <td><div class="selwrap app-status">
-      <select class="inp" data-app-status="${a.id}" aria-label="Status for ${escAttr(a.name)}">
-        ${APP_STATUSES.map(st=>`<option${a.status===st?" selected":""}>${st}</option>`).join("")}
-      </select></div></td></tr>`;}).join("")
-    :`<tr><td colspan="8" class="muted" style="padding:26px 14px;text-align:center;font-size:12.5px">
+    <td class="app-note">${a.note?escHtml(a.note):'<span class="muted">—</span>'}</td></tr>`;}).join("")
+    :`<tr><td colspan="7" class="muted" style="padding:26px 14px;text-align:center;font-size:12.5px">
         No application matches those filters.</td></tr>`}
-    <tr data-app-empty style="display:none"><td colspan="8" class="muted"
+    <tr data-app-empty style="display:none"><td colspan="7" class="muted"
       style="text-align:center;padding:18px;font-size:12.5px">No application matches that search.</td></tr>
   </tbody></table></div>`;
 }
@@ -6427,6 +6428,8 @@ document.addEventListener("click",e=>{
   }
   const carTab=e.target.closest("[data-carsub]");
   if(carTab){ carsub=carTab.dataset.carsub; render(); $(".stage").scrollTop=0; return; }
+  const carDTab=e.target.closest("[data-cardsub]");
+  if(carDTab){ carDsub=carDTab.dataset.cardsub; render(); return; }
   const dEdit=e.target.closest("[data-dept-edit]");
   if(dEdit){ deptEditing=dEdit.dataset.deptEdit; deptDeleting=""; render(); return; }
   if(e.target.closest("[data-dept-cancel]")){ deptEditing=""; render(); return; }
@@ -6457,7 +6460,7 @@ document.addEventListener("click",e=>{
   const cJd=e.target.closest("[data-career-jd]");
   if(cJd){ careerOpenJd(cJd.dataset.careerJd); return; }
   const cOpen=e.target.closest("[data-career-open]");
-  if(cOpen){ selCareer=cOpen.dataset.careerOpen; tab="detail"; render(); $(".stage").scrollTop=0; return; }
+  if(cOpen){ selCareer=cOpen.dataset.careerOpen; carDsub="details"; tab="detail"; render(); $(".stage").scrollTop=0; return; }
   const cEdit=e.target.closest("[data-career-edit]");
   if(cEdit){ selCareer=cEdit.dataset.careerEdit; tab="edit"; render(); $(".stage").scrollTop=0; return; }
   if(e.target.closest("[data-career-back]")){ tab="detail"; render(); $(".stage").scrollTop=0; return; }
