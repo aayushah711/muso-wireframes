@@ -1076,7 +1076,6 @@ const CAMP_SCHEMA = [
  ["Category|category_id","enum","Event · Activity · Workshop · Summer Camp · Inspire Camp","Chosen from the Program categories master. It is a label — the configuration is the same whether it is an event or a camp; an event is simply a program with one batch."],
  ["Minimum age|min_age","string","Free text shown on the listing, e.g. “9 years and over”. Guidance to the parent, for display only."],
  ["Where it runs|location_text","string","Printed on the confirmation. §2's example is Museum of Solutions, Lower Parel."],
- ["Default capacity|capacity","int","The number a new batch starts with. §2 gives 9. Each batch then owns its own, so changing this does not move batches already created."],
  ["Bookings close this long before it starts|cutoff_days / cutoff_hours","int","Days then hours, counted back from the start of <b>each batch</b> rather than the workshop. §2 asks for two days, which is 2 and 0."],
  ["Tax rates that can apply|tax_rate_ids[]","fk[]","→ Tax rates"],
  ["Invoice code|hsn_sac_id","fk","→ HSN / SAC codes"],
@@ -1090,7 +1089,7 @@ const BATCH_SCHEMA = [
  ["Days it runs|days_of_week[]","enum[]","Mon · Tue · Wed · Thu · Fri · Sat · Sun","§2 also allows “every x days” between the two dates, for a weekly workshop."],
  ["Default time|default_start / default_end","time","10:00 to 13:00, applied to every generated day. Individual days can then be changed."],
  ["Capacity|capacity","int","Every batch carries its own. Batch 3 runs at 12 while the others run at 9, and the Pricing tab can copy one batch's number onto others."],
- ["Available to book|is_active","bool","Closing a batch leaves the others open."]
+ ["Active|is_active","bool","Closing a batch leaves the others open."]
 ];
 
 const BATCHDAY_SCHEMA = [
@@ -1106,7 +1105,6 @@ const EVENT_SCHEMA = [
  ["Minimum age|min_age","string","Free text shown on the listing, e.g. “7 years and over”. Guidance to the parent, for display only."],
  ["Date|date","date","One date. An event that repeats is two events, or a workshop with two batches."],
  ["Start time|start_time","time","One start time. An event is a single day and a single session."],
- ["Capacity|capacity","int","This event alone. Nothing else shares it."],
  ["Visitor categories|visitor_categories[]","fk[]","→ Visitor categories. Unlike a workshop, an event is priced per category — an adult attending pays an adult price."],
  ["Booking cutoff|cutoff_days / cutoff_hours","int","Days then hours before the event begins. One date means one cut-off, with none of the per-batch complication a camp has."],
  ["Tax rates|tax_rate_ids[]","fk[]","→ Tax rates"],
@@ -1140,7 +1138,7 @@ const FAQ_CAMPS = [["The workshop",[
  ["Days it runs|days_of_week[]","Which days between those dates.","Tue to Sat.","§2 also allows “every x days”, for a workshop that meets weekly over two months rather than daily over one week."],
  ["Default time|default_start / default_end","The time applied to every generated day.","10:00 to 13:00.","This is only the starting point. Individual days can differ, which is a change from §2 — the scope says one time for all the days."],
  ["Seats in this batch|capacity","How many this batch takes.","Batch 1 and 2 take nine; Batch 3 takes twelve.","Reducing it below what is already sold cancels nobody — the batch shows full and everyone who booked keeps their place. Copying seats from another batch does the same."],
- ["Available to book|is_active","Whether this batch is on sale.","Closing Batch 1 once it has started.","The other batches stay open. A closed batch keeps its attendee list."]]],
+ ["Active|is_active","Whether this batch is on sale.","Closing Batch 1 once it has started.","The other batches stay open. A closed batch keeps its attendee list."]]],
 
  ["Each day in a batch",[
  ["Date|date","One row per day the batch meets.","Tue 14 July.","Generated from the batch's dates and days, then editable. Deleting a day does not refund anyone — the batch was sold as a whole."],
@@ -1254,10 +1252,10 @@ const M = {
     schema:[["What it is|name","string","What it is, so the next person knows what they are looking at."],
             ["Where it goes on the page|placement","enum","head · body open · body close","Where the tag is injected. Each provider states which it needs."],
             ["The code from the provider|script","richtext","Pasted from the provider. Stored as-is, injected as-is."],
-            ["Switched on|is_active","bool","Turning one off removes the tag on the next page load."]]},
+            ["Active|is_active","bool","Turning one off removes the tag on the next page load."]]},
   sources:{g:4,n:"Referral sources",owner:OWN_RETAIL,perm:"master.crm.manage",src:"Scope §1.7",q:0,
     d:"The options behind the optional “How did you hear about us?” question.",
-    schema:[["Option shown|label","string","Shown in the dropdown."],["Offered|is_active","bool",""],["Position in the list|sort_order","int",""]]},
+    schema:[["Option shown|label","string","Shown in the dropdown."],["Active|is_active","bool",""],["Position in the list|sort_order","int",""]]},
   bookings:{g:2,n:"Orders",owner:"Visitor Experience",perm:"order.manage",q:0,view:"bookings"},
   tiers:{g:5,n:"Membership tiers",owner:"Hasmukh · Sales & Marketing",perm:"membership.manage",src:"Scope §10",q:1,
     d:"The membership plans on sale — Silver, Gold, Platinum and any others. Each sets its visit count (limited or unlimited), validity, price and the discounts a member earns.",view:"tiers"},
@@ -1276,7 +1274,7 @@ const M = {
             ["Position|title","string","The position as it appears on the careers page."],
             ["Department|dept","dept","","Which team the role sits in — from the Departments master. The careers page filters on this."],
             ["Employment type|type","enum","Full-time · Part-time · Internship · Volunteer","The careers page filters on this too."],
-            ["Listing|active","bool","On puts the role on the careers page once its dates open. Off takes it down without deleting it."],
+            ["Active|active","bool","On puts the role on the careers page once its dates open. Off takes it down without deleting it."],
             ["Location|loc","string","Where the role is based."],
             ["Experience|exp","string","A range, e.g. 2–4 years — or “None required” for volunteering."],
             ["Applications open between|posted / closes","date","From the day the opening goes live on the careers page to the day it stops taking applications."],
@@ -1706,6 +1704,10 @@ const P = [
            {n:"Vroom",bind:"within",src:"Your example"}],
    cats:["Adult","Child 12–17","Child 3–11","Baby"],
    pool:"BUILDING",
+   blocks:[
+     {from:"15 Aug 2026",to:"15 Aug 2026",slot:"Five-hour afternoon",pool:"BUILDING",qty:20,reason:"School Booking",status:"Active"},
+     {from:"22 Aug 2026",to:"22 Aug 2026",slot:"Three-hour morning",pool:"BUILDING",qty:12,reason:"Birthday Booking",status:"Active"},
+     {from:"05 Sep 2026",to:"06 Sep 2026",slot:"Full day",pool:"BUILDING",qty:8,reason:"Private group",status:"Active"}],
    tax:["CGST-9","SGST-9","IGST-18"], sac:"999692",
    det:{"Type":"Product — the thing an add-on attaches to",
         "Named in":"Scope §4 — “Muso tickets”",
@@ -2038,7 +2040,7 @@ const SCHEMAS = {
     ["Start and end time|start_time / end_time","time","A slot ending 13:00 and one starting 13:00 must not count as overlapping."],
     
     ["Places held back every day|standing_hold","int","Heads withheld from this slot every day it runs — the per-slot version of §4's overlap buffer. Set it on slots that share the building with others at their busiest moment; leave it at zero elsewhere."],
-    ["Available to book|is_active","bool",""]],
+    ["Active|is_active","bool",""]],
   addon:[
     ["Which extra|addon_product_id","fk","→ Products & add-ons. What is offered alongside this product."],
     ["Must it fit inside the main booking's time|slot_binding","enum","must fall inside this product's slot · free choice on the same day","An add-on booked with a ticket either shares the main slot's time range, or is a free choice among its own slots on the same day. Set per attachment."],
@@ -2050,7 +2052,7 @@ const SCHEMAS = {
     ["Which time|slot_id","fk","→ Time slots on this product."],
     ["Which places|pool_id","fk","→ Inventory pools. Which pool the heads come out of."],
     ["How many to hold back|blocked_quantity","int","Refused if it exceeds what is still available. A block reserves what is left; it cannot create an oversell on paper."],
-    ["Why|reason","enum","maintenance · staff allocation · private group · safety · other","Required. A block means those places cannot be sold, so the reason is the record of why."],
+    ["Why|reason","enum","maintenance · staff allocation · private group · school booking · birthday booking · safety · other","Required. A block means those places cannot be sold, so the reason is the record of why."],
     ["Extra notes|notes","string",""],
     ["Currently held back|is_active","bool","Blocks do not expire on their own. Someone turns it off when the reason ends, and that is audited."]],
   price:[
@@ -2095,7 +2097,7 @@ agefilters:[["Age filters",[
  ["Label shown to visitors|label","The wording on the filter chip and the listing.","“Children 9+ Yrs”, which is §2's own phrasing.","It is display only — nothing is read from the number. The ticket types are ticked separately, so a label saying 9+ and ticks allowing a three-year-old will not contradict each other, they will simply both be true."],
  ["Ticket types it can be sold to|visitor_categories[]","The exact ticket types a listing on this band can offer.","“Children 9+ Yrs” ticks Child 3–11 and Child 12–17, and nothing else — so no adult or baby ticket appears on a 9+ workshop.","This says what can be <i>sold</i>, not whether an adult must come. That is a setting on each listing, so two listings on this band can differ. A band with no Adult and a listing demanding one is a pair the master refuses."],
  ["Position in the list|sort_order","Order of the filter chips.","Youngest band first.","None mechanically — but a jumbled order makes a parent scan the whole row."],
- ["Offered|is_active","Whether the filter appears.","Retiring a band nobody uses.","Listings already pointing at it keep the reference, so they simply stop being filterable rather than breaking."]]]],
+ ["Active|is_active","Whether the filter appears.","Retiring a band nobody uses.","Listings already pointing at it keep the reference, so they simply stop being filterable rather than breaking."]]]],
 categories:[["Visitor categories",[
  ["Short code|code","The short identifier used in reports and on the API.","CH0311 for Child 3–11.","Treat it as immutable once a booking exists against it. Changing it later orphans historic reports."],
  ["Name visitors see|name","What the visitor reads on the booking page.","“Child 3–11”.","The age range belongs in the name, because the buyer picks their own category. Rename it to just “Child” and nobody knows which band they are in."],
@@ -2103,7 +2105,7 @@ categories:[["Visitor categories",[
  ["Must be booked with|requires_category_id","Another category that must also be on the same booking.","Child 3–11 requires Adult.","Two children and no adult is refused. Two children and one adult is fine — and so is twenty children and one adult, because this is a presence test, not a ratio."],
  ["How many of those|requires_min","How many of that category are needed.","1.","Raising it to 2 means a single parent cannot book at all. If what you want is one adult per so many children, this field is the wrong tool."],
  ["Position in the list|sort_order","Position in the list on the booking page.","Adult first, Baby last.","None."],
- ["Available to book|is_active","Whether it can be sold.","Retiring a band mid-year.","Switching it off does not touch past bookings or existing price rows — those stay, so reports still reconcile."]]]],
+ ["Active|is_active","Whether it can be sold.","Retiring a band mid-year.","Switching it off does not touch past bookings or existing price rows — those stay, so reports still reconcile."]]]],
 
 pools:[["Inventory pools",[
  ["Short code|code","Short identifier referenced by products, slots and blocks.","BUILDING, MG, LCOP.","Immutable once anything points at it."],
@@ -2144,7 +2146,7 @@ products:[
  ["Tax rates that can apply|tax_rate_ids[]","The rate rows that could apply.","All three components.","Associating all three does not mean 36%. Place of supply picks which fire."],
  ["Invoice code|hsn_sac_id","The code this invoices under.","SAC 999692.","Merchandise would need an HSN instead. Nothing in retail does today, so every product here shares one SAC."],
  ["Takes places from|pool_id","The one pool a sale decrements.","BUILDING for the tour.","Capacity is not here. It lives on the pool, and the parent chain decides what else is reduced."],
- ["Available to book|is_active","Whether it is in the catalogue.","Taking Vroom off sale over winter.","Past bookings, prices and slots all survive. Reactivating restores it exactly as it was."]]],
+ ["Active|is_active","Whether it is in the catalogue.","Taking Vroom off sale over winter.","Past bookings, prices and slots all survive. Reactivating restores it exactly as it was."]]],
 
  ["Time slots",[
  ["Name for this pattern|name","Label for the pattern.","“Summer weekday morning”.","Internal only — the visitor sees the times. Name it for the pattern rather than the season, or it goes stale the following year."],
@@ -2152,7 +2154,7 @@ products:[
  ["Days it runs|days_of_week[]","Which days inside that window.","Tue–Sun, since Mondays are closed.","A day here that is also a blackout date does not run. Blackout wins."],
  ["Start and end time|start_time / end_time","The window itself.","10:00–15:00.","A slot ending 13:00 and one starting 13:00 do <b>not</b> overlap — they touch. That distinction decides whether their occupants are counted together."],
  ["Places held back every day|standing_hold","Heads withheld every day this slot runs.","50 on the five-hour slots, for changeover crowding.","Permanent until edited, unlike a quota block, which is dated and carries a reason."],
- ["Available to book|is_active","Whether the slot is sold.","Pausing the summer morning slot during a wet week.","Existing bookings in that slot stand. Only new sales stop."]]],
+ ["Active|is_active","Whether the slot is sold.","Pausing the summer morning slot during a wet week.","Existing bookings in that slot stand. Only new sales stop."]]],
 
  ["Add-on attachment",[
  ["Which extra|addon_product_id","Which add-on is offered with this product.","Mini Golf on MuSo Tour.","The add-on must exist first."],
@@ -2224,7 +2226,7 @@ paymodes:[["Payment modes",[
 
 sources:[["Referral sources",[
  ["Option shown|label","An option in “How did you hear about us?”.","Instagram.","§1.7 names the question but not the answers, so the list is entirely MuSo's."],
- ["Offered|is_active","Whether it is offered.","Dropping “Newspaper or magazine” once nobody picks it.","Past bookings keep the value, so historic reports still show it."],
+ ["Active|is_active","Whether it is offered.","Dropping “Newspaper or magazine” once nobody picks it.","Past bookings keep the value, so historic reports still show it."],
  ["Position in the list|sort_order","Order in the dropdown.","Instagram first, “Other” last.","Putting “Other” anywhere but last collects answers that could have been specific."]]]],
 
 scripts:[["Tracking scripts",[
@@ -2233,7 +2235,7 @@ scripts:[["Tracking scripts",[
  ["The code from the provider|script","Pasted from the provider, stored and injected as-is.","The GTM snippet pasted straight from the container setup screen.","Nothing validates it. A broken tag is a broken page."],
  ["Which pages it runs on|pages","Every page, booking pages, or confirmation only.","A conversion tag belongs on the confirmation page alone.","On every page it counts every visit as a sale, and the ad platform then optimises against a number that is wrong."],
  ["Where it runs|environments[]","Which environments it runs in.","Production only.","Leaving UAT on is the usual way a launch week's analytics get ruined by test bookings."],
- ["Switched on|is_active","Whether the tag is injected.","Turning off the Meta pixel during a privacy review.","Takes effect on the next page load only. Data already sent to the provider is gone."]]]]
+ ["Active|is_active","Whether the tag is injected.","Turning off the Meta pixel during a privacy review.","Takes effect on the next page load only. Data already sent to the provider is gone."]]]]
 };
 
 
@@ -2964,6 +2966,7 @@ function discDetailBody(d){
 const $ = s => document.querySelector(s);
 let addOpen = null;   // which inline add-form is open: "slot"|"batch"|"day"|"addon"|"rate"|"block"|null
 let editSlot = -1;    // index of the time slot being edited in the slot flyout (-1 = adding a new one)
+let editBlock = -1;   // index of the quota block being edited in the block flyout (-1 = adding a new one)
 // Careers: which opening the apply form is open for (-1 = closed), the composed
 // email shown after a successful send, and whether submit has been attempted.
 let carsub = "openings", selCareer = "";
@@ -3100,7 +3103,7 @@ function slotFormCard(a){
       ${fld("Days it runs",`<div class="chips" id="slotDays">${DAYS.map(d=>`<button class="chip-add chip-opt" data-day="${d}" data-on="${onDays.includes(d)?1:0}">${d}</button>`).join("")}</div>`,"Tap each day this slot is open.",true)}
       ${fld("Start time",`<input class="inp mono" id="slotT1" value="${s?dv(s.t1):""}" placeholder="HH:MM">`)}
       ${fld("End time",`<input class="inp mono" id="slotT2" value="${s?dv(s.t2):""}" placeholder="HH:MM">`)}
-      ${fld("Reserved capacity",`<input class="inp mono" id="slotHold" value="${s?escAttr(s.hold||0):""}" placeholder="0">`,"Places held back from sale whenever this time slot runs. Leave 0 for none.")}
+      ${fld("Capacity",`<input class="inp mono" id="slotCap" value="${s?escAttr(s.cap||""):""}" placeholder="40">`,"The number of places this time slot sells. Availability counts down from here.")}
       ${fld("Active",`<button type="button" class="sw" id="slotLive" data-on="${s&&s.is_active===false?0:1}"><i></i><span>${s&&s.is_active===false?"Off":"On"}</span></button>`,"Turn it off to stop selling this slot. A slot that's currently in use (has bookings) can't be turned off.")}
     </div>
     ${afFoot("",s?"Save slot":"Add slot")}
@@ -3168,14 +3171,19 @@ function rateFormCard(a){
     </div>${afFoot("","Associate rate")}`);
 }
 function blockFormCard(a){
-  return afCard("New quota block on "+a.n,"Withholds places from one slot on named dates",
+  const b=editBlock>=0?(a.blocks||[])[editBlock]:null;   // editing an existing block vs adding a new one
+  const dv=v=>(v!=null&&v!=="—")?escAttr(v):"";
+  const onSlots=b?String(b.slot||"").split(",").map(x=>x.trim()):[];
+  const reasons=["Maintenance","Staff allocation","Private group","School Booking","Birthday Booking","Safety","Other"];
+  const reasonSel=`<div class="selwrap"><select class="inp" id="af_kreason">${reasons.map(r=>`<option${b&&b.reason===r?" selected":""}>${r}</option>`).join("")}</select></div>`;
+  return afCard(b?"Edit quota block on "+a.n:"New quota block on "+a.n,"Withholds places from one slot on named dates",
     `<div class="form-body">
-      ${afFld("From date",`<input class="inp mono" id="af_kfrom" placeholder="15 Aug 2026">`)}
-      ${afFld("To date",`<input class="inp mono" id="af_kto" placeholder="15 Aug 2026">`,"Same date twice for a single day.")}
-      ${afFld("Slots",`<div class="chips" id="af_kslot">${a.slots.map(s=>`<button type="button" class="chip-add chip-opt" data-on="0">${s.n}</button>`).join("")}</div>`,"Withhold places from one or more time slots.",true)}
-      ${afFld("Blocked quantity",`<input class="inp mono" id="af_kqty" placeholder="10">`,"Refused if it exceeds what is still available.")}
-      ${afFld("Reason",afSel("af_kreason",["Maintenance","Staff allocation","Private group","Safety","Other"]),"",true)}
-    </div>${afFoot("A block reserves places that exist; it cannot create an oversell.","Add block")}`);
+      ${afFld("From date",`<input class="inp mono" id="af_kfrom" value="${b?dv(b.from):""}" placeholder="15 Aug 2026">`)}
+      ${afFld("To date",`<input class="inp mono" id="af_kto" value="${b?dv(b.to):""}" placeholder="15 Aug 2026">`,"Same date twice for a single day.")}
+      ${afFld("Slots",`<div class="chips" id="af_kslot">${a.slots.map(s=>`<button type="button" class="chip-add chip-opt" data-on="${onSlots.includes(s.n)?1:0}">${s.n}</button>`).join("")}</div>`,"Withhold places from one or more time slots.",true)}
+      ${afFld("Blocked quantity",`<input class="inp mono" id="af_kqty" value="${b?escAttr(b.qty||""):""}" placeholder="10">`,"Refused if it exceeds what is still available.")}
+      ${afFld("Reason",reasonSel,"",true)}
+    </div>${afFoot("A block reserves places that exist; it cannot create an oversell.",b?"Save block":"Add block")}`);
 }
 
 /* ---- product sub-tabs ---- */
@@ -3260,17 +3268,18 @@ const SUB = {
     <div class="card section-card">
       <div class="card-head card-head-tint"><span class="card-title">Quota blocks</span>
         <span class="card-note">Slot · pool · dates · quantity</span></div>
-      <table><thead><tr><th>Dates</th><th>Slot</th><th>Pool</th><th>Blocked</th><th>Reason</th><th>Status</th></tr></thead>
+      <table><thead><tr><th>Dates</th><th>Slot</th><th>Pool</th><th>Blocked</th><th>Reason</th><th>Status</th><th></th></tr></thead>
       <tbody>${(a.blocks&&a.blocks.length)
-        ? a.blocks.map(bk=>`<tr>
+        ? a.blocks.map((bk,i)=>`<tr>
             <td class="code">${bk.from}${bk.to&&bk.to!==bk.from?" – "+bk.to:""}</td>
             <td><b style="font-weight:500">${bk.slot||"—"}</b></td>
             <td class="code muted">${bk.pool}</td>
             <td class="code"><b style="color:var(--warn)">&minus;${bk.qty}</b></td>
             <td>${bk.reason||"—"}</td>
-            <td><span class="pill pill-ok"><i class="dot"></i>${bk.status||"Active"}</span></td></tr>`).join("")
-             +`<tr><td colspan="6"><button class="rep-add" data-addopen="block" style="border-radius:4px">+ New block</button></td></tr>`
-        : `<tr><td colspan="6" style="text-align:center;padding:32px 20px">
+            <td><span class="pill pill-ok"><i class="dot"></i>${bk.status||"Active"}</span></td>
+            <td style="text-align:right"><button class="btn" data-edit-block="${i}">Edit</button></td></tr>`).join("")
+             +`<tr><td colspan="7"><button class="rep-add" data-addopen="block" style="border-radius:4px">+ New block</button></td></tr>`
+        : `<tr><td colspan="7" style="text-align:center;padding:32px 20px">
             <div style="font-size:13.5px;font-weight:600;margin-bottom:4px">No blocks</div>
             <div style="font-size:12.5px;color:var(--ink2);max-width:46ch;margin:0 auto 12px">Every slot is selling at full pool capacity.</div>
             <button class="btn btn-primary" data-addopen="block">New block</button></td></tr>`}</tbody></table>
@@ -4167,12 +4176,8 @@ const VIEWS = {
 /* ---- forms ---- */
 /* Inventory section fields — shared by Products & add-ons and Programs. */
 function inventoryFields(noun="product"){
-  const capTip=prodBuildingPool
-    ? `An optional cap for this ${noun} even though it draws on the Building Pool. Leave blank to use the full pool.`
-    : `The fixed number of places this ${noun} has per slot, since it does not draw on the Building Pool.`;
-  return `<div class="fld wide"><div class="lab"><span class="lab-n">Is inventory taken from the Building Pool?</span>${tip("On — this shares the museum's building capacity pool. Off — this has its own fixed capacity. A capacity can still be set as an optional cap while sharing the pool.")}</div>
-      <button class="sw" data-on="${prodBuildingPool?1:0}" data-prodpool="1"><i></i><span>${prodBuildingPool?"Yes — Building Pool":"No — own capacity"}</span></button></div>
-    <div class="fld"><div class="lab"><span class="lab-n">Capacity</span>${tip(capTip)}<span class="lab-req">${prodBuildingPool?"Optional":"Required"}</span></div><input class="inp mono" placeholder="12"></div>`;
+  return `<div class="fld wide"><div class="lab"><span class="lab-n">Is inventory taken from the Building Pool?</span>${tip("On — this shares the museum's building capacity pool. Off — its time slots each carry their own capacity. Capacity is set per time slot, not here.")}</div>
+      <button class="sw" data-on="${prodBuildingPool?1:0}" data-prodpool="1"><i></i><span>${prodBuildingPool?"Yes — Building Pool":"No — own capacity"}</span></button></div>`;
 }
 /* ---- Ratio between two visitor categories, on the product --------------------
    The Visitor categories master can only say "an Adult must also be on the booking" —
@@ -5258,12 +5263,10 @@ const PROG_COMMON = [
 const PROG_SINGLE = [
   ["Date|date","date","One date. An event that repeats is two events."],
   ["Start time|start_time","time","One start time."],
-  ["Capacity|capacity","int","This session alone."],
   ["Visitor categories|visitor_categories[]","fk[]","→ Visitor categories. A single session is priced per category."]
 ];
 const PROG_MULTI = [
-  ["Subtitle|subtitle","string","The line under the title on the listing."],
-  ["Default capacity per batch|capacity","int","The number a new batch starts with; each batch then owns its own."]
+  ["Subtitle|subtitle","string","The line under the title on the listing."]
 ];
 function programForm(){
   const fmt=progFormat(progCat);
@@ -6220,11 +6223,11 @@ function addSubmit(){
     if(editSlot>=0 && a.slots[editSlot]){   // update the existing slot, preserving fields not on the form (pool, cap, sold, price)
       const s=a.slots[editSlot];
       s.n=g("slotName")||s.n; s.from=g("slotFrom")||"—"; s.to=g("slotTo")||"—";
-      s.days=days.join(", ")||"—"; s.t1=g("slotT1")||"—"; s.t2=g("slotT2")||"—"; s.hold=+g("slotHold")||0; s.is_active=slotLive;
+      s.days=days.join(", ")||"—"; s.t1=g("slotT1")||"—"; s.t2=g("slotT2")||"—"; s.cap=+g("slotCap")||s.cap; s.is_active=slotLive;
     } else {
       a.slots.push({ n:g("slotName")||"New slot", from:g("slotFrom")||"—", to:g("slotTo")||"—",
         days:days.join(", ")||"—", t1:g("slotT1")||"—", t2:g("slotT2")||"—",
-        pool:g("slotPool"), hold:+g("slotHold")||0, is_active:slotLive, price:{} });
+        pool:g("slotPool"), cap:+g("slotCap")||0, sold:0, hold:0, is_active:slotLive, price:{} });
     }
     editSlot=-1;
   } else if(addOpen==="batch"){
@@ -6241,7 +6244,14 @@ function addSubmit(){
     const code=g("af_rate"); if(code && TAXRATES.some(r=>r.code===code) && !a.tax.includes(code)) a.tax.push(code);
   } else if(addOpen==="block"){
     const kslots=[...document.querySelectorAll("#af_kslot .chip-opt")].filter(x=>x.dataset.on==="1").map(x=>x.textContent.trim());
-    (a.blocks=a.blocks||[]).push({ from:g("af_kfrom")||"—", to:g("af_kto")||"—", slot:kslots.join(", ")||"—", pool:a.pool, qty:+g("af_kqty")||0, reason:g("af_kreason"), status:"Active" });
+    a.blocks=a.blocks||[];
+    if(editBlock>=0 && a.blocks[editBlock]){   // update the existing block, keeping its status
+      const b=a.blocks[editBlock];
+      b.from=g("af_kfrom")||"—"; b.to=g("af_kto")||"—"; b.slot=kslots.join(", ")||"—"; b.qty=+g("af_kqty")||0; b.reason=g("af_kreason");
+    } else {
+      a.blocks.push({ from:g("af_kfrom")||"—", to:g("af_kto")||"—", slot:kslots.join(", ")||"—", pool:a.pool, qty:+g("af_kqty")||0, reason:g("af_kreason"), status:"Active" });
+    }
+    editBlock=-1;
   }
   addOpen=null; render(); $(".stage").scrollTop=0;
 }
@@ -6656,11 +6666,13 @@ document.addEventListener("click",e=>{
   // ---- inline add forms (open / cancel / submit) ----
   const eslot=e.target.closest("[data-edit-slot]");
   if(eslot){ editSlot=+eslot.dataset.editSlot; addOpen="slot"; render(); $(".stage").scrollTop=0; return; }
+  const eblock=e.target.closest("[data-edit-block]");
+  if(eblock){ editBlock=+eblock.dataset.editBlock; addOpen="block"; render(); $(".stage").scrollTop=0; return; }
   const ao=e.target.closest("[data-addopen]");
-  if(ao){ if(ao.dataset.addopen==="slot") editSlot=-1; addOpen=ao.dataset.addopen; render(); $(".stage").scrollTop=0; return; }
+  if(ao){ if(ao.dataset.addopen==="slot") editSlot=-1; if(ao.dataset.addopen==="block") editBlock=-1; addOpen=ao.dataset.addopen; render(); $(".stage").scrollTop=0; return; }
   const econds=e.target.closest("[data-editconds]");
   if(econds){ syncDiscountForm(); condDraft=condDraftFromDiscount(curDiscount()); condItemsOpen=false; addOpen="cond"; render(); $(".stage").scrollTop=0; return; }
-  if(e.target.closest("[data-addcancel]")){ addOpen=null; editCond=-1; condDraft=null; editSlot=-1; render(); return; }
+  if(e.target.closest("[data-addcancel]")){ addOpen=null; editCond=-1; condDraft=null; editSlot=-1; editBlock=-1; render(); return; }
   if(e.target.closest("[data-addsubmit]")){ addSubmit(); return; }
   const repAdd=e.target.closest(".rep-add");
   if(repAdd && !repAdd.dataset.addopen && !repAdd.dataset.tab && !repAdd.dataset.addcond && repAdd.closest(".rep")){
