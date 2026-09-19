@@ -900,19 +900,22 @@ const GROUPS = [
   {name:"5 · Checkout & site", color:"#6B3FC4"},
   {name:"6 · Membership", color:"#8A5A00"},
   {name:"7 · Shop", color:"#B23A8F"},
-  {name:"8 · People", color:"#0E6B8A"}
+  {name:"8 · People", color:"#0E6B8A"},
+  {name:"9 · Bookings", color:"#1E7F3C"}
 ];
-const ORDER = ["categories","pools","tax","hsn","shopcats","progcats","departments","products","programs","blackout","bookings","checkin",
+const ORDER = ["categories","pools","tax","hsn","shopcats","progcats","departments","fboptions","schoolslots","entryprices","products","programs","blackout","bookings","checkin",
                "discounts","sources","scripts","tiers","members",
-               "shopitems","shopsales","shopcoupons","career"];   // "shopreports", "affiliates", "paymodes" hidden from the rail (code kept)
-const PHASE = {categories:0,pools:0,tax:0,hsn:0,shopcats:0,progcats:0,departments:0, products:1, programs:1, blackout:2,
+               "shopitems","shopsales","shopcoupons","career","school"];   // "shopreports", "affiliates", "paymodes" hidden from the rail (code kept)
+const PHASE = {categories:0,pools:0,tax:0,hsn:0,shopcats:0,progcats:0,departments:0,fboptions:0,schoolslots:0,entryprices:0, products:1, programs:1, blackout:2,
                discounts:3,affiliates:3,
                paymodes:4,sources:4,scripts:4,bookings:2,checkin:2,
                tiers:5,members:5,
                shopitems:6,shopsales:6,shopcoupons:6,shopreports:6,
-               career:7};
+               career:7,
+               school:8};
 const PREREQ = {
   career:[], categories:[], pools:[], tax:[], hsn:[], shopcats:[], departments:[], paymodes:[], sources:[], scripts:[], progcats:[], bookings:["Products & add-ons"], checkin:["Products & add-ons"],
+  fboptions:[], schoolslots:["Products & add-ons"], entryprices:[], school:["F&B options","School time slots"],
   products:["Visitor categories","Inventory pools","Tax rates","HSN / SAC codes"],
   programs:["Program categories","Visitor categories","Tax rates","HSN / SAC codes"],
   events:["Program categories","Visitor categories","Tax rates","HSN / SAC codes"],
@@ -1280,6 +1283,31 @@ const M = {
             ["Applications open between|posted / closes","date","From the day the opening goes live on the careers page to the day it stops taking applications."],
             ["About the role|about","richtext","The paragraph that opens the JD and sits under the title on the careers page."],
             ["Upload JD|jd","file","The job description file the careers page serves. PDF or Word."]]},
+  fboptions:{g:0,n:"F&B options",owner:"Sawood · F&B",perm:"master.fb.manage",src:"Scope §8",q:1,
+    d:"The food & beverage options a school visit can add. Each carries a separate adult and child price; the school-booking form picks from this list and prices the food line off it.",
+    view:"fboptions",
+    schema:[["Option|name","string","The F&B option as it reads on the booking, e.g. Standard lunch."],
+            ["Adult price|adult","money","Per-adult price for this option."],
+            ["Child price|child","money","Per-child price for this option."],
+            ["Active|is_active","bool","Turn it off to retire this option from new bookings."]]},
+  schoolslots:{g:0,n:"School time slots",owner:"Visitor Experience",perm:"master.schoolslot.manage",src:"Scope §8",q:1,
+    d:"The visit windows a school booking chooses from. Each holds the actual start and end time of the visit and the museum-tour slot it maps to, so the visit's headcount is deducted from that retail slot's inventory.",
+    view:"schoolslots",
+    schema:[["Label|name","string","How the window reads, e.g. Morning visit 9:00–14:00."],
+            ["Actual start|start","time","When the school group actually arrives."],
+            ["Actual end|end","time","When the school group actually leaves."],
+            ["Maps to museum-tour slot|tour_slot","fk","→ Museum tour slots","Inventory for this visit is deducted from this retail slot."],
+            ["Active|is_active","bool","Turn it off to retire this window from new bookings."]]},
+  entryprices:{g:0,n:"Entry price presets",owner:"Shivam · Finance & Accounts",perm:"master.entryprice.manage",src:"Scope §8",q:1,
+    d:"Default per-student and per-adult entry prices a school booking can pull in. Prices stay editable per booking once pulled.",
+    view:"entryprices",
+    schema:[["Label|name","string","How the preset reads, e.g. Standard 2026."],
+            ["Per student|student","money","Default entry price per student."],
+            ["Per adult / teacher|adult","money","Default entry price per accompanying adult or teacher."],
+            ["Active|is_active","bool","Turn it off to retire this preset."]]},
+  school:{g:8,n:"School",owner:"Visitor Experience",perm:"school.manage",src:"Scope §8",q:0,
+    d:"School-visit enquiries and bookings in one place. A record starts as an enquiry and moves through its status to a confirmed, paid, completed visit — with its headcounts, food, schedule, proforma invoice, payments and email trail all on the booking.",
+    view:"school"},
   shopreports:{g:6,n:"Shop reports",owner:"Shivam · Finance & Accounts",perm:"shop.report.view",src:"Scope §12",q:0,
     d:"Shop sales summary and the HSN/SAC-wise quantity + GST breakup for the GST return.",view:"shopreports"},
   dashboard:{n:"Dashboard",owner:"Visitor Experience",perm:"dashboard.view",view:"dashboard"},
@@ -1498,6 +1526,245 @@ const DEPARTMENTS = [
 ];
 const deptNames = () => DEPARTMENTS.map(d=>d.name);
 const deptByName = n => DEPARTMENTS.find(d=>d.name===n);
+
+/* ============================================================================
+   SCHOOL BOOKINGS (Scope §8) — supporting masters, the record model + seeds.
+   Sponsored School (§9) is intentionally NOT built; only the status/record
+   seams are left for it. Records live in memory (like Careers) — reload resets.
+   ========================================================================== */
+
+/* ---- F&B options: food a school visit can add, priced per adult / per child ---- */
+const FB_OPTIONS = [
+  {name:"Standard lunch", adult:250, child:180, is_active:true},
+  {name:"Snack box",      adult:120, child:90,  is_active:true},
+  {name:"Premium thali",  adult:400, child:300, is_active:true},
+  {name:"Veg pizza combo",adult:220, child:170, is_active:false}
+];
+/* ---- School time slots: the visit window + the museum-tour slot it maps to,
+   so the visit's headcount comes off that retail slot's inventory. ---- */
+const SCHOOL_SLOTS = [
+  {name:"Morning visit 9:00–14:00",  start:"09:00", end:"14:00", tour_slot:"Five-hour morning",    is_active:true},
+  {name:"Late morning 10:00–13:00",  start:"10:00", end:"13:00", tour_slot:"Three-hour morning",   is_active:true},
+  {name:"Afternoon 14:00–18:00",     start:"14:00", end:"18:00", tour_slot:"Five-hour afternoon",  is_active:true}
+];
+/* ---- Entry price presets: default per-head prices a booking can pull in ---- */
+const ENTRY_PRICES = [
+  {name:"Standard 2026", student:350, adult:500, is_active:true},
+  {name:"Off-peak",      student:250, adult:400, is_active:true}
+];
+
+const SCHOOL_BOARDS   = ["SSC","ICSE","CBSE","IGCSE","IB","CIE","Other"];   // "Other" chip + the "Other Board" text field to specify it
+const SCHOOL_INTEREST = ["Museum Tour","Workshop"];                 // "Other interests" captured in a separate text field
+const SCHOOL_STATUSES = ["Open","In Discussion","Confirmed","Live","Ended","Lost","Rejected"];
+/* Statuses a person may set by hand. Confirmed / Live / Ended are set automatically
+   from payment receipt and the visit date, so they are not offered in the form. */
+const SCHOOL_MANUAL_STATUSES = ["Open","In Discussion","Lost","Rejected"];
+const SCHOOL_DESIGN   = ["Agent","Admin","Teacher","Coordinator"];
+
+/* One record carries both the enquiry fields and the backend booking fields;
+   the backend ones stay empty until the visit is worked up. Status drives it. */
+const SCHOOL_BOOKINGS = [
+  { id:"SCH-001", status:"Open", origin:"enquiry", created:"14 Sep 2026",
+    school:"Sunrise International School", location:"Powai, Mumbai", boards:["ICSE","IGCSE"],
+    grade:"Grade 5 & 6", poc:"Meera Nair", designation:"Coordinator",
+    email:"meera.nair@sunriseintl.edu.in", phone:"+91 98200 11223",
+    interested:["Museum Tour","Workshop"], prefDate:"12 Oct 2026", expChildren:120, expTeachers:8,
+    note:"Two sections visiting together; would like a robotics workshop if possible.",
+    visits:[], entryStudent:"", entryAdult:"",
+    billName:"", billAddress:"", gstin:"", pan:"", comments:"",
+    payments:[], proformaUpload:null,
+    timeline:[{on:"14 Sep 2026", who:"Website", what:"Enquiry received from the school-trips form — acknowledgement email sent to the POC."}] },
+
+  { id:"SCH-002", status:"In Discussion", origin:"enquiry", created:"08 Sep 2026",
+    school:"Green Valley High", location:"Thane West", boards:["CBSE"],
+    grade:"Grade 8", poc:"Rahul Deshpande", designation:"Teacher",
+    email:"rahul.d@greenvalley.sch.in", phone:"+91 91670 44556",
+    interested:["Museum Tour"], prefDate:"20 Oct 2026", expChildren:90, expTeachers:6,
+    note:"Checking budget approval; date may shift by a week.",
+    visits:[{date:"20 Oct 2026", slotId:"Late morning 10:00–13:00", students:90, adults:6, escorts:2, teachersComp:2,
+             food:{students:0,adults:0,comp:0,optionIds:[]}, optionals:[]}],
+    entryStudent:350, entryAdult:500,
+    billName:"Green Valley High", billAddress:"Ghodbunder Road, Thane West 400610", gstin:"", pan:"AABCG1234M", comments:"Awaiting confirmation on numbers.",
+    payments:[], proformaUpload:null,
+    timeline:[{on:"08 Sep 2026", who:"Website", what:"Enquiry received — acknowledgement email sent to the POC."},
+              {on:"11 Sep 2026", who:"Aditi (VE)", what:"Called POC; discussed slots and pricing. Status → In Discussion."}] },
+
+  { id:"SCH-003", status:"Confirmed", origin:"backend", created:"29 Aug 2026",
+    school:"St. Xavier's High School", location:"Fort, Mumbai", boards:["ICSE"],
+    grade:"Grade 6 & 7", poc:"Fr. Thomas Pereira", designation:"Admin",
+    email:"office@stxaviers.edu.in", phone:"+91 98330 77889",
+    interested:["Museum Tour","Workshop"], prefDate:"15 Oct 2026", expChildren:150, expTeachers:10,
+    note:"Annual educational trip.",
+    visits:[{date:"15 Oct 2026", slotId:"Morning visit 9:00–14:00", students:150, adults:10, escorts:3, teachersComp:4,
+             food:{students:150,adults:10,comp:3,optionIds:["Standard lunch"]},
+             optionals:[{kind:"Workshop", venue:"Studio 2", date:"15 Oct 2026", time:"11:30–12:30"}]}],
+    entryStudent:350, entryAdult:500,
+    billName:"St. Xavier's High School", billAddress:"5 Mahapalika Marg, Fort, Mumbai 400001",
+    gstin:"27AAATS1234C1Z9", pan:"AAATS1234C", comments:"Proforma sent; 40% advance received.",
+    payments:[{on:"05 Sep 2026", mode:"Net banking", amount:35000, ref:"NEFT-XAV-4471"}],
+    proformaUpload:null,
+    timeline:[{on:"29 Aug 2026", who:"Aditi (VE)", what:"Backend booking created."},
+              {on:"29 Aug 2026", who:"System", what:"Proforma invoice generated and emailed to POC."},
+              {on:"05 Sep 2026", who:"Shivam (Finance)", what:"Advance payment recorded — ₹35,000 via Net banking. Status → Confirmed."}] },
+
+  { id:"SCH-004", status:"Ended", origin:"backend", created:"20 Jul 2026",
+    school:"Little Scholars Academy", location:"Andheri East", boards:["SSC"],
+    grade:"Grade 4", poc:"Priya Menon", designation:"Coordinator",
+    email:"priya@littlescholars.in", phone:"+91 99870 22110",
+    interested:["Museum Tour"], prefDate:"05 Aug 2026", expChildren:60, expTeachers:5,
+    note:"",
+    visits:[{date:"05 Aug 2026", slotId:"Late morning 10:00–13:00", students:60, adults:5, escorts:1, teachersComp:2,
+             food:{students:60,adults:5,comp:1,optionIds:["Snack box"]}, optionals:[]}],
+    entryStudent:350, entryAdult:500,
+    billName:"Little Scholars Academy", billAddress:"Chakala, Andheri East, Mumbai 400099",
+    gstin:"", pan:"AAACL7788Q", comments:"Visit completed; tax invoice raised (no GSTIN).",
+    payments:[{on:"28 Jul 2026", mode:"Cash", amount:15000, ref:"RCPT-LS-2201"},
+              {on:"05 Aug 2026", mode:"UPI", amount:19810, ref:"UPI-LS-9930"}],
+    proformaUpload:null,
+    timeline:[{on:"20 Jul 2026", who:"Aditi (VE)", what:"Backend booking created; proforma emailed."},
+              {on:"28 Jul 2026", who:"Shivam (Finance)", what:"Advance ₹15,000 (Cash)."},
+              {on:"05 Aug 2026", who:"Reception", what:"Group checked in — 60 students, 5 teachers."},
+              {on:"05 Aug 2026", who:"Shivam (Finance)", what:"Balance ₹14,760 (UPI). Marked completed; tax invoice raised."}] },
+
+  { id:"SCH-005", status:"Lost", origin:"enquiry", created:"02 Sep 2026",
+    school:"Oakridge Public School", location:"Navi Mumbai", boards:["CBSE","IGCSE"],
+    grade:"Grade 9 & 10", poc:"Sanjay Kulkarni", designation:"Teacher",
+    email:"sanjay.k@oakridge.sch.in", phone:"+91 90040 33221",
+    interested:["Museum Tour","Workshop"], prefDate:"25 Sep 2026", expChildren:200, expTeachers:14,
+    note:"Large group; tight timeline.",
+    visits:[], entryStudent:"", entryAdult:"",
+    billName:"", billAddress:"", gstin:"", pan:"", comments:"Could not agree a date before their exam schedule.",
+    payments:[], proformaUpload:null,
+    timeline:[{on:"02 Sep 2026", who:"Website", what:"Enquiry received — acknowledgement email sent to the POC."},
+              {on:"09 Sep 2026", who:"Aditi (VE)", what:"No date could be agreed. Status → Lost."}] }
+];
+
+/* ---- School helpers ---- */
+const schoolById = id => SCHOOL_BOOKINGS.find(r=>r.id===id);
+function nextSchoolId(){
+  const n=SCHOOL_BOOKINGS.reduce((mx,r)=>{const m=/SCH-(\d+)/.exec(r.id);return m?Math.max(mx,+m[1]):mx;},0);
+  return "SCH-"+String(n+1).padStart(3,"0");
+}
+const SCHOOL_PILL = {Open:"pill-blue","In Discussion":"pill-warn",Confirmed:"pill-ok",Live:"pill-ok",Ended:"pill-off",Lost:"pill-off",Rejected:"pill-off"};
+const schoolStatusPill = r => `<span class="pill ${SCHOOL_PILL[r.status]||"pill-draft"}"><i class="dot"></i>${r.status}</span>`;
+const schoolTourSlots = () => (P.find(p=>p.c==="MUSO")||{slots:[]}).slots.map(s=>s.n);
+const fbByName = n => FB_OPTIONS.find(o=>o.name===n);
+const schoolSlotByName = n => SCHOOL_SLOTS.find(s=>s.name===n);
+function schoolLog(rec, who, what){ (rec.timeline=rec.timeline||[]).unshift({on:fmtDMY(new Date()), who, what}); }
+/* Compose the email that goes to the school POC — a branded snapshot stored on the
+   timeline entry so it can be viewed later (Shopify-style "View email"). */
+function schoolComposeEmail(rec, kind){
+  const c=schoolCompute(rec);
+  const to=rec.email||"the POC";
+  const v=(rec.visits||[])[0]||{};
+  const money0=n=>"₹"+Number(n||0).toLocaleString("en-IN");
+  const isAck = kind==="ack";
+  const SUBJ={
+    ack:"We've received your MuSo school-visit enquiry",
+    booking:"Your MuSo school visit — details & proforma",
+    proforma:"Proforma invoice for your MuSo school visit",
+    status:"Update on your MuSo school visit",
+    edit:"Updated details for your MuSo school visit",
+    confirm:"Your MuSo school visit is confirmed"
+  };
+  const subject=(SUBJ[kind]||SUBJ.booking)+" ("+rec.id+")";
+  const intro={
+    ack:"Thank you for your enquiry! We've received your request for a school visit, and our Visitor Experience team will be in touch shortly to finalise the date and other details.",
+    booking:"Thank you for choosing MuSo for your school visit. Here are the details we have on file, along with the proforma invoice.",
+    proforma:"Please find the proforma invoice for your upcoming school visit attached.",
+    status:"There's an update on your school visit booking.",
+    edit:"Your school visit details have been updated. The latest details and proforma are below.",
+    confirm:"Your school visit is confirmed. We look forward to hosting your students!"
+  }[kind]||"";
+  const rows = isAck ? [
+    ["Enquiry ID", rec.id],
+    ["School", rec.school||"—"],
+    ["Preferred date", rec.prefDate||"—"],
+    ["Expected children", rec.expChildren!==""&&rec.expChildren!=null?rec.expChildren:"—"],
+    ["Expected teachers / staff", rec.expTeachers!==""&&rec.expTeachers!=null?rec.expTeachers:"—"],
+    ["Interested in", (rec.interested||[]).join(", ")||"—"]
+  ] : [
+    ["Booking ID", rec.id],
+    ["School", rec.school||"—"],
+    ["Visit date", v.date||rec.prefDate||"—"],
+    ["Time slot", v.slotId||"—"],
+    ["Students · Adults", `${c.students} · ${c.adults}`],
+    ["Grand total", money0(c.grand)],
+    ["Balance due", c.balance>0?money0(c.balance):"Paid in full"]
+  ];
+  const closing = isAck
+    ? `We typically respond within 2 working days. If your visit is time-sensitive, reply to this email and we'll prioritise it.`
+    : `The proforma invoice is attached to this email. For a hassle-free visit, please read the <a href="#" style="color:var(--blue)">Terms &amp; Conditions</a> before you arrive.`;
+  const body=`<div style="text-align:center;margin-bottom:14px"><span style="font-family:var(--mono);font-size:26px;font-weight:800;letter-spacing:-.03em;color:#D64530">MuSo</span></div>
+    <div class="muted" style="font-size:11px;letter-spacing:.08em;text-transform:uppercase;margin-bottom:4px">${rec.id}</div>
+    <div style="font-size:17px;font-weight:600;margin-bottom:8px">${escHtml(SUBJ[kind]||SUBJ.booking)}</div>
+    <p style="font-size:13px;margin:0 0 10px">Hi ${escHtml(rec.poc||"there")},</p>
+    <p style="font-size:13px;margin:0 0 14px;color:var(--ink2)">${escHtml(intro)}</p>
+    <table class="reclist" style="width:100%"><tbody>${rows.map(([k,val])=>`<tr><td style="color:var(--ink3);width:45%">${k}</td><td><b style="font-weight:500">${escHtml(String(val))}</b></td></tr>`).join("")}</tbody></table>
+    <p style="font-size:12px;margin:14px 0 0;color:var(--ink2)">${closing}</p>
+    <p style="font-size:12px;margin:10px 0 0;color:var(--ink3)">Warm regards,<br>Visitor Experience · Museum of Solutions</p>`;
+  return {to, subject, body, kind, sentOn:fmtDMY(new Date())};
+}
+/* Log an email event carrying its content so the timeline can show "View email". */
+function schoolLogEmail(rec, who, what, kind){ (rec.timeline=rec.timeline||[]).unshift({on:fmtDMY(new Date()), who, what, email:schoolComposeEmail(rec,kind)}); }
+/* Backfill seed timeline entries that represent an outbound email (status changes,
+   "emailed"/"Email sent", proforma) with a viewable snapshot, so historical events
+   carry the same "View email" affordance as live ones. Inbound events (enquiry
+   received, check-in, payment recorded) are left alone. Called once at startup
+   (after all helpers/consts are initialised). */
+function schoolBackfillEmails(){ SCHOOL_BOOKINGS.forEach(rec=>{ (rec.timeline||[]).forEach(en=>{
+  if(en.email) return;
+  const w=en.what||"";
+  if(/Enquiry received/i.test(w)) en.email = schoolComposeEmail(rec,"ack");   // acknowledgement mail sent back on a website enquiry
+  else if(/Status\s*→|emailed|Email sent|proforma/i.test(w)) en.email = schoolComposeEmail(rec, /Status\s*→/.test(w)?"status":"booking");
+}); }); }
+/* A booking with any payment against it is Confirmed (or further) — its status is then
+   driven automatically by payment and the visit date and cannot be set by hand. */
+const schoolStatusLocked = rec => !!(rec && (rec.payments||[]).some(p=>+p.amount>0));
+/* Drive status from payment: any receipt confirms the booking (partial → Confirmed),
+   clearing the balance takes it Live. Never downgrades a manual Lost / Rejected. */
+function schoolAdvanceOnPayment(rec){
+  const c=schoolCompute(rec);
+  if(c.balance<=0){ if(["Open","In Discussion","Confirmed"].includes(rec.status)){ rec.status="Live"; schoolLog(rec,"System","Paid in full. Status → Live."); } }
+  else if(["Open","In Discussion"].includes(rec.status)){ rec.status="Confirmed"; schoolLog(rec,"System","Payment received — booking confirmed. Status → Confirmed (now locked)."); }
+}
+/* Totals — mirrors shopSaleCompute's shape. Complementary heads are ₹0; a flat
+   18% GST (CGST 9 + SGST 9) applies, e-invoice only when a GSTIN is on file. */
+function schoolCompute(rec){
+  const visits=rec.visits||[];
+  const students=visits.reduce((a,v)=>a+(+v.students||0),0);
+  const adults=visits.reduce((a,v)=>a+(+v.adults||0),0);
+  const escorts=visits.reduce((a,v)=>a+(+v.escorts||0),0);
+  const teachersComp=visits.reduce((a,v)=>a+(+v.teachersComp||0),0);
+  const visitTotal=students*(+rec.entryStudent||0)+adults*(+rec.entryAdult||0);
+  // Food & F&B now lives on each visit — aggregate across all visits.
+  let foodTotal=0, foodStudents=0, foodAdults=0, foodComp=0;
+  visits.forEach(v=>{ const f=v.food||{};
+    foodStudents+=+f.students||0; foodAdults+=+f.adults||0; foodComp+=+f.comp||0;
+    const rate=(f.optionIds||[]).reduce((acc,nm)=>{const o=fbByName(nm);return o?{adult:acc.adult+(+o.adult||0),child:acc.child+(+o.child||0)}:acc;},{adult:0,child:0});
+    foodTotal+=(+f.students||0)*rate.child+(+f.adults||0)*rate.adult; });
+  const subtotal=visitTotal+foodTotal;
+  const gstPct=18, gst=Math.round(subtotal*gstPct/100), cgst=Math.round(gst/2), sgst=gst-cgst;
+  const grand=subtotal+gst;
+  const paid=(rec.payments||[]).reduce((a,p)=>a+(+p.amount||0),0);
+  const balance=Math.max(0,grand-paid);
+  return {students,adults,escorts,teachersComp,visitTotal,foodTotal,foodStudents,foodAdults,foodComp,subtotal,gstPct,gst,cgst,sgst,grand,paid,balance,
+          eInv:!!(rec.gstin&&rec.gstin.trim())};
+}
+/* ---- CSV exports (Scope §8 Reports "Download") ---- */
+const SCHOOL_EXPORT_NAMES={school:"school-records.csv","school-boards":"school-by-board.csv","school-repeat":"school-repeat-visitors.csv"};
+function schoolExportRows(kind){
+  if(kind==="school-boards"){
+    const map={}; SCHOOL_BOOKINGS.forEach(r=>{const c=schoolCompute(r);(r.boards||[]).forEach(b=>{const m=map[b]||(map[b]={board:b,recs:0,students:0,rev:0});m.recs++;m.students+=c.students;if(["Confirmed","Live","Ended"].includes(r.status))m.rev+=c.grand;});});
+    return [["Board","Records","Students","Revenue"]].concat(Object.values(map).map(m=>[m.board,m.recs,m.students,Math.round(m.rev)]));
+  }
+  if(kind==="school-repeat"){
+    const map={}; SCHOOL_BOOKINGS.forEach(r=>{const m=map[r.school]||(map[r.school]={school:r.school,visits:0,students:0});m.visits++;m.students+=schoolCompute(r).students;});
+    return [["School","Records","Students"]].concat(Object.values(map).filter(m=>m.visits>1).map(m=>[m.school,m.visits,m.students]));
+  }
+  return [["ID","School","Location","POC","Phone","Status","Students","Adults","Grand total","Paid","Balance"]].concat(
+    SCHOOL_BOOKINGS.map(r=>{const c=schoolCompute(r);return [r.id,r.school,r.location,r.poc,r.phone,r.status,c.students,c.adults,c.grand,c.paid,c.balance];}));
+}
 
 /* ---- Careers queries: the "ask us something" form on the careers page. Name,
    email, number and the question itself — no CV, no position. They land here and
@@ -1958,7 +2225,11 @@ const OPTIONS = {
   "HSN / SAC codes":HSNCODES.map(h=>h.kind+" "+h.code),
   "Referral sources":SOURCES,
   "Shop products":SHOP_ITEMS.map(x=>x.pd+" · "+x.n),
-  "Departments":deptNames()
+  "Departments":deptNames(),
+  "F&B options":FB_OPTIONS.map(o=>o.name),
+  "School time slots":SCHOOL_SLOTS.map(s=>s.name),
+  "Entry price presets":ENTRY_PRICES.map(p=>p.name),
+  "Museum tour slots":schoolTourSlots()
 };
 
 /* ---- create-form schemas ---- */
@@ -2970,6 +3241,9 @@ let editBlock = -1;   // index of the quota block being edited in the block flyo
 // Careers: which opening the apply form is open for (-1 = closed), the composed
 // email shown after a successful send, and whether submit has been attempted.
 let carsub = "openings", selCareer = "", carDsub = "details";
+let selSchool = "", schsub = "overview", schtab = "records", schoolNewMode = "booking",
+    schoolQ = "", schoolFStatus = "", schoolRange = "Monthly",
+    schoolDraft = null, schoolMsg = "", schoolEmailView = null;
 let appFRole = "", appFStatus = "", appQ = "", careerQ = "";
 let qryQ = "";
 let qryExpanded = new Set();
@@ -4150,6 +4424,110 @@ const VIEWS = {
     return tiles+payTable+hsnTable;
   },
 
+  fboptions(){
+    return `<div class="note note-scope"><span class="note-mark">Structure</span><div>
+      The food &amp; beverage options a <b>school visit</b> can add. Each carries a separate <b>adult</b> and <b>child</b> price; the booking form picks from this list and prices the food line off it.
+    </div></div>
+    <div class="card"><div class="card-head"><span class="card-title">F&amp;B options</span>
+      <span class="card-note">${FB_OPTIONS.length} on file</span></div>
+      <div class="matrix-wrap"><table><thead><tr>
+        <th>Option</th><th class="ctr">Adult price</th><th class="ctr">Child price</th><th>Status</th></tr></thead>
+      <tbody>${FB_OPTIONS.map(o=>`<tr>
+        <td><b style="font-weight:500">${escHtml(o.name)}</b></td>
+        <td class="code" style="text-align:center">${money(o.adult)}</td>
+        <td class="code" style="text-align:center">${money(o.child)}</td>
+        <td>${o.is_active?'<span class="pill pill-ok"><i class="dot"></i>Active</span>':'<span class="pill pill-off">Inactive</span>'}</td></tr>`).join("")}
+        ${addRowNew("Add F&B option")}</tbody></table></div></div>`;
+  },
+
+  schoolslots(){
+    return `<div class="note note-scope"><span class="note-mark">Structure</span><div>
+      The windows a school visit chooses from. Each holds the <b>actual</b> start and end time of the visit and the <b>museum-tour slot</b> it maps to — so the visit's headcount is deducted from that retail slot's inventory (a 9–2 visit maps to the 10–1 retail slot).
+    </div></div>
+    <div class="card"><div class="card-head"><span class="card-title">School time slots</span>
+      <span class="card-note">${SCHOOL_SLOTS.length} on file</span></div>
+      <div class="matrix-wrap"><table><thead><tr>
+        <th>Label</th><th>Actual start</th><th>Actual end</th><th>Maps to museum-tour slot</th><th>Status</th></tr></thead>
+      <tbody>${SCHOOL_SLOTS.map(s=>`<tr>
+        <td><b style="font-weight:500">${escHtml(s.name)}</b></td>
+        <td class="code">${s.start}</td><td class="code">${s.end}</td>
+        <td>${escHtml(s.tour_slot||"—")}</td>
+        <td>${s.is_active?'<span class="pill pill-ok"><i class="dot"></i>Active</span>':'<span class="pill pill-off">Inactive</span>'}</td></tr>`).join("")}
+        ${addRowNew("Add school time slot")}</tbody></table></div></div>`;
+  },
+
+  entryprices(){
+    return `<div class="note note-scope"><span class="note-mark">Structure</span><div>
+      Default per-student and per-adult entry prices a <b>school booking</b> can pull in. Prices stay editable per booking once pulled.
+    </div></div>
+    <div class="card"><div class="card-head"><span class="card-title">Entry price presets</span>
+      <span class="card-note">${ENTRY_PRICES.length} on file</span></div>
+      <div class="matrix-wrap"><table><thead><tr>
+        <th>Preset</th><th class="ctr">Per student</th><th class="ctr">Per adult / teacher</th><th>Status</th></tr></thead>
+      <tbody>${ENTRY_PRICES.map(p=>`<tr>
+        <td><b style="font-weight:500">${escHtml(p.name)}</b></td>
+        <td class="code" style="text-align:center">${money(p.student)}</td>
+        <td class="code" style="text-align:center">${money(p.adult)}</td>
+        <td>${p.is_active?'<span class="pill pill-ok"><i class="dot"></i>Active</span>':'<span class="pill pill-off">Inactive</span>'}</td></tr>`).join("")}
+        ${addRowNew("Add entry price preset")}</tbody></table></div></div>`;
+  },
+
+  school(){
+    const S=(p)=>`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${p}</svg>`;
+    const kpi=(ico,color,label,value,sub)=>`<div class="setcard"><div class="kpi-top"><span class="kpi-ico kpi-${color}">${ico}</span><div class="set-k">${label}</div></div><div class="set-v pos">${value}</div><div class="kpi-sub">${sub}</div></div>`;
+    const tabs=`<div class="subs">
+      <button class="sub-tab" data-schtab="records" aria-selected="${schtab==="records"}">Bookings &amp; enquiries</button>
+      <button class="sub-tab" data-schtab="reports" aria-selected="${schtab==="reports"}">Reports</button></div>`;
+
+    if(schtab==="reports") return tabs+`<div class="sub-body">${schoolReports()}</div>`;
+
+    /* ---- Records tab ---- */
+    const openN=SCHOOL_BOOKINGS.filter(r=>["Open","In Discussion"].includes(r.status)).length;
+    const bookedN=SCHOOL_BOOKINGS.filter(r=>["Confirmed","Live","Ended"].includes(r.status)).length;
+    const students=SCHOOL_BOOKINGS.reduce((a,r)=>a+schoolCompute(r).students,0);
+    const rev=SCHOOL_BOOKINGS.filter(r=>["Confirmed","Live","Ended"].includes(r.status)).reduce((a,r)=>a+schoolCompute(r).grand,0);
+    const tiles=`<div class="set">
+      ${kpi(S('<path d="M3 21h18M5 21V7l7-4 7 4v14"/><path d="M9 21v-6h6v6"/>'),"blue","Open enquiries",openN,"awaiting or in discussion")}
+      ${kpi(S('<path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>'),"teal","Confirmed bookings",bookedN,"confirmed · live · ended")}
+      ${kpi(S('<circle cx="9" cy="7" r="4"/><path d="M2 21v-2a4 4 0 0 1 4-4h6a4 4 0 0 1 4 4v2"/><path d="M22 11l-2 2-1-1"/>'),"amber","Students booked",students,"across all visits")}
+      ${kpi(S('<circle cx="9" cy="9" r="6"/><path d="M18.1 10.7A6 6 0 1 1 10.7 18.1"/><path d="M7.5 7h2v4"/>'),"blue","Revenue",money(Math.round(rev)),"incl. GST, confirmed+")}
+    </div>`;
+    const filtered=SCHOOL_BOOKINGS.filter(r=>!schoolFStatus||r.status===schoolFStatus);
+    const rows=filtered.map(r=>{
+      const i=SCHOOL_BOOKINGS.indexOf(r);
+      const c=schoolCompute(r);
+      const hay=`${r.id} ${r.school} ${r.poc} ${r.location} ${(r.boards||[]).join(" ")}`.toLowerCase();
+      const when=(r.visits&&r.visits[0]&&r.visits[0].date)||r.prefDate||"—";
+      const heads=c.students||c.adults?`${c.students} st · ${c.adults} ad`:'<span class="muted">—</span>';
+      const payCell=c.grand?(c.balance<=0?'<span class="pill pill-ok"><i class="dot"></i>Paid</span>':c.paid>0?`<span class="pill pill-warn">Bal ${money(c.balance)}</span>`:`<span class="muted">${money(c.grand)} due</span>`):'<span class="muted">—</span>';
+      return `<tr data-open="school:${i}" data-school-row data-search="${escAttr(hay)}">
+        <td class="code">${r.id}</td>
+        <td><b style="font-weight:500">${escHtml(r.school)}</b><div class="sub">${escHtml(r.location||"")}</div></td>
+        <td>${escHtml(r.poc||"—")}<div class="sub code">${escHtml(r.phone||"")}</div></td>
+        <td class="code" style="white-space:nowrap">${when}</td>
+        <td class="code">${heads}</td>
+        <td>${schoolStatusPill(r)}</td>
+        <td class="code">${payCell}</td>
+        <td><div style="display:flex;gap:8px;justify-content:flex-end"><button class="btn" data-open="school:${i}">View</button><button class="btn" data-school-edit-row="${r.id}">Edit</button></div></td></tr>`;
+    }).join("");
+    const statusPick=`<div class="selwrap tool-sel"><select class="inp" data-school-filter>
+      <option value="">All statuses</option>
+      ${SCHOOL_STATUSES.map(s=>`<option${s===schoolFStatus?" selected":""}>${s}</option>`).join("")}</select></div>`;
+    const toolbar=`<div class="toolbar">
+      <label class="search"><span>&#8981;</span><input data-school-search value="${escAttr(schoolQ)}" autocomplete="off"
+        placeholder="Search by ID, school, POC or location" aria-label="Search school records"></label>
+      ${statusPick}
+      <span class="tool-note" id="schoolCount">${SCHOOL_BOOKINGS.length} records</span>
+      <button class="btn" data-export="school">Download CSV</button></div>`;
+    return tabs+`<div class="sub-body">${tiles}${toolbar}
+      <div class="card"><div class="matrix-wrap"><table class="reclist" id="schoolTable"><thead><tr>
+        <th>ID</th><th>School</th><th>POC</th><th>Visit / preferred</th><th>Heads</th><th>Status</th><th>Payment</th><th></th></tr></thead>
+      <tbody>${rows}
+        <tr data-school-newrow><td colspan="8"><button class="rep-add" data-school-new="booking" style="border-radius:4px">+ New booking</button></td></tr>
+        <tr data-school-empty style="display:none"><td colspan="8" class="muted" style="text-align:center;padding:16px">No records match that search.</td></tr>
+      </tbody></table></div></div></div>`;
+  },
+
   emptyList(){
     const m=M[current], rows=OPTIONS[m.n]||[];
     if(!rows.length) return `${openBlock(m.open)}
@@ -4755,7 +5133,8 @@ function bookingForm(editing=false){
 const SING={blackout:"blackout date",affiliates:"affiliate link",
   sources:"source",paymodes:"payment mode",scripts:"script",categories:"category",pools:"pool",
   tax:"tax rate",hsn:"code",discounts:"discount",products:"product or add-on",
-  programs:"program",progcats:"program category",departments:"department",events:"event",camps:"camp or workshop",bookings:"order",career:"role"};
+  programs:"program",progcats:"program category",departments:"department",events:"event",camps:"camp or workshop",bookings:"order",career:"role",
+  fboptions:"F&B option",schoolslots:"school time slot",entryprices:"entry price preset",school:"school booking"};
 const singular=(k,n)=>SING[k]||n.toLowerCase().replace(/s$/,"");
 const TYPE_LABEL={media:"Files",string:"Text",int:"Number",decimal:"Number",money:"Amount",
   date:"Date",datetime:"Date and time",time:"Time",bool:"Yes or no",enum:"Choose one",
@@ -5534,7 +5913,390 @@ function shopSaleDetail(){ const s=SHOP_SALES[selShopSale]; if(!s) return ""; co
   return head+tabs+`<div class="sub-body">${ssub==="invoice"?invoiceBody:detailsBody}</div>`;
 }
 
-const DETAIL = { career:()=>careerDetail(), products:productDetail, programs:campDetail, events:eventDetail, camps:campDetail, discounts:discountDetail, members:memberDetail, tiers:tierDetail, shopsales:shopSaleDetail, shopitems:shopItemDetail, shopcoupons:shopCouponDetail };
+/* ============================================================================
+   SCHOOL BOOKINGS — reports, forms, detail, proforma. Sponsored School (§9) is
+   not built. Records are edited in memory; the proforma reuses the shop invoice
+   markup and the PDF stack. See §8 of the scope.
+   ========================================================================== */
+
+const schoolMapNote = slotName => { const s=schoolSlotByName(slotName); return s&&s.tour_slot?`Maps to museum-tour slot “${escHtml(s.tour_slot)}” — the visit's heads come off that retail slot's inventory.`:""; };
+
+/* ---- Module Reports (Scope §8) ---- */
+function schoolReports(){
+  const S=(p)=>`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${p}</svg>`;
+  const kpi=(ico,color,label,value,sub)=>`<div class="setcard"><div class="kpi-top"><span class="kpi-ico kpi-${color}">${ico}</span><div class="set-k">${label}</div></div><div class="set-v pos">${value}</div><div class="kpi-sub">${sub}</div></div>`;
+  const worked=SCHOOL_BOOKINGS.filter(r=>["Confirmed","Live","Ended"].includes(r.status));
+  const agg=SCHOOL_BOOKINGS.reduce((a,r)=>{const c=schoolCompute(r);a.students+=c.students;a.adults+=c.adults;a.comp+=c.escorts+c.teachersComp;a.foodS+=c.foodStudents;a.foodA+=c.foodAdults;a.foodC+=c.foodComp;return a;},{students:0,adults:0,comp:0,foodS:0,foodA:0,foodC:0});
+  const visitCount=SCHOOL_BOOKINGS.filter(r=>(r.visits||[]).length>0).length;
+  const rev=worked.reduce((a,r)=>a+schoolCompute(r).grand,0);
+  const ranges=["Daily","Weekly","Monthly","Quarterly","Yearly"];
+  const rangeBar=`<div class="toolbar">${ranges.map(x=>`<button class="btn${x===schoolRange?" btn-primary":""}" data-school-range="${x}">${x}</button>`).join("")}<span class="tool-note">display range — wireframe</span></div>`;
+  const tiles=`<div class="set">
+    ${kpi(S('<path d="M3 21h18M5 21V7l7-4 7 4v14"/>'),"blue","School visits",visitCount,"with a scheduled visit")}
+    ${kpi(S('<circle cx="9" cy="7" r="4"/><path d="M2 21v-2a4 4 0 0 1 4-4h6a4 4 0 0 1 4 4v2"/>'),"teal","Students",agg.students,"across all visits")}
+    ${kpi(S('<circle cx="12" cy="7" r="4"/><path d="M4 21v-2a4 4 0 0 1 4-4h8a4 4 0 0 1 4 4v2"/>'),"amber","Adults / teachers",agg.adults,"paid heads")}
+    ${kpi(S('<path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>'),"blue","Complementary",agg.comp,"escorts + teachers (₹0)")}
+    ${kpi(S('<path d="M3 2v7a4 4 0 0 0 8 0V2M7 2v20M14 2c0 4 2 6 4 6M18 2v20"/>'),"teal","Food — students",agg.foodS,"meals booked")}
+    ${kpi(S('<circle cx="9" cy="9" r="6"/><path d="M18.1 10.7A6 6 0 1 1 10.7 18.1"/>'),"amber","Revenue",money(Math.round(rev)),"incl. GST, confirmed+")}
+  </div>`;
+  const boardMap={}; SCHOOL_BOOKINGS.forEach(r=>{const c=schoolCompute(r);(r.boards||[]).forEach(b=>{const m=boardMap[b]||(boardMap[b]={board:b,recs:0,students:0,rev:0});m.recs++;m.students+=c.students;if(["Confirmed","Live","Ended"].includes(r.status))m.rev+=c.grand;});});
+  const boardRows=Object.values(boardMap).map(m=>`<tr><td>${m.board}</td><td class="code">${m.recs}</td><td class="code">${m.students}</td><td class="code">${money(Math.round(m.rev))}</td></tr>`).join("")||`<tr><td colspan="4" class="muted" style="text-align:center;padding:14px">No board data yet.</td></tr>`;
+  const boardTable=`<div class="card"><div class="card-head"><span class="card-title">By education board</span><button class="btn" style="margin-left:auto" data-export="school-boards">Export CSV</button></div><div class="matrix-wrap"><table class="reclist"><thead><tr><th>Board</th><th>Records</th><th>Students</th><th>Revenue</th></tr></thead><tbody>${boardRows}</tbody></table></div></div>`;
+  const schoolMap={}; SCHOOL_BOOKINGS.forEach(r=>{const m=schoolMap[r.school]||(schoolMap[r.school]={school:r.school,visits:0,students:0});m.visits++;m.students+=schoolCompute(r).students;});
+  const repeats=Object.values(schoolMap).filter(m=>m.visits>1);
+  const repeatRows=repeats.map(m=>`<tr><td><b style="font-weight:500">${escHtml(m.school)}</b></td><td class="code">${m.visits}</td><td class="code">${m.students}</td></tr>`).join("")||`<tr><td colspan="3" class="muted" style="text-align:center;padding:14px">No repeat visitors yet.</td></tr>`;
+  const repeatTable=`<div class="card"><div class="card-head"><span class="card-title">Repeat visitors</span><span class="card-note">schools with more than one record</span><button class="btn" style="margin-left:auto" data-export="school-repeat">Export CSV</button></div><div class="matrix-wrap"><table class="reclist"><thead><tr><th>School</th><th>Records</th><th>Students total</th></tr></thead><tbody>${repeatRows}</tbody></table></div></div>`;
+  return rangeBar+tiles+boardTable+repeatTable;
+}
+
+/* ---- The backend booking / enquiry form (both editable, one code path) ---- */
+/* Each visit carries its own headcounts, Food & F&B and Optionals (venue blocks). */
+function blankVisit(){
+  return {date:"", slotId:(SCHOOL_SLOTS[0]||{}).name||"", students:0, adults:0, escorts:0, teachersComp:0,
+    food:{students:0,adults:0,comp:0,optionIds:[]}, optionals:[]};
+}
+function blankSchool(mode){
+  return {id:nextSchoolId(), status:"Open", origin:mode==="booking"?"backend":"enquiry", created:fmtDMY(new Date()),
+    school:"",location:"",boards:[],boardsOther:"",grade:"",poc:"",designation:"",email:"",phone:"",
+    interested:[],interestedOther:"",prefDate:"",expChildren:"",expTeachers:"",note:"",
+    visits:[], entryStudent:"", entryAdult:"",
+    billName:"",billAddress:"",gstin:"",pan:"",comments:"",
+    payments:[], proformaUpload:null, timeline:[], _mode:mode};
+}
+function schoolForm(editing){
+  if(!schoolDraft) schoolDraft = editing ? Object.assign(JSON.parse(JSON.stringify(schoolById(selSchool)||blankSchool("booking"))),{_mode:"booking"}) : blankSchool(schoolNewMode);
+  const d=schoolDraft;
+  const esc=v=>escAttr(v==null?"":v);
+  const t=(k,v,ph)=>`<input class="inp" data-sf="${k}" value="${esc(v)}" placeholder="${ph||""}" autocomplete="off">`;
+  const num=(k,v,ph)=>`<input class="inp mono" type="number" min="0" data-sf="${k}" value="${esc(v)}" placeholder="${ph||""}">`;
+  const ta=(k,v)=>`<textarea class="inp" data-sf="${k}" rows="3" style="resize:vertical">${escHtml(v||"")}</textarea>`;
+  const sel=(k,v,opts,blank)=>`<div class="selwrap"><select class="inp" data-sf="${k}">${blank?`<option value=""${v?"":" selected"}>${blank}</option>`:""}${opts.map(o=>`<option${o===v?" selected":""}>${o}</option>`).join("")}</select></div>`;
+  const chips=(k,sels,opts)=>`<div class="chips" data-sfchips="${k}">${opts.map(o=>`<button type="button" class="chip-add chip-opt" data-on="${(sels||[]).includes(o)?1:0}" data-chipval="${escAttr(o)}">${o}</button>`).join("")}</div>`;
+  const hint=h=>h?`<div class="muted" style="font-size:11px;margin-top:4px">${h}</div>`:"";
+  const fld=(label,inner,h,req,w)=>`<div class="fld${w?" wide":""}"><div class="lab"><span class="lab-n">${label}</span>${req?'<span class="lab-req">Required</span>':""}</div>${inner}${hint(h)}</div>`;
+  const section=(title,body)=>`<section class="form-sec"><div class="form-sec-head"><span class="form-sec-title">${title}</span></div><div class="form-sec-body">${body}</div></section>`;
+
+  // ---- Enquiry-capture sections, mirroring the public School Booking form ----
+  const secSchoolInfo=section("School Information",
+    fld("School Name",t("school",d.school,"Enter the official name of your school"),"",true)+
+    fld("School Location",t("location",d.location,"City, State, Country"),"",true));
+
+  const secBoard=section("Education Board",
+    fld("Education board",chips("boards",d.boards,SCHOOL_BOARDS),"Tick every board that applies.","",true)+
+    ((d.boards||[]).includes("Other")?fld("Other Board",t("boardsOther",d.boardsOther,"Specify here if other board"),"","",true):""));
+
+  const secVisitDetails=section("Visit Details",
+    fld("Grade / Class of Children Visiting",t("grade",d.grade,"e.g., Grade 5 - Grade 8"),"",true)+
+    fld("Preferred Date of Visit",t("prefDate",d.prefDate,"15/10/2026"),"DD/MM/YYYY",true)+
+    fld("Expected Number of Children",num("expChildren",d.expChildren,"e.g., 120"))+
+    fld("Expected Number of Teachers / Staff",num("expTeachers",d.expTeachers,"e.g., 6")));
+
+  const secPOC=section("Point of Contact",
+    fld("Name of Point of Contact (POC)",t("poc",d.poc,"Enter full name of coordinating coordinator / teacher"),"",true,true)+
+    fld("Designation",sel("designation",d.designation,SCHOOL_DESIGN,"—"))+
+    fld("Email of POC",t("email",d.email,"poc@school.edu"),"",true)+
+    fld("Phone Number of POC",t("phone",d.phone,"+91 98765 43210"),"Include country code",true));
+
+  const secInterested=section("Interested In",
+    fld("Interested In (choose multiple if needed)",chips("interested",d.interested,SCHOOL_INTEREST),"",true,true)+
+    fld("Other Interests",t("interestedOther",d.interestedOther,"Specify special topics, events or exhibitions of interest"),"","",true));
+
+  const secAdditional=section("Additional Information",
+    fld("Message / Note",ta("note",d.note),"Special assistance requests, lunch planning, etc.","",true));
+
+  // Visit 1 is always present and can't be removed; further visits are added below it.
+  // Each visit carries its own schedule, headcounts, Food & F&B and Optionals.
+  if(!Array.isArray(d.visits) || d.visits.length===0) d.visits=[blankVisit()];
+  const slotNames=SCHOOL_SLOTS.map(s=>s.name);
+  const optKinds=["Workshop","Orientation","F&B"];
+  const fbActive=FB_OPTIONS.filter(o=>o.is_active).map(o=>o.name);
+  const subHead=t2=>`<div style="margin:12px 0 6px;padding-top:10px;border-top:1px solid var(--rule2)"><b style="font-size:11.5px;color:var(--ink2)">${t2}</b></div>`;
+  const optCard=(vi,o,oi)=>`<div class="fld wide" data-vorow="${vi}|${oi}" style="border:1px dashed var(--rule2);border-radius:6px;padding:10px;margin:0">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px"><b style="font-size:11px">Optional ${oi+1}</b><button type="button" class="btn" data-school-del-optional="${vi}|${oi}">Remove</button></div>
+      <div class="form-sec-body" style="padding:0">
+        ${fld("Kind",`<div class="selwrap"><select class="inp" data-vof="kind">${optKinds.map(k=>`<option${k===o.kind?" selected":""}>${k}</option>`).join("")}</select></div>`)}
+        ${fld("Venue",`<input class="inp" data-vof="venue" value="${esc(o.venue)}" placeholder="e.g. Studio 2">`,"Blocks that space for this window.")}
+        ${fld("Date",`<input class="inp" data-vof="date" value="${esc(o.date)}" placeholder="DD Mon YYYY">`)}
+        ${fld("Time",`<input class="inp" data-vof="time" value="${esc(o.time)}" placeholder="11:30–12:30">`)}
+      </div></div>`;
+  const gridAuto="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px 16px";
+  const numFld=(label,key,val,h)=>fld(label,`<input class="inp mono" type="number" min="0" data-vf="${key}" value="${esc(val)}">`,h);
+  const visitCard=(v,i)=>{ const f=v.food||{};
+    return `<div class="fld wide" data-vrow="${i}" style="border:1px solid var(--rule2);border-radius:8px;padding:14px;margin:0;gap:0">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px"><b style="font-size:12.5px">Visit ${i+1}</b>${i>0?`<button type="button" class="btn" data-school-del-visit="${i}">Remove</button>`:""}</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px 16px;align-items:start">
+      ${fld("Date",`<input class="inp" data-vf="date" value="${esc(v.date)}" placeholder="DD Mon YYYY">`)}
+      ${fld("School time slot",`<div class="selwrap"><select class="inp" data-vf="slotId">${slotNames.map(n=>`<option${n===v.slotId?" selected":""}>${n}</option>`).join("")}</select></div>`,schoolMapNote(v.slotId))}
+    </div>
+    <div style="${gridAuto};margin-top:12px">
+      ${numFld("Students","students",v.students)}
+      ${numFld("Adults / teachers","adults",v.adults)}
+      ${numFld("Complementary escorts","escorts",v.escorts,"Entry price ₹0.")}
+      ${numFld("Complementary teachers","teachersComp",v.teachersComp,"Entry price ₹0.")}
+    </div>
+    ${subHead("Food &amp; F&amp;B")}
+    <div style="${gridAuto}">
+      ${numFld("F&B — students","foodStudents",f.students)}
+      ${numFld("F&B — adults / teachers","foodAdults",f.adults)}
+      ${numFld("F&B — complementary","foodComp",f.comp,"Charged ₹0.")}
+    </div>
+    <div style="margin-top:12px">${fld("F&B options",`<div class="chips" data-vfchips="foodopts|${i}">${fbActive.map(o=>`<button type="button" class="chip-add chip-opt" data-on="${(f.optionIds||[]).includes(o)?1:0}" data-chipval="${escAttr(o)}">${o}</button>`).join("")}</div>`,"Adult & child pricing from the F&B options master.")}</div>
+    ${subHead("Optionals (venue blocks)")}
+    <div style="display:flex;flex-direction:column;gap:10px">${(v.optionals||[]).map((o,oi)=>optCard(i,o,oi)).join("")}
+      <button type="button" class="rep-add" data-school-add-optional="${i}" style="border-radius:4px;align-self:flex-start">+ Add optional</button></div>
+  </div>`; };
+  const secPricing=section("Entry pricing",
+    fld("Entry price preset",`<div class="selwrap"><select class="inp" data-school-preset><option value="">— pick a preset —</option>${ENTRY_PRICES.map(p=>`<option>${escHtml(p.name)}</option>`).join("")}</select></div>`,"Fills the per-head prices below; they stay editable.")+
+    fld("Entry price · per student",num("entryStudent",d.entryStudent))+
+    fld("Entry price · per adult / teacher",num("entryAdult",d.entryAdult)));
+  const secVisits=section("Visits",
+    `<div class="fld" style="grid-column:1/-1;gap:14px">${(d.visits||[]).map(visitCard).join("")}
+      <button type="button" class="rep-add" data-school-add-visit="1" style="border-radius:4px;align-self:flex-start">+ Add visit</button></div>`);
+
+  const secBill=section("Billing (for invoicing)",
+    fld("Billing name",t("billName",d.billName))+
+    fld("Billing address",t("billAddress",d.billAddress),"","",true)+
+    fld("GST number",t("gstin",d.gstin),"If present, an e-invoice is raised on completion; otherwise a tax invoice.")+
+    fld("PAN",t("pan",d.pan)));
+
+  const statusLocked = schoolStatusLocked(d);
+  const statusOpts = SCHOOL_MANUAL_STATUSES.includes(d.status) ? SCHOOL_MANUAL_STATUSES : SCHOOL_MANUAL_STATUSES.concat([d.status]);
+  const statusCtl = statusLocked ? schoolStatusPill(d) : sel("status",d.status,statusOpts);
+  const secStatus=section("Status & comments",
+    fld("Status",statusCtl, statusLocked?"":"Confirmed, Live and Ended are set automatically from payment and the visit date.")+
+    fld("Comments",ta("comments",d.comments),"","",true));
+
+  const body = secSchoolInfo+secBoard+secVisitDetails+secPOC+secInterested+secAdditional
+             +secPricing+secVisits+secBill+secStatus;
+  const title = editing ? "Edit school booking" : "New school booking";
+  const saveLbl = editing ? "Save changes" : "Create booking";
+  return `<div><div class="card">
+      <div class="card-head"><span class="card-title">${title}</span></div>
+      <div class="form-body product-form">${body}</div>
+      <div class="form-foot"><span class="form-err" id="schoolErr"></span>
+        <button class="btn" data-school-cancel="1">Cancel</button>
+        <button class="btn btn-primary" data-school-save="1">${saveLbl}</button></div>
+    </div></div>`;
+}
+/* Read the open form's fields back into the draft (so add/remove/preset keep typed values). */
+function schoolCaptureForm(){
+  const d=schoolDraft; if(!d) return;
+  const g=k=>{const el=document.querySelector(`[data-sf="${k}"]`);return el?el.value:undefined;};
+  ["school","location","boardsOther","grade","poc","designation","email","phone","interestedOther","prefDate","note","entryStudent","entryAdult","billName","billAddress","gstin","pan","status","comments","expChildren","expTeachers"].forEach(k=>{const v=g(k);if(v!==undefined)d[k]=v;});
+  const chipVals=key=>[...document.querySelectorAll(`[data-sfchips="${key}"] .chip-opt[data-on="1"]`)].map(c=>c.dataset.chipval);
+  if(document.querySelector('[data-sfchips="boards"]')) d.boards=chipVals("boards");
+  if(document.querySelector('[data-sfchips="interested"]')) d.interested=chipVals("interested");
+  // Each visit carries its own schedule, headcounts, Food & F&B and Optionals.
+  document.querySelectorAll("[data-vrow]").forEach(rowEl=>{const i=+rowEl.dataset.vrow,v=(d.visits||[])[i];if(!v)return;
+    const vg=n=>{const el=rowEl.querySelector(`[data-vf="${n}"]`);return el?el.value:undefined;};
+    ["date","slotId"].forEach(n=>{const x=vg(n);if(x!==undefined)v[n]=x;});
+    ["students","adults","escorts","teachersComp"].forEach(n=>{const x=vg(n);if(x!==undefined)v[n]=+x||0;});
+    // per-visit Food & F&B
+    const f=v.food||(v.food={});
+    const fs=vg("foodStudents"),fa=vg("foodAdults"),fc=vg("foodComp");
+    if(fs!==undefined)f.students=+fs||0; if(fa!==undefined)f.adults=+fa||0; if(fc!==undefined)f.comp=+fc||0;
+    const fchips=rowEl.querySelector(`[data-vfchips="foodopts|${i}"]`);
+    if(fchips) f.optionIds=[...fchips.querySelectorAll('.chip-opt[data-on="1"]')].map(c=>c.dataset.chipval);
+    // per-visit Optionals
+    v.optionals=v.optionals||[];
+    rowEl.querySelectorAll("[data-vorow]").forEach(orowEl=>{const oi=+orowEl.dataset.vorow.split("|")[1],o=v.optionals[oi];if(!o)return;
+      const og=n=>{const el=orowEl.querySelector(`[data-vof="${n}"]`);return el?el.value:undefined;};
+      ["kind","venue","date","time"].forEach(n=>{const x=og(n);if(x!==undefined)o[n]=x;});});
+  });
+}
+function schoolCommit(){
+  schoolCaptureForm(); const d=schoolDraft; if(!d) return;
+  if(!d.school||!d.school.trim()){ const e=document.getElementById("schoolErr"); if(e)e.textContent="School name is required."; return; }
+  const existing=schoolById(d.id);
+  if(existing){ const m=d._mode; delete d._mode; const prevStatus=existing.status; Object.assign(existing,d); existing._mode&&delete existing._mode;
+    if(existing.status!==prevStatus) schoolLogEmail(existing,"Admin","Booking edited — status "+prevStatus+" → "+existing.status+". Email sent to the POC.","status");
+    else schoolLogEmail(existing,"Admin","Booking details edited. Email sent to the POC with the updated proforma.","edit");
+    selSchool=existing.id; }
+  else { delete d._mode; if(!d.timeline) d.timeline=[]; if(d.origin==="backend"){ SCHOOL_BOOKINGS.unshift(d); schoolLogEmail(d,"Admin","Backend booking created; proforma emailed to the POC.","booking"); } else { SCHOOL_BOOKINGS.unshift(d); schoolLogEmail(d,"Website","Enquiry received — acknowledgement email sent to the POC.","ack"); } selSchool=d.id; }
+  schoolDraft=null; tab="detail"; schsub="overview"; render(); $(".stage").scrollTop=0;
+}
+
+/* ---- Proforma invoice (reuses the shop invoice markup; never an e-invoice) ---- */
+function schoolProformaLines(rec){
+  const lines=[];
+  const es=+rec.entryStudent||0, ea=+rec.entryAdult||0;
+  const c=schoolCompute(rec);
+  if(c.students) lines.push({name:"Museum visit — student",hsn:"999692",qty:c.students,rate:es,amount:c.students*es});
+  if(c.adults)   lines.push({name:"Museum visit — adult / teacher",hsn:"999692",qty:c.adults,rate:ea,amount:c.adults*ea});
+  if(c.escorts)  lines.push({name:"Complementary escort",hsn:"999692",qty:c.escorts,rate:0,amount:0});
+  if(c.teachersComp) lines.push({name:"Complementary teacher",hsn:"999692",qty:c.teachersComp,rate:0,amount:0});
+  // Food & F&B — aggregate each option across all visits.
+  const foodAgg={};
+  (rec.visits||[]).forEach(v=>{const f=v.food||{};(f.optionIds||[]).forEach(nm=>{const o=fbByName(nm);if(!o)return;const q=(+f.students||0)+(+f.adults||0);const amt=(+f.students||0)*o.child+(+f.adults||0)*o.adult;if(q){const m=foodAgg[nm]||(foodAgg[nm]={q:0,amt:0});m.q+=q;m.amt+=amt;}});});
+  Object.keys(foodAgg).forEach(nm=>{const m=foodAgg[nm];lines.push({name:"F&B — "+nm,hsn:"996331",qty:m.q,rate:m.q?Math.round(m.amt/m.q):0,amount:m.amt});});
+  return lines;
+}
+function schoolProformaInvoice(rec){
+  const c=schoolCompute(rec);
+  const lines=schoolProformaLines(rec);
+  const partRows=lines.map((l,i)=>`<tr><td>${i+1}</td><td>${escHtml(l.name)}</td><td class="code">${l.hsn}</td><td class="code">${l.qty}</td><td class="code">${money(l.rate)}</td><td>Nos</td><td class="code">${money(l.amount)}</td></tr>`).join("");
+  const taxRows=`<tr class="inv-tax"><td colspan="6" style="text-align:right">CGST 9% Output</td><td class="code">${money(c.cgst)}</td></tr><tr class="inv-tax"><td colspan="6" style="text-align:right">SGST 9% Output</td><td class="code">${money(c.sgst)}</td></tr>`;
+  const hsnMap={}; lines.forEach(l=>{const half=9;const cg=Math.round(l.amount*half/100);const m=hsnMap[l.hsn]||(hsnMap[l.hsn]={hsn:l.hsn,taxable:0,cgst:0,sgst:0,half});m.taxable+=l.amount;m.cgst+=cg;m.sgst+=cg;});
+  const hsnRows=Object.values(hsnMap).map(m=>`<tr><td class="code">${m.hsn}</td><td class="code">${money(Math.round(m.taxable))}</td><td class="code">${m.half}%</td><td class="code">${money(Math.round(m.cgst))}</td><td class="code">${m.half}%</td><td class="code">${money(Math.round(m.sgst))}</td><td class="code">${money(Math.round(m.cgst+m.sgst))}</td></tr>`).join("");
+  return `<div class="invoice-actions">
+      <button class="btn btn-primary" data-school-proforma-pdf="1">Download proforma (PDF)</button>
+      <button class="btn" data-school-proforma-upload="1">Upload proforma</button>
+      <span class="muted" style="font-size:11.5px">${rec.proformaUpload?("Uploaded: "+escHtml(rec.proformaUpload)):"Sent to the POC with the confirmation email · wireframe"}</span></div>
+    <div class="invoice">
+      <div class="inv-top"><div class="inv-kind">Proforma Invoice</div></div>
+      <div class="inv-parties">
+        <div class="inv-party"><b>${MUSO_SELLER.name}</b><div>${MUSO_SELLER.addr.join("<br>")}</div><div>GSTIN/UIN: <span class="code">${MUSO_SELLER.gstin}</span></div><div>State: ${MUSO_SELLER.state}, Code: ${MUSO_SELLER.stateCode}</div><div>${MUSO_SELLER.email}</div></div>
+        <div class="inv-party inv-meta"><div><span class="muted">Proforma No.</span><br><b>PF-${rec.id}</b></div><div><span class="muted">Dated</span><br><b>${rec.created||"—"}</b></div><div><span class="muted">Booking</span><br><b>${rec.id}</b></div></div>
+      </div>
+      <div class="inv-buyer"><b>Buyer (Bill to)</b><div>${escHtml(rec.billName||rec.school||"—")}</div>${rec.billAddress?`<div>${escHtml(rec.billAddress)}</div>`:""}${rec.gstin?`<div>GSTIN/UIN: <span class="code">${escHtml(rec.gstin)}</span></div>`:'<div class="muted">No GSTIN on file — a tax invoice (not e-invoice) will be raised on completion.</div>'}</div>
+      <div class="matrix-wrap"><table class="reclist inv-table"><thead><tr><th>Sl</th><th>Particulars</th><th>HSN/SAC</th><th>Qty</th><th>Rate</th><th>per</th><th>Amount</th></tr></thead><tbody>${partRows||`<tr><td colspan="7" class="muted" style="text-align:center;padding:14px">No priced lines yet — add visit headcounts and entry prices.</td></tr>`}${lines.length?taxRows:""}
+        <tr class="inv-total"><td colspan="6" style="text-align:right"><b>Total</b></td><td class="code"><b>${money(c.grand)}</b></td></tr></tbody></table></div>
+      <div class="inv-words">Amount Chargeable (in words): <b>INR ${amountInWords(c.grand).replace(/^Rupees /,"")}</b></div>
+      ${lines.length?`<div class="matrix-wrap"><table class="reclist inv-hsn"><thead><tr><th>HSN/SAC</th><th>Taxable Value</th><th>CGST Rate</th><th>CGST Amt</th><th>SGST Rate</th><th>SGST Amt</th><th>Total Tax</th></tr></thead><tbody>${hsnRows}</tbody></table></div>`:""}
+      <div class="inv-foot"><div><b>Company's Bank Details</b><div>Bank: ${MUSO_SELLER.bank.name}</div><div>A/c No.: <span class="code">${MUSO_SELLER.bank.ac}</span></div><div>IFSC: ${MUSO_SELLER.bank.ifsc}</div></div><div class="inv-sign"><div>for <b>${MUSO_SELLER.name}</b></div><div class="inv-sign-line"></div><div class="muted">Authorised Signatory</div></div></div>
+      <div class="inv-note muted">Proforma invoice — for advance / estimation only, not a tax invoice.</div>
+    </div>`;
+}
+function schoolProformaPdf(rec){
+  const c=schoolCompute(rec), A=s=>pdfAscii(String(s));
+  const W=595,H=842,ML=56,MR=56,CW=W-ML-MR;
+  const BLUE="0.184 0.467 0.737",INK="0.082 0.102 0.118",INK2="0.353 0.388 0.420",INK3="0.541 0.576 0.612";
+  let ops=[],y=H-64;
+  const line=(t,x,size,bold,rgb)=>ops.push("BT /F"+(bold?2:1)+" "+size+" Tf "+(rgb||INK)+" rg 1 0 0 1 "+x.toFixed(1)+" "+y.toFixed(1)+" Tm ("+pdfEsc(A(t))+") Tj ET");
+  const rt=(t,xr,size,bold,rgb)=>{const w=pdfWidth(A(t),size,bold);line(t,xr-w,size,bold,rgb);};
+  line("MUSEUM OF SOLUTIONS",ML,8,true,BLUE);y-=20;
+  line("Proforma Invoice",ML,18,true,INK);y-=22;
+  line(MUSO_SELLER.name,ML,10,true,INK2);y-=13;
+  MUSO_SELLER.addr.forEach(a=>{line(a,ML,9,false,INK3);y-=12;});
+  line("GSTIN: "+MUSO_SELLER.gstin,ML,9,false,INK3);y-=18;
+  line("Proforma No.: PF-"+rec.id+"    Dated: "+(rec.created||"-"),ML,9,false,INK2);y-=16;
+  line("Bill to: "+(rec.billName||rec.school||"-"),ML,10,true,INK);y-=13;
+  if(rec.billAddress){line(rec.billAddress,ML,9,false,INK2);y-=12;}
+  line(rec.gstin?("GSTIN: "+rec.gstin):"No GSTIN on file",ML,9,false,INK2);y-=18;
+  ops.push("q "+BLUE+" RG 1 w "+ML+" "+y.toFixed(1)+" m "+(W-MR)+" "+y.toFixed(1)+" l S Q");y-=16;
+  line("Particulars",ML,9,true,INK2);rt("Qty",ML+340,9,true,INK2);rt("Rate",ML+410,9,true,INK2);rt("Amount",W-MR,9,true,INK2);y-=15;
+  schoolProformaLines(rec).forEach(l=>{line(l.name,ML,9,false,INK);rt(String(l.qty),ML+340,9,false,INK);rt(money(l.rate),ML+410,9,false,INK);rt(money(l.amount),W-MR,9,false,INK);y-=14;});
+  y-=4;ops.push("q 0.878 0.898 0.918 RG 0.7 w "+ML+" "+y.toFixed(1)+" m "+(W-MR)+" "+y.toFixed(1)+" l S Q");y-=16;
+  rt("Sub total: "+money(c.subtotal),W-MR,9,false,INK2);y-=13;
+  rt("CGST 9%: "+money(c.cgst),W-MR,9,false,INK2);y-=13;
+  rt("SGST 9%: "+money(c.sgst),W-MR,9,false,INK2);y-=13;
+  rt("Grand total: "+money(c.grand),W-MR,11,true,INK);y-=18;
+  line("Amount in words: "+amountInWords(c.grand),ML,9,false,INK2);y-=20;
+  line("Proforma invoice — for advance / estimation only, not a tax invoice.",ML,8,false,INK3);
+  ops.push("BT /F1 8 Tf "+INK3+" rg 1 0 0 1 "+ML+" 40 Tm ("+pdfEsc(A("Museum of Solutions  -  "+rec.id+"  -  Proforma"))+") Tj ET");
+  return pdfAssemble([ops.join("\n")], rec.id+"-proforma.pdf");
+}
+
+/* ---- The booking detail page ---- */
+function schoolDetail(){
+  const rec=schoolById(selSchool)||SCHOOL_BOOKINGS[0];
+  if(!rec) return `<div class="card"><div class="card-body muted">No school record on file.</div></div>`;
+  const row=(k,v)=>`<tr><td style="color:var(--ink3);width:40%">${k}</td><td>${(v!==undefined&&v!==null&&String(v).trim()!=="")?v:'<span class="muted">—</span>'}</td></tr>`;
+  const c=schoolCompute(rec);
+  const tags=arr=>(arr&&arr.length)?arr.map(x=>`<span class="tag">${escHtml(x)}</span>`).join(" "):'<span class="muted">—</span>';
+
+  /* Overview */
+  const visitRows=(rec.visits||[]).map((v,i)=>{ const f=v.food||{};
+    const foodCell=(f.students||f.adults||f.comp||(f.optionIds||[]).length)
+      ? `${f.students||0} st · ${f.adults||0} ad${f.comp?` · ${f.comp} comp`:""}${(f.optionIds||[]).length?`<div class="sub">${f.optionIds.map(escHtml).join(", ")}</div>`:""}`
+      : '<span class="muted">—</span>';
+    const optCell=(v.optionals||[]).length
+      ? v.optionals.map(o=>`${escHtml(o.kind||"—")}${o.venue?" · "+escHtml(o.venue):""}${o.date?` <span class="sub">${o.date}${o.time?" "+escHtml(o.time):""}</span>`:""}`).join("<br>")
+      : '<span class="muted">—</span>';
+    return `<tr><td class="code">${i+1}</td><td class="code">${v.date||"—"}</td><td>${escHtml(v.slotId||"—")}<div class="sub">${schoolMapNote(v.slotId)}</div></td><td class="code">${v.students||0}</td><td class="code">${v.adults||0}</td><td class="code">${(v.escorts||0)+(v.teachersComp||0)}</td><td>${foodCell}</td><td>${optCell}</td></tr>`;
+  }).join("")||`<tr><td colspan="8" class="muted" style="text-align:center;padding:12px">No visit scheduled yet.</td></tr>`;
+  const allFoodOpts=[...new Set((rec.visits||[]).flatMap(v=>(v.food&&v.food.optionIds)||[]))];
+  const overview=`<div class="card"><div class="card-head"><span class="card-title">School &amp; contact</span></div><div class="matrix-wrap"><table class="reclist"><tbody>
+      ${row("School",escHtml(rec.school))}${row("Location",escHtml(rec.location))}${row("Education board",tags((rec.boards||[]).concat(rec.boardsOther?["Other: "+rec.boardsOther]:[])))}
+      ${row("Grade / class",escHtml(rec.grade))}${row("Interested in",tags((rec.interested||[]).concat(rec.interestedOther?["Other: "+rec.interestedOther]:[])))}
+      ${row("Point of contact",escHtml(rec.poc)+(rec.designation?` <span class="muted">· ${escHtml(rec.designation)}</span>`:""))}
+      ${row("Email",rec.email?`<span class="code">${escHtml(rec.email)}</span>`:"")}${row("Phone",rec.phone?`<span class="code">${escHtml(rec.phone)}</span>`:"")}
+      ${row("Preferred date",rec.prefDate)}${row("Expected",`${rec.expChildren||"—"} children · ${rec.expTeachers||"—"} staff`)}
+      ${row("Note",escHtml(rec.note))}
+    </tbody></table></div></div>
+    <div class="card"><div class="card-head"><span class="card-title">Visits &amp; headcount</span><span class="card-note">each visit carries its own food &amp; optionals</span></div>
+      <div class="matrix-wrap"><table class="reclist"><thead><tr><th>#</th><th>Date</th><th>Slot → inventory</th><th>Students</th><th>Adults</th><th>Comp.</th><th>Food &amp; F&amp;B</th><th>Optionals</th></tr></thead><tbody>${visitRows}</tbody></table></div></div>
+    <div class="card"><div class="card-head"><span class="card-title">Pricing &amp; food</span></div><div class="matrix-wrap"><table class="reclist"><tbody>
+      ${row("Entry · per student",rec.entryStudent!==""&&rec.entryStudent!=null?money(rec.entryStudent):"")}
+      ${row("Entry · per adult",rec.entryAdult!==""&&rec.entryAdult!=null?money(rec.entryAdult):"")}
+      ${row("Visit total",c.visitTotal?money(c.visitTotal):"")}
+      ${row("F&B options (all visits)",tags(allFoodOpts))}
+      ${row("F&B heads (all visits)",`${c.foodStudents} students · ${c.foodAdults} adults · ${c.foodComp} comp.`)}
+      ${row("Food total",c.foodTotal?money(c.foodTotal):"")}
+      ${row("Sub total",money(c.subtotal))}${row("GST (18%)",money(c.gst))}${row("Grand total",`<b>${money(c.grand)}</b>`)}
+    </tbody></table></div></div>
+    <div class="card"><div class="card-head"><span class="card-title">Billing</span></div><div class="matrix-wrap"><table class="reclist"><tbody>
+      ${row("Billing name",escHtml(rec.billName))}${row("Billing address",escHtml(rec.billAddress))}
+      ${row("GSTIN",rec.gstin?`<span class="code">${escHtml(rec.gstin)}</span>`:"")}${row("PAN",rec.pan?`<span class="code">${escHtml(rec.pan)}</span>`:"")}
+      ${row("Comments",escHtml(rec.comments))}
+    </tbody></table></div></div>`;
+
+  /* Payments */
+  const payRows=(rec.payments||[]).map(p=>`<tr><td class="code">${p.on||"—"}</td><td>${escHtml(p.mode||"—")}</td><td class="code">${escHtml(p.ref||"—")}</td><td class="code">${money(p.amount||0)}</td></tr>`).join("")||`<tr><td colspan="4" class="muted" style="text-align:center;padding:12px">No payments recorded.</td></tr>`;
+  const einvNote=c.eInv?"E-invoice will be raised on completion (GSTIN on file).":"No GSTIN on file — a tax invoice will be raised on completion.";
+  const payments=`<div class="card"><div class="card-head"><span class="card-title">Payment status</span></div><div class="matrix-wrap"><table class="reclist"><tbody>
+      ${row("Grand total",`<b>${money(c.grand)}</b>`)}${row("Paid",money(c.paid))}${row("Balance",c.balance>0?`<b style="color:var(--warn)">${money(c.balance)}</b>`:'<span class="pill pill-ok"><i class="dot"></i>Paid in full</span>')}
+    </tbody></table></div></div>
+    <div class="card"><div class="card-head"><span class="card-title">Payments</span><span class="card-note">${einvNote}</span></div>
+      <div class="matrix-wrap"><table class="reclist"><thead><tr><th>Date</th><th>Mode</th><th>Reference</th><th>Amount</th></tr></thead><tbody>${payRows}</tbody></table></div>
+      <div class="card-body" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+        <div class="selwrap"><select class="inp" id="schoolPayMode" style="min-width:130px"><option>Cash</option><option>Card</option><option>UPI</option><option>Net banking</option></select></div>
+        <input class="inp mono" id="schoolPayAmt" type="number" min="0" placeholder="Amount" style="max-width:140px">
+        <button class="btn" data-school-addpay="1">Add offline payment</button>
+        <button class="btn btn-primary" data-school-onlinepay="1">Record online payment</button>
+      </div></div>`;
+
+  /* Timeline */
+  // Newest first — sorted by date so seed and logged events read in one order (stable, so same-day events keep their logged order).
+  const tl=(rec.timeline||[]).slice().sort((a,b)=>{const da=parseDMY(a.on),db=parseDMY(b.on);return (db?db.getTime():0)-(da?da.getTime():0);});
+  const timeline=`<div class="card"><div class="card-head"><span class="card-title">Timeline &amp; notifications</span><span class="card-note">${tl.length} event${tl.length===1?"":"s"}</span></div>
+      <div class="attn">${tl.length?tl.map(e=>`<div class="attn-row attn-info" style="cursor:default">
+        <span class="attn-n">${e.on||""}</span><span class="attn-t"><b>${escHtml(e.who||"")}</b> — ${escHtml(e.what||"")}${e.email?`<div style="margin-top:6px"><button class="btn" data-school-view-email="${rec.timeline.indexOf(e)}">View email</button></div>`:""}</span></div>`).join(""):`<div class="card-body muted">Nothing logged yet.</div>`}</div></div>`;
+
+  /* Aside actions */
+  const aside=`<aside class="disc-summary-col">
+    <div class="card"><div class="card-head"><span class="card-title">At a glance</span></div><div class="matrix-wrap"><table class="reclist"><tbody>
+      ${row("Status",schoolStatusPill(rec))}${row("Students",`<b>${c.students}</b>`)}${row("Grand total",money(c.grand))}${row("Balance",c.balance>0?money(c.balance):"₹0")}
+    </tbody></table></div></div>
+    <div class="card"><div class="card-head"><span class="card-title">Actions</span></div><div class="card-body" style="display:flex;flex-direction:column;gap:8px">
+      <button class="btn btn-primary" data-school-edit="1">Edit details</button>
+      <button class="btn" data-school-sendmail="1">Send email</button>
+      <button class="btn" data-school-proforma-pdf="1">Download proforma</button>
+      ${(rec.status!=="Ended"&&schoolStatusLocked(rec))?`<button class="btn" data-school-complete="1">Mark completed</button>`:""}
+    </div></div></aside>`;
+
+  const subs=[["overview","Overview"],["payments","Payments"],["proforma","Proforma invoice"],["timeline",`Timeline · ${tl.length}`]];
+  if(!subs.some(([k])=>k===schsub)) schsub="overview";
+  const tabs=`<div class="subs">${subs.map(([k,l])=>`<button class="sub-tab" data-schsub="${k}" aria-selected="${schsub===k}">${l}</button>`).join("")}</div>`;
+  const bodyByTab = schsub==="payments"?payments : schsub==="proforma"?schoolProformaInvoice(rec) : schsub==="timeline"?timeline : overview;
+  const confirm = schoolMsg?`<div class="confirm-layer"><button class="confirm-backdrop" data-school-msg-dismiss="1" aria-label="Close"></button>
+    <div class="confirm-box" role="dialog" aria-modal="true"><div class="confirm-title">Email sent</div><div class="confirm-body">${escHtml(schoolMsg)}</div>
+    <div class="confirm-actions"><button class="btn btn-primary" data-school-msg-dismiss="1">Done</button></div></div></div>`:"";
+  const em=schoolEmailView;
+  const emailModal = em?`<div class="confirm-layer"><button class="confirm-backdrop" data-school-email-close="1" aria-label="Close"></button>
+    <div class="confirm-box" role="dialog" aria-modal="true" style="max-width:560px;width:92%;padding:0;overflow:hidden">
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:14px 20px;border-bottom:1px solid var(--rule)"><b style="font-size:14px">View email</b><button class="btn" data-school-email-close="1" aria-label="Close">✕</button></div>
+      <div style="padding:16px 20px;max-height:62vh;overflow:auto">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:6px"><div style="font-size:13px"><span class="muted">Subject:</span> <b>${escHtml(em.subject)}</b></div><span class="pill pill-ok" style="flex:none"><i class="dot"></i>Delivered</span></div>
+        <div class="muted" style="font-size:11.5px;margin-bottom:14px">To: ${escHtml(em.to)}${em.sentOn?" · "+em.sentOn:""}</div>
+        <div style="border:1px solid var(--rule);border-radius:10px;padding:22px;background:#fff">${em.body}</div>
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;padding:12px 20px;border-top:1px solid var(--rule)"><span class="muted" style="font-size:11px">Wireframe — no email is actually sent.</span><span style="display:flex;gap:8px"><button class="btn" data-school-email-close="1">Cancel</button><button class="btn btn-primary" data-school-email-resend="1">Resend email</button></span></div>
+    </div></div>`:"";
+  return `<div class="detailhead"><h2 class="detailname">${escHtml(rec.school||"School booking")}</h2><span class="code">${rec.id}</span>${schoolStatusPill(rec)}</div>
+  <div class="two"><div>${tabs}<div class="sub-body">${bodyByTab}</div></div>${aside}</div>${confirm}${emailModal}`;
+}
+/* Live search on the records table (called from the render tail). */
+function syncSchoolSearch(){
+  const tbl=document.getElementById("schoolTable"); if(!tbl) return;
+  const needle=(schoolQ||"").trim().toLowerCase(); let shown=0;
+  tbl.querySelectorAll("[data-school-row]").forEach(tr=>{const hit=!needle||(tr.dataset.search||"").includes(needle);tr.style.display=hit?"":"none";if(hit)shown++;});
+  const empty=tbl.querySelector("[data-school-empty]"); if(empty) empty.style.display=shown?"none":"";
+  const nr=tbl.querySelector("[data-school-newrow]"); if(nr) nr.style.display=needle?"none":"";
+  const cnt=document.getElementById("schoolCount"); if(cnt) cnt.textContent=needle?`${shown} of ${SCHOOL_BOOKINGS.length} records`:`${SCHOOL_BOOKINGS.length} records`;
+}
+
+const DETAIL = { career:()=>careerDetail(), products:productDetail, programs:campDetail, events:eventDetail, camps:campDetail, discounts:discountDetail, members:memberDetail, tiers:tierDetail, shopsales:shopSaleDetail, shopitems:shopItemDetail, shopcoupons:shopCouponDetail, school:()=>schoolDetail() };
 /* ================= Careers =====================================================
    Admin side only. The public careers page is what a candidate sees — the list, the
    View JD link and the apply form all live there. What the panel owns is the master
@@ -6154,7 +6916,7 @@ function render(){
   const label=singular(current,m.n);
   const back=t=>`<button class="pageback" data-tab="list">&larr; ${t}</button>`;
   let body;
-  if(tab==="new") body = back("Back to "+m.n.toLowerCase()) + (current==="products" ? productForm() : current==="programs" ? createForm(PROGRAM_SCHEMA,"program","",{}) : current==="bookings" ? bookingForm() : current==="discounts" ? discountForm(false) : current==="tiers" ? tierForm(false) : current==="members" ? memberForm(false) : current==="shopsales" ? shopSaleForm() : current==="shopitems" ? shopItemForm(false) : current==="shopcoupons" ? createForm(SCHEMAS.shopcoupons,"coupon") : current==="hsn" ? createForm(schema,label,"",{kind:"hsn"}) : createForm(schema,label));
+  if(tab==="new") body = back("Back to "+m.n.toLowerCase()) + (current==="school" ? schoolForm(false) : current==="products" ? productForm() : current==="programs" ? createForm(PROGRAM_SCHEMA,"program","",{}) : current==="bookings" ? bookingForm() : current==="discounts" ? discountForm(false) : current==="tiers" ? tierForm(false) : current==="members" ? memberForm(false) : current==="shopsales" ? shopSaleForm() : current==="shopitems" ? shopItemForm(false) : current==="shopcoupons" ? createForm(SCHEMAS.shopcoupons,"coupon") : current==="hsn" ? createForm(schema,label,"",{kind:"hsn"}) : createForm(schema,label));
   else if(tab==="edit" && current==="shopitems") body = back("Back to shop products") + shopItemForm(true);
   else if(tab==="edit" && current==="shopcoupons"){ const c=SHOP_COUPONS[selShopCoupon]||{}; body = back("Back to shop coupons") + createForm(SCHEMAS.shopcoupons,"coupon","",{code:c.code,desc:c.desc,type:c.type,v:c.v,preparedBy:c.preparedBy,proposedBy:c.proposedBy,approvedBy:c.approvedBy,status:c.status},true); }
   else if(tab==="edit" && current==="tiers") body = back("Back to membership tiers") + tierForm(true);
@@ -6170,6 +6932,7 @@ function render(){
     body = `<button class="pageback" data-career-back="1">&larr; Back to ${role?escHtml(role.title):"the role"}</button>`
          + createForm(M.career.schema,"role","",careerEditValues(role),true);
   }
+  else if(tab==="edit" && current==="school") body = back("Back to school records") + schoolForm(true);
   else if(tab==="hist") body = back("Back to "+m.n.toLowerCase()) + VIEWS.history();
   else if(tab==="detail" && DETAIL[current]) body = back("Back to "+m.n.toLowerCase()) + DETAIL[current]();
   else body = (VIEWS[m.view]||VIEWS.emptyList)();
@@ -6181,6 +6944,7 @@ function render(){
   if(savedScroll.formBody!=null){ const fb=document.querySelector(".booking-main .form-body"); if(fb) fb.scrollTop=savedScroll.formBody; }
   if(savedScroll.summaryBody!=null){ const sb=document.querySelector(".booking-summary-body"); if(sb) sb.scrollTop=savedScroll.summaryBody; }
   syncCareerSearch();
+  syncSchoolSearch();
   syncRatio();
   $("#rail").innerHTML = railHTML();
   $("#railFoot").innerHTML = ORDER.length+" masters<br>Retail products &amp; pricing";
@@ -6471,12 +7235,12 @@ document.addEventListener("click",e=>{
     if(a&&a.cv) careerOpenPdf(careerCvPdf(a), a.cv.name); return; }
   if(e.target.closest("[data-career-clear]")){ careerFDept=""; careerFType=""; careerFStatus="all"; render(); return; }
   const nav=e.target.closest(".mitem");
-  if(nav){ current=nav.dataset.k; selP=0; selW=0; selB=0; selE=0; esub="details"; eventCats=new Set(); selBooking=0; tab="list"; sub="details"; csub="details"; editD=-1; selD=0; dsub="summary"; editCond=-1; condDraft=null; draftDiscount=null; addOpen=null; progKind="event"; progCat="Event"; render(); $(".stage").scrollTop=0; return; }
+  if(nav){ current=nav.dataset.k; selP=0; selW=0; selB=0; selE=0; esub="details"; eventCats=new Set(); selBooking=0; tab="list"; sub="details"; csub="details"; editD=-1; selD=0; dsub="summary"; editCond=-1; condDraft=null; draftDiscount=null; addOpen=null; progKind="event"; progCat="Event"; schoolDraft=null; schtab="records"; schoolEmailView=null; schoolMsg=""; render(); $(".stage").scrollTop=0; return; }
   const goto=e.target.closest("[data-goto]");
   if(goto){ current=goto.dataset.goto; selP=0; selW=0; selB=0; selE=0; selD=0; selBooking=0; tab="list"; sub="details"; csub="details"; dsub="summary"; addOpen=null; render(); $(".stage").scrollTop=0; return; }
   const t=e.target.closest("[data-tab]");
-  if(t){ tab=t.dataset.tab; if(tab==="new"&&current==="bookings") resetBooking(); if(tab==="new"&&current==="shopsales") resetShopSale(); if(tab==="new"&&current==="programs"){progKind=progFormat(progCat)==="multi"?"camp":"event";eventCats=new Set();} if(tab==="new"&&current==="events") eventCats=new Set(); if(tab==="new"&&current==="discounts") draftDiscount=null; if((tab==="new"||tab==="edit")&&current==="tiers") seedTierDraft(tab==="edit"); if(tab==="new"&&(current==="products"||current==="programs")) prodBuildingPool=false; addOpen=null; render(); $(".stage").scrollTop=0; return; }
-  if(e.target.closest("#hAdd")){ tab="new"; if(current==="bookings") resetBooking(); if(current==="shopsales") resetShopSale(); if(current==="events") eventCats=new Set(); if(current==="discounts") draftDiscount=null; if(current==="tiers") seedTierDraft(false); if(current==="products"||current==="programs") prodBuildingPool=false; addOpen=null; render(); $(".stage").scrollTop=0; return; }
+  if(t){ tab=t.dataset.tab; if(tab==="new"&&current==="bookings") resetBooking(); if(tab==="new"&&current==="shopsales") resetShopSale(); if(tab==="new"&&current==="programs"){progKind=progFormat(progCat)==="multi"?"camp":"event";eventCats=new Set();} if(tab==="new"&&current==="events") eventCats=new Set(); if(tab==="new"&&current==="discounts") draftDiscount=null; if((tab==="new"||tab==="edit")&&current==="tiers") seedTierDraft(tab==="edit"); if(tab==="new"&&(current==="products"||current==="programs")) prodBuildingPool=false; if(tab==="new"&&current==="school") schoolDraft=blankSchool(schoolNewMode); if(tab==="list") schoolDraft=null; addOpen=null; render(); $(".stage").scrollTop=0; return; }
+  if(e.target.closest("#hAdd")){ tab="new"; if(current==="bookings") resetBooking(); if(current==="shopsales") resetShopSale(); if(current==="events") eventCats=new Set(); if(current==="discounts") draftDiscount=null; if(current==="tiers") seedTierDraft(false); if(current==="products"||current==="programs") prodBuildingPool=false; if(current==="school") schoolDraft=blankSchool(schoolNewMode); addOpen=null; render(); $(".stage").scrollTop=0; return; }
   // member form Save — Location and PIN code are each optional, but at least one must be given
   const memSave=e.target.closest("[data-member-save]");
   if(memSave){ const loc=((document.getElementById("memberLocation")||{}).value||"").trim(), pin=((document.getElementById("memberPincode")||{}).value||"").trim();
@@ -6611,10 +7375,47 @@ document.addEventListener("click",e=>{
   const tgl=e.target.closest("[data-toggle-active]");
   if(tgl){ const i=+tgl.dataset.toggleActive; P[i].active = (P[i].active===false); render(); return; }
   // ---- open a record's detail page ----
+  // School listing "Edit" — intercept before the row's data-open (View) handler.
+  const schEditRow=e.target.closest("[data-school-edit-row]");
+  if(schEditRow){ const id=schEditRow.dataset.schoolEditRow, rec=schoolById(id); if(rec){ selSchool=id; schoolDraft=Object.assign(JSON.parse(JSON.stringify(rec)),{_mode:"booking"}); tab="edit"; render(); $(".stage").scrollTop=0; } return; }
   const od=e.target.closest("[data-open]");
   if(od){ const [kind,i]=od.dataset.open.split(":"); const idx=+i;
-    if(kind==="prod") selP=idx; else if(kind==="camp"){ selW=idx; selB=0; progKind="camp"; } else if(kind==="event"){ selE=idx; progKind="event"; } else if(kind==="disc"){ selD=idx; dsub="summary"; } else if(kind==="member"){ selMember=idx; msub="summary"; } else if(kind==="tier"){ selTier=idx; } else if(kind==="shopitem"){ selShopItem=idx; sitab="details"; } else if(kind==="shopsale"){ selShopSale=idx; ssub="details"; } else if(kind==="shopcoupon"){ selShopCoupon=idx; }
+    if(kind==="prod") selP=idx; else if(kind==="camp"){ selW=idx; selB=0; progKind="camp"; } else if(kind==="event"){ selE=idx; progKind="event"; } else if(kind==="disc"){ selD=idx; dsub="summary"; } else if(kind==="member"){ selMember=idx; msub="summary"; } else if(kind==="tier"){ selTier=idx; } else if(kind==="shopitem"){ selShopItem=idx; sitab="details"; } else if(kind==="shopsale"){ selShopSale=idx; ssub="details"; } else if(kind==="shopcoupon"){ selShopCoupon=idx; } else if(kind==="school"){ selSchool=(SCHOOL_BOOKINGS[idx]||{}).id||""; schsub="overview"; schoolEmailView=null; schoolMsg=""; }
     tab="detail"; sub="details"; esub="details"; csub="details"; addOpen=null; render(); $(".stage").scrollTop=0; return; }
+  // ---- School bookings handlers ----
+  const schNew=e.target.closest("[data-school-new]");
+  if(schNew){ schoolNewMode=schNew.dataset.schoolNew; schoolDraft=blankSchool(schoolNewMode); tab="new"; render(); $(".stage").scrollTop=0; return; }
+  if(e.target.closest("[data-school-edit]")){ const rec=schoolById(selSchool); schoolDraft=rec?Object.assign(JSON.parse(JSON.stringify(rec)),{_mode:"booking"}):blankSchool("booking"); tab="edit"; render(); $(".stage").scrollTop=0; return; }
+  if(e.target.closest("[data-school-cancel]")){ const editing=schoolById((schoolDraft||{}).id); schoolDraft=null; tab=editing?"detail":"list"; render(); $(".stage").scrollTop=0; return; }
+  if(e.target.closest("[data-school-save]")){ schoolCommit(); return; }
+  const schAddV=e.target.closest("[data-school-add-visit]");
+  if(schAddV){ schoolCaptureForm(); const d=schoolDraft; if(d){ (d.visits=d.visits||[]).push(blankVisit()); } render(); return; }
+  const schDelV=e.target.closest("[data-school-del-visit]");
+  if(schDelV){ schoolCaptureForm(); const d=schoolDraft; if(d&&d.visits) d.visits.splice(+schDelV.dataset.schoolDelVisit,1); render(); return; }
+  const schAddO=e.target.closest("[data-school-add-optional]");
+  if(schAddO){ schoolCaptureForm(); const d=schoolDraft; const vi=+schAddO.dataset.schoolAddOptional; const v=d&&(d.visits||[])[vi]; if(v){ (v.optionals=v.optionals||[]).push({kind:"Workshop",venue:"",date:"",time:""}); } render(); return; }
+  const schDelO=e.target.closest("[data-school-del-optional]");
+  if(schDelO){ schoolCaptureForm(); const d=schoolDraft; const [vi,oi]=schDelO.dataset.schoolDelOptional.split("|").map(Number); const v=d&&(d.visits||[])[vi]; if(v&&v.optionals) v.optionals.splice(oi,1); render(); return; }
+  const schTab=e.target.closest("[data-schtab]");
+  if(schTab){ schtab=schTab.dataset.schtab; render(); $(".stage").scrollTop=0; return; }
+  const schDsub=e.target.closest("[data-schsub]");
+  if(schDsub){ schsub=schDsub.dataset.schsub; render(); return; }
+  const schRange=e.target.closest("[data-school-range]");
+  if(schRange){ schoolRange=schRange.dataset.schoolRange; render(); return; }
+  const schExp=e.target.closest("[data-export]");
+  if(schExp && schExp.dataset.export.startsWith("school")){ downloadCSV(SCHOOL_EXPORT_NAMES[schExp.dataset.export]||"school.csv", schoolExportRows(schExp.dataset.export)); return; }
+  if(e.target.closest("[data-school-addpay]")){ const rec=schoolById(selSchool); if(rec){ const mode=(document.getElementById("schoolPayMode")||{}).value||"Cash"; const amt=Math.max(0,+((document.getElementById("schoolPayAmt")||{}).value)||0); if(amt>0){ (rec.payments=rec.payments||[]).push({on:fmtDMY(new Date()),mode,amount:amt,ref:"RCPT-"+String(Date.now()).slice(-6)}); schoolLog(rec,"Finance","Payment recorded — "+money(amt)+" via "+mode+"."); schoolAdvanceOnPayment(rec); } } render(); return; }
+  if(e.target.closest("[data-school-onlinepay]")){ const rec=schoolById(selSchool); if(rec){ const c=schoolCompute(rec); const amt=c.balance>0?c.balance:0; if(amt>0){ (rec.payments=rec.payments||[]).push({on:fmtDMY(new Date()),mode:"Online",amount:amt,ref:"PG-"+String(Date.now()).slice(-8)}); schoolLog(rec,"Payment gateway","Online payment "+money(amt)+" received via gateway."); schoolAdvanceOnPayment(rec); } } render(); return; }
+  if(e.target.closest("[data-school-sendmail]")){ const rec=schoolById(selSchool); if(rec){ schoolLogEmail(rec,"System","Email sent to "+(rec.email||"the POC")+" with booking details and the proforma invoice.","booking"); schoolMsg="Email sent to "+(rec.email||"the POC")+". Open it from the Timeline via “View email”. (Wireframe — no email is actually sent.)"; } render(); return; }
+  if(e.target.closest("[data-school-complete]")){ const rec=schoolById(selSchool); if(rec){ rec.status="Ended"; schoolLog(rec,"Admin","Visit marked completed. "+(rec.gstin?"E-invoice":"Tax invoice")+" raised."); } render(); return; }
+  const schPdf=e.target.closest("[data-school-proforma-pdf]");
+  if(schPdf){ const rec=schoolById(selSchool); if(rec) careerOpenPdf(schoolProformaPdf(rec), rec.id+"-proforma.pdf"); return; }
+  if(e.target.closest("[data-school-proforma-upload]")){ const rec=schoolById(selSchool); if(rec){ rec.proformaUpload="proforma-"+rec.id+".pdf"; schoolLog(rec,"Admin","Custom proforma uploaded and attached to the email."); } render(); return; }
+  if(e.target.closest("[data-school-msg-dismiss]")){ schoolMsg=""; render(); return; }
+  const schViewEmail=e.target.closest("[data-school-view-email]");
+  if(schViewEmail){ const rec=schoolById(selSchool); const en=rec&&(rec.timeline||[])[+schViewEmail.dataset.schoolViewEmail]; if(en&&en.email) schoolEmailView=en.email; render(); return; }
+  if(e.target.closest("[data-school-email-close]")){ schoolEmailView=null; render(); return; }
+  if(e.target.closest("[data-school-email-resend]")){ const rec=schoolById(selSchool), to=(schoolEmailView&&schoolEmailView.to)||"the POC"; if(rec&&schoolEmailView){ schoolLogEmail(rec,"System","Email resent to "+to+".",schoolEmailView.kind); } schoolEmailView=null; schoolMsg="Email resent to "+to+"."; render(); return; }
   // ---- Shop / Merchandise handlers ----
   const shAdd=e.target.closest("[data-shop-addstock]");
   if(shAdd){ shopAddStock=+shAdd.dataset.shopAddstock; render(); return; }
@@ -6748,6 +7549,10 @@ document.addEventListener("click",e=>{
   if(titem){ const it=titem.dataset.tieritem; const td=tierDraft; if(td){ td.products=td.products||[]; const i=td.products.indexOf(it); if(i>=0){ td.products.splice(i,1); if(td.slots) delete td.slots[it]; } else td.products.push(it); } render(); return; }
   const tslot=e.target.closest("[data-tierslot]");
   if(tslot){ const [p,sn]=tslot.dataset.tierslot.split("|"); const td=tierDraft; if(td){ td.slots=td.slots||{}; const arr=td.slots[p]=td.slots[p]||[]; const i=arr.indexOf(sn); if(i>=0) arr.splice(i,1); else arr.push(sn); } render(); return; }
+  // School Education-board chips: toggle in the draft and re-render so the
+  // "Other Board" text field appears/disappears the moment Other is ticked.
+  const boardChip=schoolDraft && e.target.closest('[data-sfchips="boards"] .chip-opt');
+  if(boardChip){ schoolCaptureForm(); const d=schoolDraft; d.boards=d.boards||[]; const v=boardChip.dataset.chipval, i=d.boards.indexOf(v); if(i>=0) d.boards.splice(i,1); else d.boards.push(v); if(!d.boards.includes("Other")) d.boardsOther=""; render(); return; }
   const opt=e.target.closest(".chip-opt");
   if(opt){ opt.dataset.on = opt.dataset.on==="1"?"0":"1"; refreshDiscountSummaries();
     if(opt.closest('.fld[data-df="visitor_categories[]"]')) rebuildRatio();
@@ -6773,6 +7578,10 @@ document.addEventListener("change",e=>{
     render(); return; }
   const aSt=e.target.closest&&e.target.closest("[data-app-status]");
   if(aSt){ const a=appById(aSt.dataset.appStatus); if(a) a.status=aSt.value; render(); return; }
+  // ---- School bookings ----
+  if(e.target.closest&&e.target.closest("[data-school-filter]")){ schoolFStatus=e.target.value; render(); return; }
+  if(e.target.closest&&e.target.closest("[data-school-status]")){ const rec=schoolById(selSchool); if(rec&&!schoolStatusLocked(rec)&&rec.status!==e.target.value){ const was=rec.status; rec.status=e.target.value; schoolLogEmail(rec,"Admin","Status changed "+was+" → "+rec.status+". Email sent to the POC.","status"); } render(); return; }
+  if(e.target.closest&&e.target.closest("[data-school-preset]")){ schoolCaptureForm(); const p=ENTRY_PRICES.find(x=>x.name===e.target.value); if(p&&schoolDraft){ schoolDraft.entryStudent=p.student; schoolDraft.entryAdult=p.adult; } render(); return; }
   const meth=e.target.closest&&e.target.closest("[data-method]");
   if(meth){ syncDiscountForm(); curDiscount().auto = e.target.value==="auto"; render(); return; }
   const applies=e.target.closest&&e.target.closest("[data-applies-to]");
@@ -6817,6 +7626,7 @@ function ageLabel(str){ const a=ageFromDOB(str); return a===null?"":(a===0?"Unde
 document.addEventListener("input",e=>{
   if(e.target.matches&&e.target.matches("[data-app-search]")){ appQ=e.target.value; syncCareerSearch(); return; }
   if(e.target.matches&&e.target.matches("[data-career-search]")){ careerQ=e.target.value; syncCareerSearch(); return; }
+  if(e.target.matches&&e.target.matches("[data-school-search]")){ schoolQ=e.target.value; syncSchoolSearch(); return; }
   if(e.target.matches&&e.target.matches("[data-qry-search]")){ qryQ=e.target.value; syncCareerSearch(); return; }
   if(e.target.matches&&e.target.matches("[data-ratio]")){ prodRatio[e.target.dataset.ratio]=e.target.value; syncRatio(); return; }
   if(current==="departments" && e.target.closest&&e.target.closest('.fld[data-df="name"]')){
@@ -6913,6 +7723,7 @@ document.addEventListener("mouseout",e=>{ if(e.target.closest&&e.target.closest(
 document.addEventListener("focusin",e=>{ const t=e.target.closest&&e.target.closest(".tip"); if(t) showTip(t); });
 document.addEventListener("focusout",e=>{ if(e.target.closest&&e.target.closest(".tip")) tipbox.classList.remove("on"); });
 
+schoolBackfillEmails();
 render();
 
 </script>
