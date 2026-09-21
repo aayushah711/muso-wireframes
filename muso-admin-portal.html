@@ -1192,7 +1192,7 @@ const M = {
     view:"pools"},
   tax:{g:0,n:"Tax rates",owner:"Shivam · Finance & Accounts",perm:"master.tax.manage",src:"Scope §12",
     d:"One rate in force: 18%, charged as CGST 9% plus SGST 9%. A rate is never edited — a change closes one row and opens another, so a past invoice keeps what it was charged.",
-    view:"taxrates",
+    view:"tax",
     schema:[["Short code|code","string","Short code used on reports, e.g. CGST-9."],
             ["Name on the invoice|name","string","Printed on the invoice line, e.g. CGST."],
             ["Rate %|percentage","decimal","The single rate for this row, e.g. 9. CGST 9% and SGST 9% are two rows, not two columns on one."],
@@ -1209,7 +1209,8 @@ const M = {
     d:"The teams a role can belong to. Careers picks its department from this list and the public careers page filters on it, so a team has to exist here before an opening can sit in it.",
     view:"departments",
     schema:[["Department|name","string","The team name as it appears on the careers page, e.g. Education."],
-            ["Added on|added","auto","Stamped when the department is saved."]]},
+            ["Added on|added","auto","Stamped when the department is saved."],
+            ["Active|is_active","bool","Turn it off to retire this department — it stays on existing roles but is hidden from new ones."]]},
 
   shopcats:{g:0,n:"Shop categories",owner:"Sawood · Shop ops",perm:"shop.manage",src:"Scope §5",q:1,
     d:"The merchandise departments a shop product belongs to — Books, Toys, Apparel and so on. Each carries a short code used to auto-generate the Product ID (e.g. Books → BK-00001).",
@@ -1241,6 +1242,7 @@ const M = {
     view:"camps",schema:CAMP_SCHEMA},
   blackout:{g:2,n:"Blackout dates",owner:OWN_RETAIL,perm:"master.calendar.manage",src:"Scope §1.3",q:0,
     d:"Closures. Building-wide by default, because a public holiday shuts everything — to reduce one slot rather than close it, use a quota block inside the product.",
+    view:"blackout",
     schema:[["Date closed|date","date",""],
             ["How much is closed|scope","enum","whole museum · one product · one time slot","A closure can disable a whole date, one product, or a single time slot."],
             ["Which one|product_id","fk","→ Products & add-ons. Only when the closure is narrower than the whole museum."],
@@ -1548,11 +1550,11 @@ const CAREER_OPENINGS = [
 /* ---- Departments: the teams a role can sit in. A Foundations master because the
    careers page filters on it and every opening has to pick one. ---- */
 const DEPARTMENTS = [
-  {name:"Education",          added:"04 Apr 2026"},
-  {name:"Operations",         added:"04 Apr 2026"},
-  {name:"Marketing",          added:"04 Apr 2026"},
-  {name:"Finance & Accounts", added:"19 Apr 2026"},
-  {name:"Reception",          added:"22 May 2026"}
+  {name:"Education",          added:"04 Apr 2026", is_active:true},
+  {name:"Operations",         added:"04 Apr 2026", is_active:true},
+  {name:"Marketing",          added:"04 Apr 2026", is_active:true},
+  {name:"Finance & Accounts", added:"19 Apr 2026", is_active:true},
+  {name:"Reception",          added:"22 May 2026", is_active:true}
 ];
 const deptNames = () => DEPARTMENTS.map(d=>d.name);
 const deptByName = n => DEPARTMENTS.find(d=>d.name===n);
@@ -2075,9 +2077,9 @@ const shopPreset = code => SHOP_PRESETS.find(p=>p.code===String(code||"").trim()
 
 /* Shop coupons — a Shop-only master, approval-gated (only Approved coupons apply on a sale). */
 const SHOP_COUPONS = [
-  {code:"STAFF20",type:"Percentage",v:20,desc:"Staff discount",preparedBy:"Sawood",proposedBy:"Ashish",approvedBy:"Chandresh",status:"Approved",from:"01 Apr 2026",to:"31 Mar 2027"},
-  {code:"MUSO50",type:"Flat amount",v:50,desc:"Flat ₹50 off",preparedBy:"Sawood",proposedBy:"Ashish",approvedBy:"",status:"Pending approval",from:"01 Sep 2026",to:"30 Sep 2026"},
-  {code:"DIWALI10",type:"Percentage",v:10,desc:"Festive 10%",preparedBy:"Sawood",proposedBy:"",approvedBy:"",status:"Draft",from:"",to:""}
+  {code:"STAFF20",type:"Percentage",v:20,desc:"Staff discount",preparedBy:"Sawood",proposedBy:"Ashish",approvedBy:"Chandresh",status:"Approved",is_active:true,from:"01 Apr 2026",to:"31 Mar 2027"},
+  {code:"MUSO50",type:"Flat amount",v:50,desc:"Flat ₹50 off",preparedBy:"Sawood",proposedBy:"Ashish",approvedBy:"",status:"Pending approval",is_active:true,from:"01 Sep 2026",to:"30 Sep 2026"},
+  {code:"DIWALI10",type:"Percentage",v:10,desc:"Festive 10%",preparedBy:"Sawood",proposedBy:"",approvedBy:"",status:"Draft",is_active:true,from:"",to:""}
 ];
 // resolve a code to a real coupon, or to a synthetic Approved coupon for the Employee/Gift presets
 const shopCoupon = code => { const c=SHOP_COUPONS.find(x=>String(x.code).toUpperCase()===String(code||"").trim().toUpperCase()); if(c) return c; const p=shopPreset(code); return p?{code:p.code,type:"Percentage",v:p.pct,status:"Approved",desc:p.label}:undefined; };
@@ -2494,7 +2496,7 @@ const SCHEMAS = {
     ["Value|v","int","20 for 20% off, or a rupee amount for flat, e.g. 20."],
     ["Valid|valid_from / valid_to","date","When the coupon can be used."],
     ["Proposed by|proposedBy","string","Who proposed it to management, e.g. Ashish."],
-    ["Status|status","enum","Draft · Pending approval","New codes start as Draft or Pending approval — approve from the coupon's detail page. Only Approved codes apply at the counter."]],
+    ["Active|is_active","bool","Turn it off to keep the coupon inactive. New coupons start as Draft and go through review from the coupon's detail page before they apply at the counter."]],
   bookings:[
     ["Customer name|customer_name","string","Name on the booking."],
     ["Email|email","string","Confirmation is sent here."],
@@ -3466,6 +3468,7 @@ let carsub = "openings", selCareer = "", carDsub = "details";
 let selSchool = "", schsub = "overview", schtab = "records", schoolNewMode = "booking",
     schoolQ = "", schoolFStatus = "", schoolRange = "Monthly",
     schoolDraft = null, schoolMsg = "", schoolEmailView = null, schoolEInvView = false, schoolEInvConfirm = false, schoolSaveConfirm = false;
+let mEdit = -1;   // generic Foundations master-row edit index
 let selSp = "", spsub = "overview", sptab = "records", spNewMode = "booking",
     spQ = "", spFStatus = "", spRange = "Monthly",
     spDraft = null, spMsg = "", spEmailView = null, spSaveConfirm = false;
@@ -3877,6 +3880,8 @@ function deptSave(){
     CAREER_OPENINGS.forEach(r=>{ if(r.dept===d.name) r.dept=name; });
     d.name=name;
   }
+  const act=document.getElementById("deptEditActive");
+  if(act) d.is_active = act.dataset.on==="1";
   deptEditing=""; render();
 }
 
@@ -3900,6 +3905,9 @@ function deptEditLayer(){
           <span class="career-hint">${used
             ? `${used} role${used===1?"":"s"} sit${used===1?"s":""} on this. Renaming moves ${used===1?"it":"them"} with it.`
             : "No role uses this yet."}</span></div>
+        <div class="fld"><div class="lab"><span class="lab-n">Active</span></div>
+          <button type="button" class="sw" id="deptEditActive" data-on="${d.is_active===false?0:1}"><i></i><span>${d.is_active===false?"Off":"On"}</span></button>
+          <span class="career-hint">Turn it off to retire this department — it stays on existing roles but is hidden from new ones.</span></div>
         <div class="form-err" id="deptEditErr" style="margin:0"></div>
       </div>
       <div class="form-foot"><span class="career-foot-note">${escHtml(d.name)}</span>
@@ -4189,12 +4197,12 @@ const VIEWS = {
       <td>${m.expires}${st.daysLeft!=null?`<div class="sub">${st.daysLeft<0?"expired "+(-st.daysLeft)+"d ago":"in "+st.daysLeft+" days"}</div>`:""}</td>
       <td class="code">${visCell}</td>
       <td>${memberStatusPill(m)}</td>
-      <td><div style="display:flex;gap:8px"><button class="btn" data-open="member:${i}">View</button><button class="btn" data-open-renew="${i}">Renew</button></div></td></tr>`; }).join("");
+      <td><div style="display:flex;gap:8px"><button class="btn" data-open="member:${i}">View</button><button class="btn" data-member-edit="${i}">Edit</button><button class="btn" data-open-renew="${i}">Renew</button></div></td></tr>`; }).join("");
     const searchbar=`<div class="toolbar"><label class="search"><span>&#8981;</span><input data-member-search placeholder="Search members by mobile number, name or ID" aria-label="Search members" autocomplete="off"></label>
       <span class="tool-note" id="memberCount">${MEMBERS.length} members</span></div>`;
     return tiles+searchbar+
     `<div class="card"><div class="matrix-wrap"><table class="reclist" id="membersTable"><thead><tr>
-      <th>Member ID</th><th>Registered pair</th><th>Tier</th><th>Validity</th><th>Visits</th><th>Status</th><th>Actions</th></tr></thead>
+      <th>Member ID</th><th>Registered pair</th><th>Tier</th><th>Validity</th><th>Visits</th><th>Membership Status</th><th>Actions</th></tr></thead>
     <tbody>${rows}
       <tr data-member-addrow><td colspan="7"><button class="rep-add" data-tab="new" style="border-radius:4px">+ New member</button></td></tr>
       <tr data-member-empty style="display:none"><td colspan="7" class="muted" style="text-align:center;padding:16px">No members match that search.</td></tr>
@@ -4214,7 +4222,6 @@ const VIEWS = {
       <td><div style="display:flex;align-items:center;gap:8px">
         <button class="btn" data-open="prod:${i}" aria-label="View ${r.n}">View</button>
         <button class="btn" data-editp="${i}" aria-label="Edit ${r.n}">Edit</button>
-        <button class="sw" data-toggle-active="${i}" data-on="${r.active===false?0:1}" role="switch" aria-checked="${r.active===false?'false':'true'}" aria-label="${r.active===false?'Activate':'Deactivate'} ${r.n}"><i></i></button>
       </div></td></tr>`).join("")}
       <tr><td colspan="7"><button class="rep-add" data-tab="new" style="border-radius:4px">+ New product or add-on</button></td></tr>
     </tbody></table></div></div>`;
@@ -4241,12 +4248,13 @@ const VIEWS = {
     <div class="card">
       <div class="card-head"><span class="card-title">Categories</span>
         <span class="card-note">Priced per slot, on each product</span></div>
-      <table><thead><tr><th>Category</th><th>Age band</th><th>Must be booked with</th><th>Notes</th></tr></thead>
-      <tbody>${CATS.map(c=>`<tr>
+      <table><thead><tr><th>Category</th><th>Age band</th><th>Must be booked with</th><th>Status</th><th>Actions</th></tr></thead>
+      <tbody>${CATS.map((c,i)=>`<tr>
         <td><b style="font-weight:500">${c.name}</b><div class="code">${c.code}</div></td>
         <td class="code">${c.band}</td>
         <td>${c.req?`<span class="mode">${needsText(c)}</span>`:'<span class="muted">Nothing — books alone</span>'}</td>
-        <td class="muted" style="font-size:12px">${c.note}</td></tr>`).join("")}
+        <td>${c.is_active===false?'<span class="pill pill-off">Inactive</span>':'<span class="pill pill-ok"><i class="dot"></i>Active</span>'}</td>
+        <td><button class="btn" data-medit="${i}">Edit</button></td></tr>`).join("")}
         ${addRowNew("Add category")}</tbody></table>
       <div class="card-body" style="border-top:1px solid var(--rule);font-size:12.5px;color:var(--ink2);line-height:1.65">
         <b style="color:var(--ink)">One rule, not a set of them.</b> §1.11 asks for an adult alongside younger children. Expressed as a requirement on the category rather than an age threshold, it is checked by counting what is in the cart — no age arithmetic, and it works the same whether the buyer supplied a date of birth or not.
@@ -4258,45 +4266,41 @@ const VIEWS = {
   },
 
   pools(){
-    const p=POOLS.shared;
+    const rows=[POOLS.shared].concat(POOLS.sub||[]);
+    const ownCap=P.filter(x=>x.pool!=="BUILDING").length;
     return `<div class="note note-scope"><span class="note-mark">Structure</span><div>
-      Inventory is what a sale decrements, and the numbers that govern it are <b>fields on these rows</b> — there is no separate capacity screen. Two layers: one shared building pool, and a pool per product that has its own limit.
+      One shared <b>building pool</b> caps how many people are inside at once. Each product either draws on it or carries its own per-slot capacity (a toggle on the product) — so there's no separate pool to create per activity.
     </div></div>
-    <div class="card">
-      <div class="card-head"><span class="card-title">The configurable numbers</span>
-        <span class="lock">&#9880; restricted</span><span class="card-note">§4 requires both to be configurable — each is a capacity field on a pool</span></div>
-      <div class="set" style="margin:0;padding:15px 16px">${SETTINGS.map(x=>`<div class="setcard" style="border:none;padding:0">
-        <div class="set-k">${x.k}</div><div class="set-d">${x.d}</div>
-        <div class="set-v">${x.v}<span class="set-u">${x.u}</span></div>
-        <div class="set-foot">${x.f}</div></div>`).join("")}</div>
-      <div class="card-body" style="border-top:1px solid var(--rule);font-size:12.5px;color:var(--ink2);line-height:1.7">
-        A change takes effect on save. <b style="color:var(--ink)">No booking is ever cancelled by it.</b> Only what is still sellable moves:
-        <b style="font-family:var(--mono);color:var(--ink)">capacity &minus; reserved capacity &minus; quota blocks &minus; occupants &minus; held at checkout &nbsp;&ge;&nbsp; 0</b>.
-        If the new number is already below what has been sold, the slot shows sold out at zero, never a negative. To hold capacity back for one date, use a quota block inside the product.
-      </div>
-    </div>
-    <p class="stack-lbl">Layer 1 · Shared</p>
-    <div class="pool pool-shared">
-      <div class="pool-top"><span class="pool-name">${p.name}</span><span class="pool-code">${p.code}</span>
-        <span class="pool-cap">${p.cap}<small>${p.unit}</small></span></div>
-      <div class="pool-d">${p.d}</div>
-      <div class="pool-draw">
-        ${p.inn.map(i=>`<span class="draw draw-in">&#8595; ${i}</span>`).join("")}
-        ${p.out.map(i=>`<span class="draw draw-out">excluded · ${i}</span>`).join("")}</div>
-    </div>
-    <div class="arrow">&#8595;</div>
-    <div class="card" style="margin-top:16px">
-      <div class="card-head"><span class="card-title">How a product's inventory is decided</span>
-        <span class="card-note">Set on each product record</span></div>
-      <div class="card-body" style="font-size:12.5px;color:var(--ink2);line-height:1.75">
-        Each product chooses one of two things on its own record, with a single toggle:<br><br>
-        <b style="color:var(--ink)">Building Pool</b> &mdash; the sale draws on the shared building capacity above. Used for anything that puts a body in the building at the same time as a museum visit.<br><br>
-        <b style="color:var(--ink)">Its own capacity</b> &mdash; the product carries a fixed number of places and does not touch the building pool. Used for a self-contained activity with its own room and its own limit.<br><br>
-        Because it is one toggle on the product, there is no separate pool record per activity to create or keep in step.
-      </div>
-    </div>`;
+    <div class="card"><div class="card-head"><span class="card-title">Inventory pools</span>
+      <span class="card-note">${rows.length} on file · ${ownCap} product${ownCap===1?"":"s"} on own capacity</span></div>
+      <div class="matrix-wrap"><table><thead><tr>
+        <th>Pool</th><th>Code</th><th class="ctr">Capacity</th><th>Status</th><th>Actions</th></tr></thead>
+      <tbody>${rows.map((x,ri)=>{
+        return `<tr>
+        <td><b style="font-weight:500">${escHtml(x.name)}</b></td>
+        <td class="code">${escHtml(x.code)}</td>
+        <td class="code" style="text-align:center">${escHtml(String(x.cap))}</td>
+        <td>${x.is_active===false?'<span class="pill pill-off">Inactive</span>':'<span class="pill pill-ok"><i class="dot"></i>Active</span>'}</td>
+        <td><button class="btn" data-medit="${ri}">Edit</button></td></tr>`;}).join("")}
+        ${addRowNew("Add inventory pool")}</tbody></table></div></div>`;
   },
 
+  blackout(){
+    const scopePill=s=>s==="whole museum"?'<span class="pill pill-warn">Whole museum</span>':`<span class="mode">${escHtml(s)}</span>`;
+    return `<div class="note note-scope"><span class="note-mark">Structure</span><div>
+      Closures. A <b>whole museum</b> row shuts the entire date; the narrower rows disable a single product or one time slot. Public holidays are typically whole-museum.
+    </div></div>
+    <div class="card"><div class="card-head"><span class="card-title">Blackout dates</span>
+      <span class="card-note">${BLACKOUT_DATES.length} on file</span></div>
+      <div class="matrix-wrap"><table><thead><tr>
+        <th>Date closed</th><th>How much is closed</th><th>Which one</th><th>Why</th></tr></thead>
+      <tbody>${BLACKOUT_DATES.map(b=>`<tr>
+        <td class="code" style="white-space:nowrap">${escHtml(b.date||"—")}</td>
+        <td>${scopePill(b.scope||"whole museum")}</td>
+        <td>${b.scope&&b.scope!=="whole museum"?escHtml(b.product_id||"—"):'<span class="muted">—</span>'}</td>
+        <td class="muted" style="font-size:12px">${escHtml(b.reason||"")}</td></tr>`).join("")}
+        ${addRowNew("Add blackout date")}</tbody></table></div></div>`;
+  },
   discounts(){
     const seg=`<div class="cond-summary" style="margin-bottom:16px">Discounts never combine. When more than one applies to an order, the single discount that gives the customer the <b>biggest saving</b> is applied automatically.</div>`;
     return seg+toolbar("Search discounts",DISCOUNTS.length+" discounts")+
@@ -4320,11 +4324,13 @@ const VIEWS = {
     <div class="card">
       <div class="card-head"><span class="card-title">Codes</span></div>
       <div class="matrix-wrap"><table><thead><tr>
-        <th>Code</th><th>Kind</th><th>Description</th><th>Unit</th><th>Tax</th></tr></thead>
-      <tbody>${HSNCODES.map(h=>`<tr>
+        <th>Code</th><th>Kind</th><th>Description</th><th>Tax</th><th>Status</th><th>Actions</th></tr></thead>
+      <tbody>${HSNCODES.map((h,i)=>`<tr>
         <td class="code">${h.code}</td><td><span class="mode">${h.kind}</span></td>
-        <td style="font-size:12.5px">${h.desc}</td><td class="code">${h.uqc}</td>
-        <td style="font-size:12px">${hsnTotalPct(h.code)?`<b style="font-weight:600">${hsnTotalPct(h.code)}%</b> <span class="muted">· ${hsnCompLabel(h.code)}</span>`:'<span class="muted">—</span>'}</td></tr>`).join("")}
+        <td style="font-size:12.5px">${h.desc}</td>
+        <td style="font-size:12px">${hsnTotalPct(h.code)?`<b style="font-weight:600">${hsnTotalPct(h.code)}%</b> <span class="muted">· ${hsnCompLabel(h.code)}</span>`:'<span class="muted">—</span>'}</td>
+        <td>${h.is_active===false?'<span class="pill pill-off">Inactive</span>':'<span class="pill pill-ok"><i class="dot"></i>Active</span>'}</td>
+        <td><button class="btn" data-medit="${i}">Edit</button></td></tr>`).join("")}
         ${addRowNew("Add code")}</tbody></table></div>
     </div>`;
   },
@@ -4347,19 +4353,19 @@ const VIEWS = {
       <div class="card-head"><span class="card-title">Departments</span>
         <span class="card-note">${DEPARTMENTS.length} on file</span></div>
       <div class="matrix-wrap"><table><thead><tr>
-        <th>Department</th><th>Added on</th><th class="ctr">Roles on it</th><th>Actions</th></tr></thead>
+        <th>Department</th><th>Added on</th><th class="ctr">Roles on it</th><th>Status</th><th>Actions</th></tr></thead>
       <tbody>${DEPARTMENTS.map(d=>{
         const used=CAREER_OPENINGS.filter(r=>r.dept===d.name).length;
         return `<tr>
         <td><b style="font-weight:500">${escHtml(d.name)}</b></td>
         <td class="code" style="white-space:nowrap">${d.added||"—"}</td>
         <td class="code" style="text-align:center">${used}</td>
+        <td>${d.is_active===false?'<span class="pill pill-off">Inactive</span>':'<span class="pill pill-ok"><i class="dot"></i>Active</span>'}</td>
         <td><div class="career-acts">
           <button class="btn" data-dept-edit="${escAttr(d.name)}">Edit</button>
-          <button class="btn btn-danger" data-dept-del="${escAttr(d.name)}">Delete</button>
         </div></td></tr>`;}).join("")}
         ${addRowNew("Add department")}</tbody></table></div>
-    </div>` + deptEditLayer() + deptDeleteLayer();
+    </div>` + deptEditLayer();
   },
 
   shopcats(){
@@ -4369,10 +4375,12 @@ const VIEWS = {
     <div class="card">
       <div class="card-head"><span class="card-title">Categories</span></div>
       <div class="matrix-wrap"><table><thead><tr>
-        <th>Category</th><th>Code</th><th>Products</th></tr></thead>
-      <tbody>${SHOP_CATEGORIES.map(c=>`<tr>
+        <th>Category</th><th>Code</th><th>Products</th><th>Status</th><th>Actions</th></tr></thead>
+      <tbody>${SHOP_CATEGORIES.map((c,i)=>`<tr>
         <td><b style="font-weight:500">${c.name}</b></td><td class="code">${c.code}</td>
-        <td class="muted" style="font-size:11.5px">${SHOP_ITEMS.filter(x=>x.cat===c.name).length} product${SHOP_ITEMS.filter(x=>x.cat===c.name).length===1?"":"s"}</td></tr>`).join("")}
+        <td class="muted" style="font-size:11.5px">${SHOP_ITEMS.filter(x=>x.cat===c.name).length} product${SHOP_ITEMS.filter(x=>x.cat===c.name).length===1?"":"s"}</td>
+        <td>${c.is_active===false?'<span class="pill pill-off">Inactive</span>':'<span class="pill pill-ok"><i class="dot"></i>Active</span>'}</td>
+        <td><button class="btn" data-medit="${i}">Edit</button></td></tr>`).join("")}
         ${addRowNew("Add category")}</tbody></table></div>
     </div>`;
   },
@@ -4384,11 +4392,12 @@ const VIEWS = {
     <div class="card">
       <div class="card-head"><span class="card-title">Rates</span>
         <span class="card-note">Products associate the ones that could apply to them</span></div>
-      <table><thead><tr><th>Code</th><th>Name</th><th>Component</th><th class="ctr">%</th><th>Charged when</th><th>From</th><th>To</th></tr></thead>
-      <tbody>${TAXRATES.map(r=>`<tr>
+      <table><thead><tr><th>Code</th><th>Name</th><th class="ctr">%</th><th>Status</th><th>Actions</th></tr></thead>
+      <tbody>${TAXRATES.map((r,i)=>`<tr>
         <td class="code">${r.code}</td><td><b style="font-weight:500">${r.name}</b></td>
-        <td class="code">${r.comp}</td><td class="num ctr"><b>${r.pct}%</b></td>
-        <td>${r.when}</td><td class="code">${r.from}</td><td class="code muted">${r.to}</td></tr>`).join("")}
+        <td class="num ctr"><b>${r.pct}%</b></td>
+        <td>${r.is_active===false?'<span class="pill pill-off">Inactive</span>':'<span class="pill pill-ok"><i class="dot"></i>Active</span>'}</td>
+        <td><button class="btn" data-medit="${i}">Edit</button></td></tr>`).join("")}
         ${addRowNew("Add rate")}</tbody></table>
       <div class="card-body" style="border-top:1px solid var(--rule);font-size:12.5px;color:var(--ink2);line-height:1.65">
         Charged-when is what stops a product carrying all three from being taxed 36%. An invoice fires only the rows matching its place of supply — CGST plus SGST inside Maharashtra, IGST outside it.
@@ -4499,13 +4508,14 @@ const VIEWS = {
   progcats(){
     return `${toolbar("Search program categories",PROGCATS.length+" records")}
     <div class="card"><div class="matrix-wrap"><table class="reclist"><thead><tr>
-      <th>Category</th><th>Format</th><th>Description</th><th>Status</th></tr></thead>
-    <tbody>${PROGCATS.map(c=>`<tr>
+      <th>Category</th><th>Format</th><th>Description</th><th>Status</th><th>Actions</th></tr></thead>
+    <tbody>${PROGCATS.map((c,i)=>`<tr>
       <td><b style="font-weight:500">${c.name}</b></td>
       <td><span class="tag tag-${c.format==="multi"?"t":"a"}">${FMT_LABEL[c.format]}</span></td>
       <td class="muted" style="font-size:12px">${c.note}</td>
-      <td><span class="pill pill-ok"><i class="dot"></i>Active</span></td></tr>`).join("")}
-      <tr><td colspan="4"><button class="rep-add" data-tab="new" style="border-radius:4px">+ New category</button></td></tr>
+      <td>${c.is_active===false?'<span class="pill pill-off">Inactive</span>':'<span class="pill pill-ok"><i class="dot"></i>Active</span>'}</td>
+      <td><button class="btn" data-medit="${i}">Edit</button></td></tr>`).join("")}
+      <tr><td colspan="5"><button class="rep-add" data-tab="new" style="border-radius:4px">+ New category</button></td></tr>
     </tbody></table></div></div>`;
   },
 
@@ -4656,12 +4666,13 @@ const VIEWS = {
     <div class="card"><div class="card-head"><span class="card-title">School F&amp;B options</span>
       <span class="card-note">${FB_OPTIONS.length} on file</span></div>
       <div class="matrix-wrap"><table><thead><tr>
-        <th>Option</th><th class="ctr">Adult price</th><th class="ctr">Child price</th><th>Status</th></tr></thead>
-      <tbody>${FB_OPTIONS.map(o=>`<tr>
+        <th>Option</th><th class="ctr">Adult price</th><th class="ctr">Child price</th><th>Status</th><th>Actions</th></tr></thead>
+      <tbody>${FB_OPTIONS.map((o,i)=>`<tr>
         <td><b style="font-weight:500">${escHtml(o.name)}</b></td>
         <td class="code" style="text-align:center">${money(o.adult)}</td>
         <td class="code" style="text-align:center">${money(o.child)}</td>
-        <td>${o.is_active?'<span class="pill pill-ok"><i class="dot"></i>Active</span>':'<span class="pill pill-off">Inactive</span>'}</td></tr>`).join("")}
+        <td>${o.is_active?'<span class="pill pill-ok"><i class="dot"></i>Active</span>':'<span class="pill pill-off">Inactive</span>'}</td>
+        <td><button class="btn" data-medit="${i}">Edit</button></td></tr>`).join("")}
         ${addRowNew("Add F&B option")}</tbody></table></div></div>`;
   },
 
@@ -4672,12 +4683,13 @@ const VIEWS = {
     <div class="card"><div class="card-head"><span class="card-title">School time slots</span>
       <span class="card-note">${SCHOOL_SLOTS.length} on file</span></div>
       <div class="matrix-wrap"><table><thead><tr>
-        <th>Label</th><th>Actual start</th><th>Actual end</th><th>Maps to museum-tour slot</th><th>Status</th></tr></thead>
-      <tbody>${SCHOOL_SLOTS.map(s=>`<tr>
+        <th>Label</th><th>Actual start</th><th>Actual end</th><th>Maps to museum-tour slot</th><th>Status</th><th>Actions</th></tr></thead>
+      <tbody>${SCHOOL_SLOTS.map((s,i)=>`<tr>
         <td><b style="font-weight:500">${escHtml(s.name)}</b></td>
         <td class="code">${s.start}</td><td class="code">${s.end}</td>
         <td>${escHtml(s.tour_slot||"—")}</td>
-        <td>${s.is_active?'<span class="pill pill-ok"><i class="dot"></i>Active</span>':'<span class="pill pill-off">Inactive</span>'}</td></tr>`).join("")}
+        <td>${s.is_active?'<span class="pill pill-ok"><i class="dot"></i>Active</span>':'<span class="pill pill-off">Inactive</span>'}</td>
+        <td><button class="btn" data-medit="${i}">Edit</button></td></tr>`).join("")}
         ${addRowNew("Add school time slot")}</tbody></table></div></div>`;
   },
 
@@ -4688,12 +4700,13 @@ const VIEWS = {
     <div class="card"><div class="card-head"><span class="card-title">School Entry price presets</span>
       <span class="card-note">${ENTRY_PRICES.length} on file</span></div>
       <div class="matrix-wrap"><table><thead><tr>
-        <th>Preset</th><th class="ctr">Per student</th><th class="ctr">Per adult / teacher</th><th>Status</th></tr></thead>
-      <tbody>${ENTRY_PRICES.map(p=>`<tr>
+        <th>Preset</th><th class="ctr">Per student</th><th class="ctr">Per adult / teacher</th><th>Status</th><th>Actions</th></tr></thead>
+      <tbody>${ENTRY_PRICES.map((p,i)=>`<tr>
         <td><b style="font-weight:500">${escHtml(p.name)}</b></td>
         <td class="code" style="text-align:center">${money(p.student)}</td>
         <td class="code" style="text-align:center">${money(p.adult)}</td>
-        <td>${p.is_active?'<span class="pill pill-ok"><i class="dot"></i>Active</span>':'<span class="pill pill-off">Inactive</span>'}</td></tr>`).join("")}
+        <td>${p.is_active?'<span class="pill pill-ok"><i class="dot"></i>Active</span>':'<span class="pill pill-off">Inactive</span>'}</td>
+        <td><button class="btn" data-medit="${i}">Edit</button></td></tr>`).join("")}
         ${addRowNew("Add entry price preset")}</tbody></table></div></div>`;
   },
 
@@ -4758,11 +4771,12 @@ const VIEWS = {
       The funders a <b>sponsored school visit</b> is billed to. The sponsored-booking form picks one, and the visit's e-invoice is raised against it — the school pays nothing.
     </div></div>
     <div class="card"><div class="card-head"><span class="card-title">Sponsored School Sponsors</span><span class="card-note">${SPONSORS.length} on file</span></div>
-      <div class="matrix-wrap"><table><thead><tr><th>Sponsor</th><th>GSTIN</th><th>State</th><th>Contact</th><th>Status</th></tr></thead>
-      <tbody>${SPONSORS.map(s=>`<tr>
+      <div class="matrix-wrap"><table><thead><tr><th>Sponsor</th><th>GSTIN</th><th>State</th><th>Contact</th><th>Status</th><th>Actions</th></tr></thead>
+      <tbody>${SPONSORS.map((s,i)=>`<tr>
         <td><b style="font-weight:500">${escHtml(s.name)}</b></td><td class="code">${escHtml(s.gstin||"—")}</td>
         <td>${escHtml(s.state||"—")}</td><td class="sub">${escHtml(s.email||"—")}</td>
-        <td>${s.is_active?'<span class="pill pill-ok"><i class="dot"></i>Active</span>':'<span class="pill pill-off">Inactive</span>'}</td></tr>`).join("")}
+        <td>${s.is_active?'<span class="pill pill-ok"><i class="dot"></i>Active</span>':'<span class="pill pill-off">Inactive</span>'}</td>
+        <td><button class="btn" data-medit="${i}">Edit</button></td></tr>`).join("")}
         ${addRowNew("Add sponsor")}</tbody></table></div></div>`;
   },
   districts(){
@@ -4770,11 +4784,12 @@ const VIEWS = {
       Districts sponsored visitors come from — used for tagging bookings and reporting on reach.
     </div></div>
     <div class="card"><div class="card-head"><span class="card-title">Sponsored School Districts</span><span class="card-note">${DISTRICTS.length} on file</span></div>
-      <div class="matrix-wrap"><table><thead><tr><th>District</th><th class="ctr">Bookings</th><th>Status</th></tr></thead>
-      <tbody>${DISTRICTS.map(d=>`<tr>
+      <div class="matrix-wrap"><table><thead><tr><th>District</th><th class="ctr">Bookings</th><th>Status</th><th>Actions</th></tr></thead>
+      <tbody>${DISTRICTS.map((d,i)=>`<tr>
         <td><b style="font-weight:500">${escHtml(d.name)}</b></td>
         <td class="code" style="text-align:center">${SPONSORED_BOOKINGS.filter(r=>r.district===d.name).length}</td>
-        <td>${d.is_active?'<span class="pill pill-ok"><i class="dot"></i>Active</span>':'<span class="pill pill-off">Inactive</span>'}</td></tr>`).join("")}
+        <td>${d.is_active?'<span class="pill pill-ok"><i class="dot"></i>Active</span>':'<span class="pill pill-off">Inactive</span>'}</td>
+        <td><button class="btn" data-medit="${i}">Edit</button></td></tr>`).join("")}
         ${addRowNew("Add district")}</tbody></table></div></div>`;
   },
 
@@ -4968,7 +4983,6 @@ function productForm(editing=false){
   const booking=[field(PROD_REST[0],values), field(PROD_REST[1],values),
                  ratioField(values["visitor_categories[]"]||[])];
   const finance=PROD_REST.slice(2,4).map(f=>field(f,values));
-  const inventory=inventoryFields("product");
   const listing=LISTING_FIELDS.map(f=>field(f,values));
   return `<div class="product-create">
     <div class="card">
@@ -4979,7 +4993,6 @@ function productForm(editing=false){
           isProd?"Choose which add-ons this product offers.":"Choose whether this add-on can also be bought on its own.")}
         ${section("Booking rules",booking)}
         ${section("Tax",finance)}
-        ${section("Inventory",[inventory])}
         ${section("Listing content",listing)}
         ${section("Status",[field(["Active|is_active","bool","Turn it off to take this off sale. A product that's currently in use (has bookings or slots on sale) can't be turned off."],{is_active:true})])}
       </div>
@@ -5021,6 +5034,10 @@ function createForm(schema,label,footNote,values={},editing=false){
     const byName=names=>names.map(n=>schema.find(f=>(f[0].split("|")[1]||f[0])===n)).filter(Boolean);
     const secs=[["Basic information",["code","name","is_adult","from_age / to_age"]],["Booking rules",["requires_category_id","requires_min"]],["Display",["sort_order","is_active"]]];
     headings=secs.map(s=>s[0]); groups=secs.map(s=>byName(s[1]));
+  } else if(current==="pools"){   // Inventory pool — field-based sections (no schedule/booking config on a pool)
+    const byName=names=>names.map(n=>schema.find(f=>(f[0].split("|")[1]||f[0])===n)).filter(Boolean);
+    const secs=[["Basics",["code","name","capacity"]],["Status",["is_active"]]];
+    headings=secs.map(s=>s[0]); groups=secs.map(s=>byName(s[1]));
   } else if(current==="hsn"){   // HSN / SAC code — field-based sections, not catalogue chunks
     const byName=names=>names.map(n=>schema.find(f=>(f[0].split("|")[1]||f[0])===n)).filter(Boolean);
     const secs=[["Basics",["code","kind","description"]],["Tax",["tax_rate_ids[]"]],["Status",["is_active"]]];
@@ -5042,7 +5059,7 @@ function createForm(schema,label,footNote,values={},editing=false){
     headings=secs.map(s=>s[0]); groups=secs.map(s=>byName(s[1]));
   } else if(label==="coupon"){   // Shop coupon
     const byName=names=>names.map(n=>schema.find(f=>(f[0].split("|")[1]||f[0])===n)).filter(Boolean);
-    const secs=[["Coupon",["code","desc","type","v","valid_from / valid_to"]],["Approval",["proposedBy","status"]]];
+    const secs=[["Coupon",["code","desc","type","v","valid_from / valid_to"]],["Approval",["proposedBy"]],["Status",["is_active"]]];
     headings=secs.map(s=>s[0]); groups=secs.map(s=>byName(s[1]));
   } else {
     for(let i=0;i<schema.length;i+=3) groups.push(schema.slice(i,i+3));
@@ -5059,7 +5076,7 @@ function createForm(schema,label,footNote,values={},editing=false){
     <div class="card">
       <div class="card-head"><span class="card-title">${editing?"Edit":"New"} ${label}</span></div>
       <div class="form-body product-form">${secHTML.join("")}</div>
-      ${current==="career"?"":`<div class="form-foot">${current==="departments"&&!editing?`<span class="form-err" id="deptErr"></span>`:""}<button class="btn" data-tab="list">Cancel</button><button class="btn btn-primary"${label==="event"?' data-save-event="1"':current==="departments"&&!editing?' data-dept-create="1"':''}>${editing?"Save changes":"Create "+label}</button></div>`}
+      ${current==="career"?"":`<div class="form-foot">${current==="departments"&&!editing?`<span class="form-err" id="deptErr"></span>`:""}<button class="btn" data-tab="list">Cancel</button><button class="btn btn-primary"${label==="event"?' data-save-event="1"':current==="departments"&&!editing?' data-dept-create="1"':current==="blackout"&&!editing?' data-blackout-create="1"':editing&&mEdit>=0&&masterData(current)?' data-medit-save="1"':''}>${editing?"Save changes":"Create "+label}</button></div>`}
     </div>
   </div>`;
 }
@@ -5613,7 +5630,7 @@ function field(f,values={}){
   const impact=(hint&&hint.edge)?hint.edge:"";
   const egph=egFromNote(note)||egPlaceholder(hint&&hint.example);
   let ctl="";
-  if(type==="bool"){ ctl=`<button class="sw" data-on="${val?1:0}"><i></i><span>${val?"On":"Off"}</span></button>`; }
+  if(type==="bool"){ const on = val===undefined ? /^is_active$|^active$/.test(name) : !!val; ctl=`<button class="sw" data-on="${on?1:0}"><i></i><span>${on?"On":"Off"}</span></button>`; }
   else if(type==="enum[]"){ ctl=`<div class="chips">${opts.map(o=>`<button class="chip-add chip-opt" data-on="${Array.isArray(val)&&val.includes(o)?1:0}">${o}</button>`).join("")}</div>`; }
   else if(type==="enum"){ ctl=`<div class="selwrap"><select class="inp"><option>Select&#8230;</option>${opts.map(o=>`<option${String(val||"").toLowerCase()===o.toLowerCase()?" selected":""}>${o}</option>`).join("")}</select></div>`; }
   else if(type==="fk[]"||type==="fk"){
@@ -5765,7 +5782,7 @@ function tierForm(editing){
         fld("Plan name",`<input class="inp" value="${escAttr(t.name||"")}" placeholder="e.g. Silver, Gold, Platinum">`,"The plan name shown to customers.",true,true)
         +fld("Price",`<div class="inp-suffix"><input class="inp mono" type="number" min="0" value="${escAttr(t.price||"")}" placeholder="0"><span>₹</span></div>`,"One-time price of the plan.",true)
         +fld("Striked price",`<div class="inp-suffix"><input class="inp mono" type="number" min="0" value="${escAttr(t.strikedPrice||"")}" placeholder="0"><span>₹</span></div>`,"Optional original price shown struck-through next to the plan price to signal a discount.",false)
-        +fld("Status",`<div class="selwrap"><select class="inp"><option${t.status==="Active"?" selected":""}>Active</option><option${t.status==="Draft"?" selected":""}>Draft</option></select></div>`,"Draft plans are not on sale yet.",false))}
+        +fld("Active",`<button type="button" class="sw" data-on="${t.status==="Draft"?0:1}"><i></i><span>${t.status==="Draft"?"Off":"On"}</span></button>`,"Turn it off to keep the plan a draft — draft plans are not on sale yet.",false))}
       ${sec("Visits & validity",
         fld("Visits included",`<div class="inp-suffix"><input class="inp mono" type="number" min="0" step="1" value="${escAttr(numvis)}" placeholder="Leave blank for Unlimited"><span>visits</span></div>`,"Number of visits included. Leave blank to mean Unlimited. One visit admits 1 adult + 1 child.",false)
         +fld("Validity",`<div class="selwrap"><select class="inp">${["3 months","6 months","Yearly"].map(o=>`<option${t.validity===o?" selected":""}>${o}</option>`).join("")}</select></div>`,"Membership auto-expires when the validity period ends.",true)
@@ -6096,7 +6113,7 @@ function shopCouponDetail(){ const c=SHOP_COUPONS[selShopCoupon]; if(!c) return 
   </tbody></table></div></div>
   <div class="card"><div class="card-head"><span class="card-title">Approval</span><span class="card-note">a code cannot apply until Approved</span></div><div class="matrix-wrap"><table class="reclist"><tbody>
     ${row("Created by",c.preparedBy||"—")}${row("Proposed by",c.proposedBy||"—")}${row("Approved by",c.approvedBy||'<span class="muted">—</span>')}${row("Status",pill)}
-  </tbody></table>${c.status==="Pending approval"?`<div class="card-body"><button class="btn btn-primary" data-shop-coupon-approve="${selShopCoupon}" style="width:100%;justify-content:center">Approve coupon</button></div>`:""}</div></div></div>`;
+  </tbody></table>${c.status==="Draft"?`<div class="card-body"><button class="btn btn-primary" data-shop-coupon-review="${selShopCoupon}" style="width:100%;justify-content:center">Send for Review</button></div>`:c.status==="Pending approval"?`<div class="card-body"><button class="btn btn-primary" data-shop-coupon-approve="${selShopCoupon}" style="width:100%;justify-content:center">Approve coupon</button></div>`:""}</div></div></div>`;
 }
 
 function shopSaleForm(){
@@ -7657,6 +7674,22 @@ function careerApplications(){
 }
 
 
+/* Foundations master-row edit: the data array behind each simple master, so a row's
+   Edit button can open the create form prefilled from that row (display-only). */
+const masterData = k => ({categories:CATS, tax:TAXRATES, hsn:HSNCODES, shopcats:SHOP_CATEGORIES, progcats:PROGCATS,
+  fboptions:FB_OPTIONS, schoolslots:SCHOOL_SLOTS, entryprices:ENTRY_PRICES, sponsors:SPONSORS, districts:DISTRICTS, pools:[POOLS.shared]}[k]);
+function masterEditValues(k, i){
+  const row=(masterData(k)||[])[i]||{};
+  if(k==="tax")  return {code:row.code,name:row.name,percentage:row.pct,is_active:true};
+  if(k==="hsn")  return {code:row.code,kind:row.kind,description:row.desc,"tax_rate_ids[]":(row.tax||[]),is_active:true};
+  if(k==="pools")return {code:row.code,name:row.name,capacity:String(row.cap||"").replace(/\D/g,"")};
+  if(k==="categories"){ const b=/(\d+)\D+(\d+)/.exec(row.band||""); const over=/(\d+)\s*and over/.exec(row.band||"");
+    return {code:row.code,name:row.name,is_adult:row.code==="ADULT",from_age:b?+b[1]:(over?+over[1]:0),to_age:b?+b[2]:"",requires_category_id:row.req||"",requires_min:row.reqMin||0,is_active:true}; }
+  if(k==="progcats") return {name:row.name,format:row.format==="multi"?"multi-day batches":"single session",note:row.note,is_active:true};
+  if(k==="shopcats") return {name:row.name,code:row.code,is_active:true};
+  return row;   // school masters (fboptions/schoolslots/entryprices/sponsors/districts) — keys line up with the schema
+}
+
 function render(){
   document.querySelector("body > .drawer-layer")?.remove();
   document.querySelector("body > .confirm-layer")?.remove();
@@ -7676,7 +7709,7 @@ function render(){
   let body;
   if(tab==="new") body = back("Back to "+m.n.toLowerCase()) + (current==="school" ? schoolForm(false) : current==="sponsored" ? spForm(false) : current==="products" ? productForm() : current==="programs" ? createForm(PROGRAM_SCHEMA,"program","",{}) : current==="bookings" ? bookingForm() : current==="discounts" ? discountForm(false) : current==="tiers" ? tierForm(false) : current==="members" ? memberForm(false) : current==="shopsales" ? shopSaleForm() : current==="shopitems" ? shopItemForm(false) : current==="shopcoupons" ? createForm(SCHEMAS.shopcoupons,"coupon") : current==="hsn" ? createForm(schema,label,"",{kind:"hsn"}) : createForm(schema,label));
   else if(tab==="edit" && current==="shopitems") body = back("Back to shop products") + shopItemForm(true);
-  else if(tab==="edit" && current==="shopcoupons"){ const c=SHOP_COUPONS[selShopCoupon]||{}; body = back("Back to shop coupons") + createForm(SCHEMAS.shopcoupons,"coupon","",{code:c.code,desc:c.desc,type:c.type,v:c.v,preparedBy:c.preparedBy,proposedBy:c.proposedBy,approvedBy:c.approvedBy,status:c.status},true); }
+  else if(tab==="edit" && current==="shopcoupons"){ const c=SHOP_COUPONS[selShopCoupon]||{}; body = back("Back to shop coupons") + createForm(SCHEMAS.shopcoupons,"coupon","",{code:c.code,desc:c.desc,type:c.type,v:c.v,preparedBy:c.preparedBy,proposedBy:c.proposedBy,approvedBy:c.approvedBy,is_active:c.is_active!==false},true); }
   else if(tab==="edit" && current==="tiers") body = back("Back to membership tiers") + tierForm(true);
   else if(tab==="edit" && current==="members") body = back("Back to members") + memberForm(true);
   else if(tab==="edit" && current==="products") body = back("Back to "+m.n.toLowerCase()) + productForm(true);
@@ -7692,6 +7725,7 @@ function render(){
   }
   else if(tab==="edit" && current==="school") body = back("Back to school records") + schoolForm(true);
   else if(tab==="edit" && current==="sponsored") body = back("Back to sponsored records") + spForm(true);
+  else if(tab==="edit" && mEdit>=0 && masterData(current)) body = back("Back to "+m.n.toLowerCase()) + createForm(schema,label,"",masterEditValues(current,mEdit),true);
   else if(tab==="hist") body = back("Back to "+m.n.toLowerCase()) + VIEWS.history();
   else if(tab==="detail" && DETAIL[current]) body = back("Back to "+m.n.toLowerCase()) + DETAIL[current]();
   else body = (VIEWS[m.view]||VIEWS.emptyList)();
@@ -7833,7 +7867,16 @@ function primaryCatFor(kind,id){
    as the cap/sold numbers added for spots-left. Blackout always wins over any slot. */
 const WEEKDAYS=["Mon","Tue","Wed","Thu","Fri","Sat","Sun"];
 const MONTHS=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
-const BLACKOUTS=["15 Aug 2026","26 Jan 2027"]; // sample — Independence Day / Republic Day
+/* Blackout dates master — closures. Whole-museum rows shut the whole date; the
+   narrower rows disable one product or one time slot. */
+const BLACKOUT_DATES=[
+  {date:"15 Aug 2026", scope:"whole museum", product_id:"",           reason:"Independence Day"},
+  {date:"02 Oct 2026", scope:"whole museum", product_id:"",           reason:"Gandhi Jayanti"},
+  {date:"01 Nov 2026", scope:"one product",  product_id:"Mini Golf",  reason:"Green maintenance"},
+  {date:"25 Dec 2026", scope:"whole museum", product_id:"",           reason:"Christmas"},
+  {date:"26 Jan 2027", scope:"whole museum", product_id:"",           reason:"Republic Day"}
+];
+const BLACKOUTS=BLACKOUT_DATES.filter(b=>b.scope==="whole museum").map(b=>b.date);
 function parseDMY(str){ const m=/^(\d{1,2})\s+(\w{3})\s+(\d{4})$/.exec((str||"").trim()); if(!m) return null; const mi=MONTHS.indexOf(m[2]); if(mi<0) return null; return new Date(+m[3],mi,+m[1]); }
 function fmtDMY(d){ return String(d.getDate()).padStart(2,"0")+" "+MONTHS[d.getMonth()]+" "+d.getFullYear(); }
 function dayIndexMon0(d){ return (d.getDay()+6)%7; } // 0=Mon .. 6=Sun
@@ -7845,7 +7888,7 @@ function dateMatchesDays(d,daysStr){
   return start<=end ? (idx>=start&&idx<=end) : (idx>=start||idx<=end);
 }
 function dateInSlotRange(d,s){ const from=parseDMY(s.from),to=parseDMY(s.to); if(!from||!to) return false; return d>=from&&d<=to; }
-function isBlackout(dateStr){ return BLACKOUTS.includes(dateStr); }
+function isBlackout(dateStr){ return BLACKOUT_DATES.some(b=>b.scope==="whole museum"&&b.date===dateStr); }
 function slotsForDate(slots,dateStr){
   if(!dateStr||isBlackout(dateStr)) return [];
   const d=parseDMY(dateStr); if(!d) return [];
@@ -7978,7 +8021,19 @@ document.addEventListener("click",e=>{
       : DEPARTMENTS.some(d=>d.name.toLowerCase()===name.toLowerCase())
         ? `\u201C${name}\u201D is already on the list.` : "";
     if(bad){ if(fld) fld.classList.add("is-miss"); if(box) box.textContent=bad; return; }
-    DEPARTMENTS.push({ name, added: fmtDMY(new Date()) });
+    const actSw=document.querySelector('.fld[data-df="is_active"] .sw');
+    DEPARTMENTS.push({ name, added: fmtDMY(new Date()), is_active: actSw?actSw.dataset.on==="1":true });
+    tab="list"; render(); $(".stage").scrollTop=0; return;
+  }
+  if(e.target.closest("[data-blackout-create]")){
+    const f=readForm(document.querySelector(".product-form"))||{};
+    const dateEl=document.querySelector('.fld[data-df="date"] input');
+    const date=(f.date||(dateEl?dateEl.value:"")||"").trim();
+    if(!date){ const fld=dateEl&&dateEl.closest(".fld"); if(fld) fld.classList.add("is-miss"); return; }
+    const scope=(f.scope&&!/^Select/.test(f.scope))?f.scope:"whole museum";
+    BLACKOUT_DATES.push({ date, scope,
+      product_id: scope==="whole museum" ? "" : ((f.product_id&&!/^Select/.test(f.product_id))?f.product_id:""),
+      reason: (f.reason||"").trim() });
     tab="list"; render(); $(".stage").scrollTop=0; return;
   }
   const cJd=e.target.closest("[data-career-jd]");
@@ -8001,12 +8056,15 @@ document.addEventListener("click",e=>{
     return; }
   if(e.target.closest("[data-career-clear]")){ careerFDept=""; careerFType=""; careerFStatus="all"; render(); return; }
   const nav=e.target.closest(".mitem");
-  if(nav){ current=nav.dataset.k; selP=0; selW=0; selB=0; selE=0; esub="details"; eventCats=new Set(); selBooking=0; tab="list"; sub="details"; csub="details"; editD=-1; selD=0; dsub="summary"; editCond=-1; condDraft=null; draftDiscount=null; addOpen=null; progKind="event"; progCat="Event"; schoolDraft=null; schtab="records"; schoolEmailView=null; schoolMsg=""; schoolEInvView=false; schoolEInvConfirm=false; schoolSaveConfirm=false; spDraft=null; sptab="records"; spEmailView=null; spMsg=""; spSaveConfirm=false; render(); $(".stage").scrollTop=0; return; }
+  if(nav){ current=nav.dataset.k; mEdit=-1; selP=0; selW=0; selB=0; selE=0; esub="details"; eventCats=new Set(); selBooking=0; tab="list"; sub="details"; csub="details"; editD=-1; selD=0; dsub="summary"; editCond=-1; condDraft=null; draftDiscount=null; addOpen=null; progKind="event"; progCat="Event"; schoolDraft=null; schtab="records"; schoolEmailView=null; schoolMsg=""; schoolEInvView=false; schoolEInvConfirm=false; schoolSaveConfirm=false; spDraft=null; sptab="records"; spEmailView=null; spMsg=""; spSaveConfirm=false; render(); $(".stage").scrollTop=0; return; }
   const goto=e.target.closest("[data-goto]");
-  if(goto){ current=goto.dataset.goto; selP=0; selW=0; selB=0; selE=0; selD=0; selBooking=0; tab="list"; sub="details"; csub="details"; dsub="summary"; addOpen=null; render(); $(".stage").scrollTop=0; return; }
+  if(goto){ current=goto.dataset.goto; mEdit=-1; selP=0; selW=0; selB=0; selE=0; selD=0; selBooking=0; tab="list"; sub="details"; csub="details"; dsub="summary"; addOpen=null; render(); $(".stage").scrollTop=0; return; }
   const t=e.target.closest("[data-tab]");
-  if(t){ tab=t.dataset.tab; if(tab==="new"&&current==="bookings") resetBooking(); if(tab==="new"&&current==="shopsales") resetShopSale(); if(tab==="new"&&current==="programs"){progKind=progFormat(progCat)==="multi"?"camp":"event";eventCats=new Set();} if(tab==="new"&&current==="events") eventCats=new Set(); if(tab==="new"&&current==="discounts") draftDiscount=null; if((tab==="new"||tab==="edit")&&current==="tiers") seedTierDraft(tab==="edit"); if(tab==="new"&&(current==="products"||current==="programs")) prodBuildingPool=false; if(tab==="new"&&current==="school") schoolDraft=blankSchool(schoolNewMode); if(tab==="new"&&current==="sponsored") spDraft=blankSp(spNewMode); if(tab==="list"){ schoolDraft=null; spDraft=null; } addOpen=null; render(); $(".stage").scrollTop=0; return; }
-  if(e.target.closest("#hAdd")){ tab="new"; if(current==="bookings") resetBooking(); if(current==="shopsales") resetShopSale(); if(current==="events") eventCats=new Set(); if(current==="discounts") draftDiscount=null; if(current==="tiers") seedTierDraft(false); if(current==="products"||current==="programs") prodBuildingPool=false; if(current==="school") schoolDraft=blankSchool(schoolNewMode); if(current==="sponsored") spDraft=blankSp(spNewMode); addOpen=null; render(); $(".stage").scrollTop=0; return; }
+  if(t){ tab=t.dataset.tab; if(tab==="new"&&current==="bookings") resetBooking(); if(tab==="new"&&current==="shopsales") resetShopSale(); if(tab==="new"&&current==="programs"){progKind=progFormat(progCat)==="multi"?"camp":"event";eventCats=new Set();} if(tab==="new"&&current==="events") eventCats=new Set(); if(tab==="new"&&current==="discounts") draftDiscount=null; if((tab==="new"||tab==="edit")&&current==="tiers") seedTierDraft(tab==="edit"); if(tab==="new"&&(current==="products"||current==="programs")) prodBuildingPool=false; if(tab==="new"&&current==="school") schoolDraft=blankSchool(schoolNewMode); if(tab==="new"&&current==="sponsored") spDraft=blankSp(spNewMode); if(tab==="list"){ schoolDraft=null; spDraft=null; } mEdit=-1; addOpen=null; render(); $(".stage").scrollTop=0; return; }
+  const medit=e.target.closest("[data-medit]");
+  if(medit){ mEdit=+medit.dataset.medit; tab="edit"; render(); $(".stage").scrollTop=0; return; }
+  if(e.target.closest("[data-medit-save]")){ mEdit=-1; tab="list"; render(); $(".stage").scrollTop=0; return; }
+  if(e.target.closest("#hAdd")){ tab="new"; mEdit=-1; if(current==="bookings") resetBooking(); if(current==="shopsales") resetShopSale(); if(current==="events") eventCats=new Set(); if(current==="discounts") draftDiscount=null; if(current==="tiers") seedTierDraft(false); if(current==="products"||current==="programs") prodBuildingPool=false; if(current==="school") schoolDraft=blankSchool(schoolNewMode); if(current==="sponsored") spDraft=blankSp(spNewMode); addOpen=null; render(); $(".stage").scrollTop=0; return; }
   // member form Save — Location and PIN code are each optional, but at least one must be given
   const memSave=e.target.closest("[data-member-save]");
   if(memSave){ const loc=((document.getElementById("memberLocation")||{}).value||"").trim(), pin=((document.getElementById("memberPincode")||{}).value||"").trim();
@@ -8137,15 +8195,17 @@ document.addEventListener("click",e=>{
   if(pickCust){ const c=CUSTOMERS.find(x=>x.phone===pickCust.dataset.pickCustomer); if(c){ bookingCustomer={name:c.name,phone:c.phone,email:c.email,member:c.member||null,location:c.location||bookingCustomer.location||""}; bookingCustomerLinked=CUSTOMERS.indexOf(c); } render(); return; }
   const unlinkCust=e.target.closest("[data-unlink-customer]");
   if(unlinkCust){ bookingCustomerLinked=-1; bookingCustomer.member=null; render(); return; }
-  // ---- activate / deactivate a product from the listing ----
-  const tgl=e.target.closest("[data-toggle-active]");
-  if(tgl){ const i=+tgl.dataset.toggleActive; P[i].active = (P[i].active===false); render(); return; }
   // ---- open a record's detail page ----
   // School listing "Edit" — intercept before the row's data-open (View) handler.
   const schEditRow=e.target.closest("[data-school-edit-row]");
   if(schEditRow){ const id=schEditRow.dataset.schoolEditRow, rec=schoolById(id); if(rec){ selSchool=id; schoolDraft=Object.assign(JSON.parse(JSON.stringify(rec)),{_mode:"booking"}); tab="edit"; render(); $(".stage").scrollTop=0; } return; }
   const spEditRow=e.target.closest("[data-sp-edit-row]");
   if(spEditRow){ const id=spEditRow.dataset.spEditRow, rec=spById(id); if(rec){ selSp=id; spDraft=Object.assign(JSON.parse(JSON.stringify(rec)),{_mode:"booking"}); tab="edit"; render(); $(".stage").scrollTop=0; } return; }
+  // Members listing "Edit" / "Renew" — intercept before the row's data-open (View) handler.
+  const memEditRow=e.target.closest("[data-member-edit]");
+  if(memEditRow){ selMember=+memEditRow.dataset.memberEdit; current="members"; tab="edit"; render(); $(".stage").scrollTop=0; return; }
+  const memRenewRow=e.target.closest("[data-open-renew]");
+  if(memRenewRow){ selMember=+memRenewRow.dataset.openRenew; current="members"; tab="detail"; addOpen="renew"; render(); $(".stage").scrollTop=0; return; }
   const od=e.target.closest("[data-open]");
   if(od){ const [kind,i]=od.dataset.open.split(":"); const idx=+i;
     if(kind==="prod") selP=idx; else if(kind==="camp"){ selW=idx; selB=0; progKind="camp"; } else if(kind==="event"){ selE=idx; progKind="event"; } else if(kind==="disc"){ selD=idx; dsub="summary"; } else if(kind==="member"){ selMember=idx; msub="summary"; } else if(kind==="tier"){ selTier=idx; } else if(kind==="shopitem"){ selShopItem=idx; sitab="details"; } else if(kind==="shopsale"){ selShopSale=idx; ssub="details"; } else if(kind==="shopcoupon"){ selShopCoupon=idx; } else if(kind==="school"){ selSchool=(SCHOOL_BOOKINGS[idx]||{}).id||""; schsub="overview"; schoolEmailView=null; schoolMsg=""; schoolEInvView=false; schoolEInvConfirm=false; } else if(kind==="sponsored"){ selSp=(SPONSORED_BOOKINGS[idx]||{}).id||""; spsub="overview"; spEmailView=null; spMsg=""; }
@@ -8269,6 +8329,8 @@ document.addEventListener("click",e=>{
   if(e.target.closest("[data-shop-instant-clear]")){ shopInstantPct=0; shopInstantDesc=""; shopInstantMgr=""; shopInstantSent=false; shopInstantCode=""; shopInstantOtp=""; shopInstantApplied=false; shopInstantErr=false; render(); return; }
   const shPay=e.target.closest("[data-shop-pay]");
   if(shPay){ shopPay=shPay.dataset.shopPay; render(); return; }
+  const shRev=e.target.closest("[data-shop-coupon-review]");
+  if(shRev){ const c=SHOP_COUPONS[+shRev.dataset.shopCouponReview]; if(c) c.status="Pending approval"; render(); return; }
   const shAppr=e.target.closest("[data-shop-coupon-approve]");
   if(shAppr){ const c=SHOP_COUPONS[+shAppr.dataset.shopCouponApprove]; if(c) c.status="Approved"; render(); return; }
   const dAppr=e.target.closest("[data-disc-approve]");
@@ -8311,8 +8373,6 @@ document.addEventListener("click",e=>{
   if(cs){ csub=cs.dataset.csub; addOpen=null; render(); return; }
   const ms=e.target.closest("[data-msub]");
   if(ms){ msub=ms.dataset.msub; addOpen=null; render(); return; }
-  const orenew=e.target.closest("[data-open-renew]");
-  if(orenew){ selMember=+orenew.dataset.openRenew; current="members"; tab="detail"; addOpen="renew"; render(); $(".stage").scrollTop=0; return; }
   const oredeem=e.target.closest("[data-open-redeem]");
   if(oredeem){ selMember=+oredeem.dataset.openRedeem; current="members"; tab="detail"; addOpen="redeem"; redeemStep=1; render(); return; }
   const rnext=e.target.closest("[data-redeem-next]");

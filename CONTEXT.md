@@ -186,14 +186,54 @@ Verified: `node --check` + render sweep (0 failures across **28** masters) + log
 
 ---
 
+### 14. Merged `~/Downloads/muso-admin-portal.html` (Careers "Portfolio link")
+3-way `git merge-file` (base `ab59f09`, ours HEAD `91794b6` = base + School/Sponsored, theirs = base + a Careers portfolio feature). One conflict — their reworded `career` schema sat where my new masters were inserted; resolved by taking **their** career schema (incl. the new `["Portfolio link|portfolio","bool",…]` field) then keeping **my** masters (fboptions…sponsored) after it. Their careers additions (portfolio bool on roles, portfolio URLs + `qual`/`exp` on applications, `CAREER_WATCH`/`CAREER_PH`/`tipRich` helpers, portfolio column + sort in the applications table) merged cleanly. Verified: `node --check` + sweep (0 failures across 28 masters) + live checks (careers portfolio row/field, School e-invoice, Sponsored invoice all render). Result is uncommitted in the working tree.
+
+### 15. Masters/records UI pass — Edit buttons, column hygiene, Active toggles (latest session)
+All verified with `node --check` + DOM-stub render sweep (0 failures) + targeted logic/render tests; browser attach was unavailable (a Chrome instance already held the chrome-devtools profile), so live checks were skipped this pass.
+
+**Generic Foundations row Edit**
+- Added a reusable master-row edit path: `let mEdit` (row index), `masterData(k)` (key → seed array: categories→CATS, tax→TAXRATES, hsn→HSNCODES, shopcats→SHOP_CATEGORIES, progcats→PROGCATS, fboptions/schoolslots/entryprices/sponsors/districts, pools→[POOLS.shared]), and `masterEditValues(k,i)` (maps a seed row → schema field names; special mappers for tax/hsn/pools/categories/progcats/shopcats, raw row otherwise, `is_active` defaults active).
+- Render branch: `tab==="edit" && mEdit>=0 && masterData(current)` → `createForm(schema,label,"",masterEditValues(...),true)`. Handlers: `data-medit` (open), `data-medit-save` (return to list — display-only persistence, consistent with generic create). `mEdit` reset on nav / `data-goto` / New / any `data-tab`.
+- Added a per-row **Edit** button to all 11 Foundations list views (categories, pools, tax, hsn, shopcats, progcats, fboptions, schoolslots, entryprices, sponsors, districts). Departments already had its own Edit/Delete.
+
+**Tax view was dead code (fixed)**
+- `M.tax.view` pointed at `"taxrates"` which has no `VIEWS` function → tax silently fell back to the generic `emptyList` (a 2-col Name/Status table). Re-pointed `M.tax.view = "tax"` so the real `tax()` view renders (now with the Edit button). Also fixed a latent bug there: it referenced a non-existent `r.when`; the "Charged when" text is now built from the seed's `field/op/val` (or "Always").
+
+**Column hygiene (remove data with no matching form input; add Status everywhere it applies)**
+- Removed columns that displayed values not captured by any form field: **Notes** (categories), **Draws on it** (pools — its `included_functions` field was removed from the form), **Component / Charged when / From / To** (tax), **Unit** (hsn).
+- Added a **Status** column (reads `is_active`, defaults Active) to every Foundations list that has the field. **Departments** later got one too (see below). Kept legitimate derived count columns (Products, Roles on it, Bookings).
+- **Inventory pools**: removed the **Excluded** column and the "concurrent heads" unit label; the pools **Edit** form now shows only **Basics** (code/name/capacity) + **Status** — the wrongly-labelled generic "Schedule & booking" section (capacity_basis / parent_pool / included_functions) was removed (new `current==="pools"` branch in `createForm`).
+
+**Products & add-ons**
+- Removed the **"Is inventory taken from the Building Pool?"** question and its now-empty **Inventory** section from the product form (kept on Programs — `inventoryFields()` is shared).
+- Removed the in-list **Active toggle switch** from the Actions column (the only page that had one) + its dead `data-toggle-active` handler. Actions is now View / Edit; the Status pill still shows active/inactive.
+
+**Blackout dates — Create working + seeds**
+- `BLACKOUT_DATES` records seed (5: Independence Day, Gandhi Jayanti, a product-only Mini Golf closure, Christmas, Republic Day). `BLACKOUTS` (whole-museum dates) derives from it; `isBlackout` scans it live. New `VIEWS.blackout()` list (`M.blackout.view="blackout"`). The **Create** button is wired (`data-blackout-create` in the `createForm` footer + handler using `readForm()` → pushes a record). NB: the date field is a native picker, so a newly-created row shows an ISO date vs the seeds' `DD Mon YYYY`.
+
+**Members**
+- Renamed the list column **Status → Membership Status**; added a per-row **Edit** button. The edit form already existed (`memberForm(true)` pre-fills + "Save changes"); the bug was that the Edit (and **Renew**) buttons were swallowed by the row's `data-open` (View) handler. Fixed by intercepting `data-member-edit` and `data-open-renew` **before** the `data-open` handler (same pattern as the School/Sponsored edit-row buttons).
+
+**Active switch replaces Status dropdown**
+- **Membership tiers** form and **Shop coupons** form: the Status/Active-Draft dropdown is now an **Active** toggle switch. Coupon schema field `status` (enum) → `is_active` (bool); coupon edit-form values and seeds carry `is_active`. Generic `bool` field now defaults `is_active`/`active` **On** for new records (`val===undefined` → on) — applies to every create form.
+
+**Shop coupons — Send for Review**
+- Coupon detail: **Draft** coupons show a **Send for Review** button (`data-shop-coupon-review` → Pending approval); Pending shows **Approve coupon** (→ Approved); Approved shows neither. The approval **status** (Draft/Pending/Approved) and the new **Active** on/off toggle are now two separate concepts on a coupon.
+
+**Departments — Active toggle**
+- Added an **Active** field to the schema + seeds (all active), an **Active** toggle to both the create form and the rename/edit flyout (`deptEditLayer`/`deptSave` read it), and a **Status** column to the list. `deptCreate` reads the toggle.
+
+---
+
 ## Known wireframe simplifications / open notes
 - Auto discounts apply on **simplified bases** (whole-cart or the obvious line group), not a full `target/prods/cats` engine.
 - Per "stack all", there is **no** mutual-exclusion (`no[]`) or biggest-saving enforcement in the POS — a member can get both the member add-on line and the Membership auto row.
 - `recalcBookingSummary()` / `renderBookingAttendees()` remain **dead code** (key off non-existent `[data-bookqty]`) — left untouched.
 - Seeds still carry some inert legacy fields (`prec`, `no`, old `apply` strings) — harmless.
-- Git HEAD is `ab59f09` (branch `main`). Sessions 1–11 are in HEAD; the **session-12 School Bookings and session-13 Sponsored School work is uncommitted** in the working tree (`muso-admin-portal.html` modified) — commit/branch when ready. Untracked docs (`CONTEXT.md`, `VENUE-MODULE-PLAN.md`, scope docs, etc.) remain untracked.
+- Git HEAD is `ccc3d97` (branch `main`) — already contains sessions 12–14 (School Bookings, Sponsored School, the Downloads/Portfolio merge). Only **session 15 (this masters/records UI pass) is uncommitted** in the working tree (`muso-admin-portal.html` staged, `CONTEXT.md` modified) — commit when ready. Untracked docs (`CONTEXT.md`, `VENUE-MODULE-PLAN.md`, scope docs, etc.) remain untracked.
 
 ## Quick reference — key seeds & helpers
-- Seeds: `P` (products/add-ons), `BOOKINGS`, `CUSTOMERS`, `DISCOUNTS`, `MEMBERSHIP_TIERS`, `MEMBERS`, `CATS`, `WORKSHOPS`, `EVENTS`, `PROGCATS`, `BLACKOUTS`, `DASH`, `LOCATIONS` (none — Location is free-text).
+- Seeds: `P` (products/add-ons), `BOOKINGS`, `CUSTOMERS`, `DISCOUNTS`, `MEMBERSHIP_TIERS`, `MEMBERS`, `CATS`, `WORKSHOPS`, `EVENTS`, `PROGCATS`, `BLACKOUT_DATES` (records; `BLACKOUTS` = whole-museum dates derived from it), `SHOP_COUPONS` (carry `status` + `is_active`), `DEPARTMENTS` (carry `is_active`), `DASH`, `LOCATIONS` (none — Location is free-text).
 - Discount code that works in POS: **IND50, MUMKIDS150, JSW001–JSW100** (all now), plus auto discounts by cart condition.
 - Backups this session: `/tmp/pre-multislot-backup.html`, `/tmp/pre-merge-backup.html`.
