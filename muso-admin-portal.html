@@ -731,6 +731,9 @@ th .th-sort{padding:9px 14px}
 .app-file:hover{background:var(--blue-line);border-color:var(--blue)}
 .app-file:focus-visible{outline:2px solid var(--blue);outline-offset:1px}
 .app-note{font-size:11.5px;color:var(--ink2);min-width:170px;max-width:206px;line-height:1.5}
+.app-qual{font-size:12px;min-width:150px;max-width:220px;line-height:1.45}
+.app-port{font-size:12px;max-width:190px}
+.app-port-miss{font-size:11.5px;color:var(--ink3)}
 /* Every question occupies exactly two lines whether it needs them or not, and the
    "more" link keeps its line even when hidden — so every collapsed row is the same
    height and the list stays a list. Only an opened row grows. */
@@ -1282,16 +1285,17 @@ const M = {
   career:{g:7,n:"Careers",owner:"People & Culture",perm:"career.manage",src:"Scope §14",q:0,
     d:"The openings the public careers page lists, and everything that comes back off it — applications against a role, and general queries from the ask-us form. Roles are written and dated here; applications and queries are read and moved along here.",
     view:"career",
-    schema:[["Role ID|code","auto","Generated from the last role on file — it is not typed."],
-            ["Position|title","string","The position as it appears on the careers page."],
-            ["Department|dept","dept","","Which team the role sits in — from the Departments master. The careers page filters on this."],
-            ["Employment type|type","enum","Full-time · Part-time · Internship · Volunteer","The careers page filters on this too."],
-            ["Active|active","bool","On puts the role on the careers page once its dates open. Off takes it down without deleting it."],
-            ["Location|loc","string","Where the role is based."],
-            ["Experience|exp","string","A range, e.g. 2–4 years — or “None required” for volunteering."],
-            ["Applications open between|posted / closes","date","From the day the opening goes live on the careers page to the day it stops taking applications."],
-            ["About the role|about","richtext","The paragraph that opens the JD and sits under the title on the careers page."],
-            ["Upload JD|jd","file","The job description file the careers page serves. PDF or Word."]]},
+    schema:[["Role ID|code","auto","Generated. Not typed."],
+            ["Position|title","string","The job title candidates see on the careers page."],
+            ["Department|dept","dept","","The team this role belongs to. Teams are added under Foundations, Departments."],
+            ["Employment type|type","enum","Full-time · Part-time · Internship · Volunteer","Full-time, part-time, internship or volunteering. Candidates filter by this."],
+            ["Active|active","bool","On shows the role on the careers page. Off hides it, without deleting it."],
+            ["Location|loc","string","Where the role is based, as a candidate would recognise it."],
+            ["Experience|exp","string","How much experience is needed, such as 2-4 years. Write Fresher if there is no minimum."],
+            ["Applications open between|posted / closes","date","The first and last day the role accepts applications."],
+            ["About the role|about","richtext","A short summary candidates read under the job title."],
+            ["Upload JD|jd","file","The job description candidates download from the careers page. PDF or Word."],
+            ["Portfolio link|portfolio","bool","On adds a portfolio link box to the application form."]]},
   fboptions:{g:0,n:"School F&B options",owner:"Sawood · F&B",perm:"master.fb.manage",src:"Scope §8",q:1,
     d:"The food & beverage options a school visit can add. Each carries a separate adult and child price; the school-booking form picks from this list and prices the food line off it.",
     view:"fboptions",
@@ -1421,88 +1425,88 @@ const APP_STATUSES = ["New","Shortlisted","Interviewed","Rejected"];
 const CAREER_APPLICATIONS = [
   /* ROLE-014 — Visitor Experience Associate */
   {id:"APP-2071", role:"ROLE-014", name:"Ananya Deshpande", email:"ananya.deshpande@example.com",
-   phone:"98200 41187", on:"12 Sep 2026", status:"Shortlisted", cv:{name:"Ananya-Deshpande-CV.pdf",size:186000},
+   phone:"98200 41187", exp:1, qual:"B.A. Mass Media, Mumbai University", on:"12 Sep 2026", status:"Shortlisted", cv:{name:"Ananya-Deshpande-CV.pdf",size:186000},
    note:"Two summers at the Nehru Science Centre front desk. Happy on weekends."},
   {id:"APP-2068", role:"ROLE-014", name:"Rohan Kulkarni", email:"rohan.k@example.com",
-   phone:"99301 20554", on:"11 Sep 2026", status:"New", cv:{name:"Rohan-Kulkarni-Resume.pdf",size:142000}, note:""},
+   phone:"99301 20554", exp:0, qual:"B.Com, Mumbai University", on:"11 Sep 2026", status:"New", cv:{name:"Rohan-Kulkarni-Resume.pdf",size:142000}, note:""},
   {id:"APP-2064", role:"ROLE-014", name:"Fatima Shaikh", email:"fatima.shaikh@example.com",
-   phone:"91670 33812", on:"09 Sep 2026", status:"Interviewed", cv:{name:"Fatima-Shaikh-CV.pdf",size:203000},
+   phone:"91670 33812", exp:2, qual:"B.A. English, SNDT", on:"09 Sep 2026", status:"Interviewed", cv:{name:"Fatima-Shaikh-CV.pdf",size:203000},
    note:"Currently at a bookshop counter in Bandra. Can start immediately."},
   {id:"APP-2059", role:"ROLE-014", name:"Kabir Menon", email:"kabir.menon@example.com",
-   phone:"98671 90042", on:"07 Sep 2026", status:"Rejected", cv:{name:"Kabir-Menon.pdf",size:97000},
+   phone:"98671 90042", exp:1, qual:"B.Sc. Hospitality, IHM Mumbai", on:"07 Sep 2026", status:"Rejected", cv:{name:"Kabir-Menon.pdf",size:97000},
    note:"Looking for weekdays only."},
   {id:"APP-2055", role:"ROLE-014", name:"Sneha Iyer", email:"sneha.iyer@example.com",
-   phone:"90040 71265", on:"05 Sep 2026", status:"New", cv:{name:"Sneha-Iyer-CV.pdf",size:221000}, note:""},
+   phone:"90040 71265", exp:0, qual:"B.M.S., KC College", on:"05 Sep 2026", status:"New", cv:{name:"Sneha-Iyer-CV.pdf",size:221000}, note:""},
   {id:"APP-2052", role:"ROLE-014", name:"Aditya Rane", email:"aditya.rane@example.com",
-   phone:"98195 55810", on:"03 Sep 2026", status:"Shortlisted", cv:{name:"Aditya-Rane-CV.pdf",size:175000},
+   phone:"98195 55810", exp:3, qual:"Diploma in Travel & Tourism", on:"03 Sep 2026", status:"Shortlisted", cv:{name:"Aditya-Rane-CV.pdf",size:175000},
    note:"Ran the ticket counter at a film festival for three years."},
 
   /* ROLE-015 — Workshop Facilitator, Robotics */
   {id:"APP-2066", role:"ROLE-015", name:"Meera Raghavan", email:"meera.raghavan@example.com",
-   phone:"90290 18874", on:"10 Sep 2026", status:"Shortlisted", cv:{name:"Meera-Raghavan-CV.pdf",size:264000},
+   phone:"90290 18874", exp:3, qual:"B.E. Electronics, VJTI", portfolio:"github.com/meera-raghavan", on:"10 Sep 2026", status:"Shortlisted", cv:{name:"Meera-Raghavan-CV.pdf",size:264000},
    note:"Teaches an after-school robotics club. Arduino and micro:bit."},
   {id:"APP-2061", role:"ROLE-015", name:"Siddharth Nair", email:"sid.nair@example.com",
-   phone:"98923 40117", on:"08 Sep 2026", status:"New", cv:{name:"Siddharth-Nair-Portfolio.pdf",size:412000},
+   phone:"98923 40117", exp:0, qual:"B.Tech Mechatronics (final year), SRM", portfolio:"sidnair.dev/projects", on:"08 Sep 2026", status:"New", cv:{name:"Siddharth-Nair-Portfolio.pdf",size:412000},
    note:"Mechatronics final year. Free on weekends."},
   {id:"APP-2057", role:"ROLE-015", name:"Tanvi Joshi", email:"tanvi.joshi@example.com",
-   phone:"93211 76004", on:"06 Sep 2026", status:"Interviewed", cv:{name:"Tanvi-Joshi-CV.pdf",size:158000}, note:""},
+   phone:"93211 76004", exp:2, qual:"B.Sc. Physics, Ruia College", on:"06 Sep 2026", status:"Interviewed", cv:{name:"Tanvi-Joshi-CV.pdf",size:158000}, note:""},
   {id:"APP-2050", role:"ROLE-015", name:"Imran Qureshi", email:"imran.q@example.com",
-   phone:"98337 02291", on:"02 Sep 2026", status:"New", cv:{name:"Imran-Qureshi-CV.pdf",size:131000},
+   phone:"98337 02291", exp:5, qual:"M.Tech Robotics, IIT Bombay", portfolio:"imranqureshi.github.io", on:"02 Sep 2026", status:"New", cv:{name:"Imran-Qureshi-CV.pdf",size:131000},
    note:"Ex-FIRST Robotics mentor."},
 
   /* ROLE-016 — Retail Shop Supervisor */
   {id:"APP-2073", role:"ROLE-016", name:"Pooja Bhatt", email:"pooja.bhatt@example.com",
-   phone:"98204 66319", on:"14 Sep 2026", status:"New", cv:{name:"Pooja-Bhatt-CV.pdf",size:198000},
+   phone:"98204 66319", exp:5, qual:"B.Com, Delhi University", on:"14 Sep 2026", status:"New", cv:{name:"Pooja-Bhatt-CV.pdf",size:198000},
    note:"Five years at a museum shop in Delhi, three supervising."},
   {id:"APP-2070", role:"ROLE-016", name:"Vikram Salvi", email:"vikram.salvi@example.com",
-   phone:"99676 12048", on:"13 Sep 2026", status:"Shortlisted", cv:{name:"Vikram-Salvi-CV.pdf",size:172000}, note:""},
+   phone:"99676 12048", exp:4, qual:"B.B.A. Retail Management, Pune University", on:"13 Sep 2026", status:"Shortlisted", cv:{name:"Vikram-Salvi-CV.pdf",size:172000}, note:""},
   {id:"APP-2065", role:"ROLE-016", name:"Nikhil Patil", email:"nikhil.patil@example.com",
-   phone:"90823 44170", on:"10 Sep 2026", status:"Rejected", cv:{name:"Nikhil-Patil.pdf",size:88000},
+   phone:"90823 44170", exp:1, qual:"H.S.C., Maharashtra Board", on:"10 Sep 2026", status:"Rejected", cv:{name:"Nikhil-Patil.pdf",size:88000},
    note:"No supervisory experience yet."},
 
   /* ROLE-017 — Marketing Intern */
   {id:"APP-2075", role:"ROLE-017", name:"Priya Sharma", email:"priya.sharma@example.com",
-   phone:"98200 11223", on:"15 Sep 2026", status:"Shortlisted", cv:{name:"Priya-Sharma-CV.pdf",size:214000},
+   phone:"98200 11223", exp:0, qual:"B.A. Advertising (final year), Xavier's", portfolio:"priya.example.com/work", on:"15 Sep 2026", status:"Shortlisted", cv:{name:"Priya-Sharma-CV.pdf",size:214000},
    note:"Available from October. Portfolio at priya.example.com."},
   {id:"APP-2074", role:"ROLE-017", name:"Arjun Verma", email:"arjun.verma@example.com",
-   phone:"98336 71902", on:"15 Sep 2026", status:"New", cv:{name:"Arjun-Verma-CV.pdf",size:167000}, note:""},
+   phone:"98336 71902", exp:0, qual:"B.M.M., Jai Hind College", on:"15 Sep 2026", status:"New", cv:{name:"Arjun-Verma-CV.pdf",size:167000}, note:""},
   {id:"APP-2072", role:"ROLE-017", name:"Ishita Bose", email:"ishita.bose@example.com",
-   phone:"93242 05518", on:"14 Sep 2026", status:"New", cv:{name:"Ishita-Bose-CV.pdf",size:189000},
+   phone:"93242 05518", exp:0, qual:"B.A. Journalism, Sophia College", portfolio:"behance.net/ishitabose", on:"14 Sep 2026", status:"New", cv:{name:"Ishita-Bose-CV.pdf",size:189000},
    note:"Ran the social handles for her college fest."},
   {id:"APP-2069", role:"ROLE-017", name:"Dhruv Agarwal", email:"dhruv.agarwal@example.com",
-   phone:"98111 30276", on:"12 Sep 2026", status:"Interviewed", cv:{name:"Dhruv-Agarwal-CV.pdf",size:154000}, note:""},
+   phone:"98111 30276", exp:1, qual:"B.B.A. Marketing, NMIMS", portfolio:"dhruvagarwal.notion.site", on:"12 Sep 2026", status:"Interviewed", cv:{name:"Dhruv-Agarwal-CV.pdf",size:154000}, note:""},
   {id:"APP-2067", role:"ROLE-017", name:"Sara DSouza", email:"sara.dsouza@example.com",
-   phone:"98670 81143", on:"11 Sep 2026", status:"New", cv:{name:"Sara-DSouza-CV.pdf",size:206000},
+   phone:"98670 81143", exp:1, qual:"M.A. Museum Studies, Mumbai University", portfolio:"saradsouza.substack.com", on:"11 Sep 2026", status:"New", cv:{name:"Sara-DSouza-CV.pdf",size:206000},
    note:"Writes a weekly newsletter on Mumbai's museums."},
   {id:"APP-2063", role:"ROLE-017", name:"Yash Gandhi", email:"yash.gandhi@example.com",
-   phone:"99204 55031", on:"10 Sep 2026", status:"Rejected", cv:{name:"Yash-Gandhi.pdf",size:112000},
+   phone:"99204 55031", exp:0, qual:"B.Com (final year), Narsee Monjee", on:"10 Sep 2026", status:"Rejected", cv:{name:"Yash-Gandhi.pdf",size:112000},
    note:"Wants remote."},
   {id:"APP-2060", role:"ROLE-017", name:"Aisha Khan", email:"aisha.khan@example.com",
-   phone:"90048 27760", on:"09 Sep 2026", status:"New", cv:{name:"Aisha-Khan-CV.pdf",size:178000}, note:""},
+   phone:"90048 27760", exp:0, qual:"B.A. Psychology, St. Andrew's", portfolio:"aishakhan.myportfolio.com", on:"09 Sep 2026", status:"New", cv:{name:"Aisha-Khan-CV.pdf",size:178000}, note:""},
 
   /* ROLE-018 — Weekend Gallery Volunteer */
   {id:"APP-2076", role:"ROLE-018", name:"Rhea Kapoor", email:"rhea.kapoor@example.com",
-   phone:"98195 63308", on:"15 Sep 2026", status:"New", cv:{name:"Rhea-Kapoor-Intro.pdf",size:74000},
+   phone:"98195 63308", exp:0, qual:"Class 12 (appearing), Cathedral School", on:"15 Sep 2026", status:"New", cv:{name:"Rhea-Kapoor-Intro.pdf",size:74000},
    note:"Class 12. One Sunday a month works for me."},
   {id:"APP-2071B", role:"ROLE-018", name:"Manav Thakur", email:"manav.thakur@example.com",
-   phone:"93726 10094", on:"13 Sep 2026", status:"Shortlisted", cv:{name:"Manav-Thakur.pdf",size:69000}, note:""},
+   phone:"93726 10094", exp:0, qual:"B.Sc. Zoology, Ruparel College", on:"13 Sep 2026", status:"Shortlisted", cv:{name:"Manav-Thakur.pdf",size:69000}, note:""},
   {id:"APP-2062", role:"ROLE-018", name:"Zoya Merchant", email:"zoya.merchant@example.com",
-   phone:"98209 74425", on:"09 Sep 2026", status:"New", cv:{name:"Zoya-Merchant-CV.pdf",size:121000},
+   phone:"98209 74425", exp:2, qual:"B.A. Fine Arts, Sir J.J. School of Art", on:"09 Sep 2026", status:"New", cv:{name:"Zoya-Merchant-CV.pdf",size:121000},
    note:"Volunteered at the Kala Ghoda festival last two years."},
   {id:"APP-2058", role:"ROLE-018", name:"Harsh Vora", email:"harsh.vora@example.com",
-   phone:"99878 33162", on:"07 Sep 2026", status:"New", cv:{name:"Harsh-Vora.pdf",size:83000}, note:""},
+   phone:"99878 33162", exp:0, qual:"B.Com, Mithibai College", on:"07 Sep 2026", status:"New", cv:{name:"Harsh-Vora.pdf",size:83000}, note:""},
   {id:"APP-2054", role:"ROLE-018", name:"Leena Pillai", email:"leena.pillai@example.com",
-   phone:"90045 60219", on:"06 Sep 2026", status:"Interviewed", cv:{name:"Leena-Pillai-CV.pdf",size:144000},
+   phone:"90045 60219", exp:28, qual:"B.Ed., Mumbai University", on:"06 Sep 2026", status:"Interviewed", cv:{name:"Leena-Pillai-CV.pdf",size:144000},
    note:"Retired schoolteacher, free Saturdays."},
 
   /* ROLE-012 — Membership Executive (closed) */
   {id:"APP-2011", role:"ROLE-012", name:"Nandini Rao", email:"nandini.rao@example.com",
-   phone:"98860 41207", on:"12 Aug 2026", status:"Rejected", cv:{name:"Nandini-Rao-CV.pdf",size:191000}, note:""},
+   phone:"98860 41207", exp:2, qual:"B.B.A., Christ University", on:"12 Aug 2026", status:"Rejected", cv:{name:"Nandini-Rao-CV.pdf",size:191000}, note:""},
   {id:"APP-2007", role:"ROLE-012", name:"Farhan Ali", email:"farhan.ali@example.com",
-   phone:"98334 90015", on:"09 Aug 2026", status:"Interviewed", cv:{name:"Farhan-Ali-CV.pdf",size:163000},
+   phone:"98334 90015", exp:4, qual:"M.B.A. Marketing, Symbiosis", on:"09 Aug 2026", status:"Interviewed", cv:{name:"Farhan-Ali-CV.pdf",size:163000},
    note:"Four years in CRM at a gym chain."},
   {id:"APP-2003", role:"ROLE-012", name:"Gauri Shinde", email:"gauri.shinde@example.com",
-   phone:"90287 15544", on:"05 Aug 2026", status:"Rejected", cv:{name:"Gauri-Shinde.pdf",size:105000}, note:""}
+   phone:"90287 15544", exp:1, qual:"B.A. Sociology, Fergusson College", on:"05 Aug 2026", status:"Rejected", cv:{name:"Gauri-Shinde.pdf",size:105000}, note:""}
 ];
 const CAREER_OPENINGS = [
   {id:"ROLE-014", jd:{name:"Visitor-Experience-Associate-JD.pdf",size:148000}, title:"Visitor Experience Associate", dept:"Operations",
@@ -1511,7 +1515,7 @@ const CAREER_OPENINGS = [
    about:"Front-of-house for every visitor who walks in - ticketing, orientation, and running the floor during peak sessions.",},
 
   {id:"ROLE-015", jd:{name:"Workshop-Facilitator-Robotics-JD.pdf",size:132000}, title:"Workshop Facilitator - Robotics", dept:"Education",
-   loc:"Museum of Solutions, Mumbai", type:"Part-time", exp:"1-3 years", active:true,
+   loc:"Museum of Solutions, Mumbai", type:"Part-time", exp:"1-3 years", active:true, portfolio:true,
    posted:"28 Aug 2026", closes:"30 Sep 2026",
    about:"Runs the robotics and kinetic-machines workshops for 9+ age groups, including weekend camps.",},
 
@@ -1521,17 +1525,17 @@ const CAREER_OPENINGS = [
    about:"Owns the museum shop floor - stock, coupons, daily sales reconciliation and the counter team.",},
 
   {id:"ROLE-017", jd:{name:"Marketing-Intern-JD.pdf",size:119000}, title:"Marketing Intern", dept:"Marketing",
-   loc:"Museum of Solutions, Mumbai", type:"Internship", exp:"Student / fresher", active:true,
+   loc:"Museum of Solutions, Mumbai", type:"Internship", exp:"Fresher", active:true, portfolio:true,
    posted:"09 Sep 2026", closes:"28 Sep 2026",
    about:"A six-month internship supporting campaigns for exhibitions, camps and membership drives.",},
 
   {id:"ROLE-018", jd:{name:"Weekend-Gallery-Volunteer-JD.pdf",size:96000}, title:"Weekend Gallery Volunteer", dept:"Education",
-   loc:"Museum of Solutions, Mumbai", type:"Volunteer", exp:"None required", active:false,
+   loc:"Museum of Solutions, Mumbai", type:"Volunteer", exp:"Fresher", active:false,
    posted:"05 Sep 2026", closes:"31 Oct 2026",
    about:"Weekend support on the galleries - helping children through exhibits and keeping activity stations stocked.",},
 
   {id:"ROLE-019", title:"Accessibility Programmes Lead", dept:"Education",
-   loc:"Museum of Solutions, Mumbai", type:"Full-time", exp:"4-6 years", active:true,
+   loc:"Museum of Solutions, Mumbai", type:"Full-time", exp:"4-6 years", active:true, portfolio:true,
    posted:"01 Oct 2026", closes:"30 Nov 2026",
    about:"Builds the museum's programming for children with disabilities, and trains the floor team to run it.",},
 
@@ -5024,7 +5028,7 @@ function createForm(schema,label,footNote,values={},editing=false){
   } else if(label==="role"){   // Careers opening — group by field, not catalogue chunks
     const byName=names=>names.map(n=>schema.find(f=>(f[0].split("|")[1]||f[0])===n)).filter(Boolean);
     const secs=[["The opening",["title","dept","type","active"]],
-                ["Where and who",["loc","exp"]],
+                ["Where, who and what we ask for",["loc","exp","portfolio"]],
                 ["Dates",["posted / closes"]],
                 ["Job description",["about","jd"]]];
     headings=secs.map(x=>x[0]); groups=secs.map(x=>byName(x[1]));
@@ -5509,8 +5513,26 @@ function egPlaceholder(ex){
 function egFromNote(note){ const m=String(note||"").match(/e\.g\.\s*([^.,;]+)/i); return m?m[1].trim():""; }
 /* The careers schema is small and its own thing, so it renders its own fields rather
    than inheriting the catalogue's required-field heuristics. */
+/* The second half of the tooltip, the same "watch for" the other forms carry: what
+   this field does once it is live, not a restatement of what to type. */
+/* Only where there is something to be careful of — a change that hits the live page at
+   once, or one that cannot be undone. Everything else gets the description alone. */
+const CAREER_WATCH = {
+  active:"Off takes the role off the live page at once, whatever the dates say.",
+  "posted / closes":"Past the closing date the role stops taking applications.",
+  jd:"A new file replaces the old one. The old one is not kept."
+};
+/* Placeholders follow the Products & add-ons form: a bare example of the answer,
+   no "e.g." prefix and no restating the label. */
+const CAREER_PH = {
+  title:"Visitor Experience Associate",
+  loc:"Museum of Solutions, Mumbai",
+  exp:"2-4 years",
+  about:"Formatted text"
+};
 function careerField(f,values,label,name,type,required){
   const val=values[name];
+  const ph=CAREER_PH[name]?` placeholder="${escAttr(CAREER_PH[name])}"`:"";
   let note=f.length>3?f[3]:(f[2]||"");
   const opts=(f.length>3?f[2]:"").split("·").map(x=>x.trim()).filter(Boolean);
   const wide=["richtext","bool","file"].includes(type)||name==="loc"||name.includes(" / ");
@@ -5518,7 +5540,9 @@ function careerField(f,values,label,name,type,required){
   if(type==="auto")
     ctl=`<input class="inp mono" value="${escAttr(val||autoValue())}" readonly tabindex="-1">`;
   else if(type==="bool"){
-    const on = val===undefined ? true : !!val;   // a new role is listed unless told otherwise
+    /* A new role is live unless told otherwise, but nothing is asked of applicants
+       unless it is switched on. */
+    const on = val===undefined ? (name!=="portfolio") : !!val;
     ctl=`<button class="sw" data-on="${on?1:0}"><i></i><span>${on?"On":"Off"}</span></button>`;
   }
   else if(type==="dept"){
@@ -5541,7 +5565,7 @@ function careerField(f,values,label,name,type,required){
   }
   else if(type==="richtext")
     ctl=`<textarea class="inp" rows="${name==="about"?3:5}" style="resize:vertical"${
-      name!=="about"?' placeholder="One per line"':""}>${escAttr(val==null?"":val)}</textarea>`;
+      ph || (name!=="about"?' placeholder="One per line"':"")}>${escAttr(val==null?"":val)}</textarea>`;
   else if(name.includes(" / ")){
     /* Same shape as the discount form's "Offer runs between": one label, two dates. */
     const parts=name.split(" / ");
@@ -5551,13 +5575,13 @@ function careerField(f,values,label,name,type,required){
     }).join("")}</div>`;
   }
   else
-    ctl=`<input class="inp mono"${type==="date"?' placeholder="DD Mon YYYY"':""} value="${escAttr(val==null?"":val)}">`;
+    ctl=`<input class="inp mono"${type==="date"?' placeholder="DD Mon YYYY"':ph} value="${escAttr(val==null?"":val)}">`;
   if(type==="auto") note = val ? "Set when the role was created. It never changes."
                               : "Reserved for this role and assigned when you save.";
   return `<div class="fld${wide?" wide":""}" data-df="${escAttr(name)}">
-    <div class="lab"><span class="lab-n">${label}</span>
+    <div class="lab"><span class="lab-n">${label}</span>${tipRich(note,CAREER_WATCH[name]||"")}
       <span class="lab-req">${type==="auto"?"Generated":required?"Required":"Optional"}</span></div>
-    ${ctl}${note?`<span class="career-hint">${note}</span>`:""}</div>`;
+    ${ctl}</div>`;
 }
 
 function field(f,values={}){
@@ -5570,7 +5594,7 @@ function field(f,values={}){
   const opts=optRaw?optRaw.split("·").map(x=>x.trim()).filter(Boolean):[];
   const parts=name.includes(" / ")?name.split(" / "):[name];
   const wide=(!NARROW.includes(type)||parts.length>1)?" wide":"";
-  const CAREER_REQ=["title","dept","type","loc","posted / closes","about"];
+  const CAREER_REQ=["title","dept","type","loc","exp","posted / closes","about"];
   if(current==="career"){
     if(name==="code") return "";   // generated, and shown on the role itself — never a form field
     return careerField(f,values,label,name,type,CAREER_REQ.includes(name));
@@ -7175,6 +7199,10 @@ const CAREER_SORT = {
 const APP_SORT = {
   id:{get:a=>a.id}, name:{get:a=>a.name}, phone:{get:a=>a.phone},
   role:{get:a=>{ const r=roleById(a.role); return r?r.title:a.role; }},
+  exp:{get:a=>(a.exp||0), type:"num"}, qual:{get:a=>a.qual||""},
+  /* Links first, then the ones a role asked for and did not get, then the rest. */
+  portfolio:{get:a=>{ const r=roleById(a.role);
+    return a.portfolio ? "1 "+a.portfolio : (r&&r.portfolio) ? "2" : "3"; }},
   on:{get:a=>a.on, type:"date"}, cv:{get:a=>(a.cv&&a.cv.name)||""}, note:{get:a=>a.note},
   status:{get:a=>a.status, type:"rank", rank:["New","Shortlisted","Interviewed","Rejected"]}
 };
@@ -7277,6 +7305,9 @@ function careerDetail(){
         ${row("Employment type",`<span class="tag tag-t">${r.type}</span>`)}
         ${row("Location",escHtml(r.loc))}
         ${row("Experience",escHtml(r.exp))}
+        ${row("Portfolio link",r.portfolio
+          ? `<span class="pill pill-blue"><i class="dot"></i>Required</span>`
+          : `<span class="muted">Not asked for</span>`)}
       </tbody></table></div></div>
 
   <div class="card"><div class="card-head"><span class="card-title">Dates</span>
@@ -7299,7 +7330,7 @@ function careerDetail(){
   // ---- Applications tab ----
   const appsBody=`<div class="card"><div class="card-head"><span class="card-title">Applications</span>
       <span class="card-note">${apps.length} received</span></div>
-      ${apps.length?appTable(sortRows(apps,APP_SORT,appSort),"roleAppTable",false)
+      ${apps.length?appTable(sortRows(apps,APP_SORT,appSort),"roleAppTable",false,false,!!r.portfolio)
       :`<div class="card-body muted" style="font-size:12.5px">Nothing has come in against this role yet.</div>`}
   </div>`;
 
@@ -7330,7 +7361,8 @@ function nextRoleId(){
 function careerEditValues(r){
   if(!r) return {};
   return { code:r.id, title:r.title, dept:r.dept, type:r.type, loc:r.loc, exp:r.exp,
-           posted:r.posted, closes:r.closes, about:r.about, jd:r.jd, active:!!r.active };
+           posted:r.posted, closes:r.closes, about:r.about, jd:r.jd, active:!!r.active,
+           portfolio:!!r.portfolio };
 }
 
 /* ---- Applications received --------------------------------------------------
@@ -7420,30 +7452,52 @@ function careerOpenPdf(str,file){
 /* One applications table, used by the Applications received tab and by a role's
    detail page, so the two never drift apart. */
 /* Applications are read in the row: the CV and the status are the controls, and there is
-   nothing behind a row to open. `open` is kept so a row link can be turned back on. */
-function appTable(list, id, open=false){
+   nothing behind a row to open. `open` is kept so a row link can be turned back on.
+   `showRole` is off on a role's own detail page — every row there is that role, so the
+   column would repeat the page title down the whole table. */
+/* Years on the job, written the way a shortlist reads: a fresher is a fresher, not "0". */
+function appExp(a){
+  const y = +a.exp || 0;
+  return y===0 ? "Fresher" : y===1 ? "1 yr" : y+" yrs";
+}
+/* Three different things, and HR needs to tell them apart: a link that was given, a role
+   that asked and got nothing back, and a role that never asked at all. The middle one is
+   an ordinary outcome, not a failure — the field is offered, not enforced. */
+function appPortfolio(a, role){
+  if(a.portfolio) return `<button class="app-file" data-app-port="${a.id}"
+    title="Open ${escAttr(a.portfolio)}">${escHtml(a.portfolio)}</button>`;
+  if(role && role.portfolio) return `<span class="app-port-miss">Left blank</span>`;
+  return `<span class="muted" title="This role does not ask for a portfolio">NA</span>`;
+}
+function appTable(list, id, open=false, showRole=true, showPort=true){
+  const cols = (showRole?8:7) + (showPort?1:0) + 1;
   return `<div class="matrix-wrap"><table${open?' class="reclist"':""} id="${id}" data-sorttable="app"><thead><tr>
     ${sortTh("Application","id",appSort)}${sortTh("Applicant","name",appSort)}
-    ${sortTh("Phone","phone",appSort)}${sortTh("Applied for","role",appSort)}
+    ${sortTh("Phone","phone",appSort)}${showRole?sortTh("Applied for","role",appSort):""}
+    ${sortTh("Experience","exp",appSort)}${sortTh("Qualification","qual",appSort)}
+    ${showPort?sortTh("Portfolio","portfolio",appSort):""}
     ${sortTh("Received","on",appSort)}${sortTh("CV","cv",appSort)}
     ${sortTh("Notes","note",appSort)}</tr></thead>
   <tbody>${list.length?list.map(a=>{
     const role=roleById(a.role);
-    const hay=`${a.id} ${a.name} ${a.email} ${a.phone} ${role?role.title:""}`.toLowerCase();
+    const hay=`${a.id} ${a.name} ${a.email} ${a.phone} ${role?role.title:""} ${a.qual||""} ${appExp(a)} ${a.portfolio||""}`.toLowerCase();
     return `<tr${open?` data-app-open="${a.id}"`:""} data-app-row data-search="${escAttr(hay)}">
     <td class="code" style="white-space:nowrap">${a.id}</td>
     <td class="career-title"><b style="font-weight:500">${escHtml(a.name)}</b>
       <div class="career-sub">${escHtml(a.email)}</div></td>
     <td class="code" style="white-space:nowrap">${a.phone}</td>
-    <td class="career-loc"><b style="font-weight:500">${role?escHtml(role.title):a.role}</b>
-      <div class="career-sub">${role?role.dept+" · "+role.type:""}</div></td>
+    ${showRole?`<td class="career-loc"><b style="font-weight:500">${role?escHtml(role.title):a.role}</b>
+      <div class="career-sub">${role?role.dept+" · "+role.type:""}</div></td>`:""}
+    <td class="code" style="white-space:nowrap">${escHtml(appExp(a))}</td>
+    <td class="app-qual">${a.qual?escHtml(a.qual):'<span class="muted">—</span>'}</td>
+    ${showPort?`<td class="app-port">${appPortfolio(a,role)}</td>`:""}
     <td class="code" style="white-space:nowrap">${a.on}</td>
     <td>${a.cv?`<button class="app-file" data-app-cv="${a.id}" title="Open ${escAttr(a.cv.name)}">${escHtml(a.cv.name)}</button>
       <div class="career-left">${humanSize(a.cv.size)}</div>`:'<span class="muted">—</span>'}</td>
     <td class="app-note">${a.note?escHtml(a.note):'<span class="muted">—</span>'}</td></tr>`;}).join("")
-    :`<tr><td colspan="7" class="muted" style="padding:26px 14px;text-align:center;font-size:12.5px">
+    :`<tr><td colspan="${cols}" class="muted" style="padding:26px 14px;text-align:center;font-size:12.5px">
         No application matches those filters.</td></tr>`}
-    <tr data-app-empty style="display:none"><td colspan="7" class="muted"
+    <tr data-app-empty style="display:none"><td colspan="${cols}" class="muted"
       style="text-align:center;padding:18px;font-size:12.5px">No application matches that search.</td></tr>
   </tbody></table></div>`;
 }
@@ -7460,12 +7514,14 @@ function roleFormRead(){
   const dates=form.querySelector('.fld[data-df="posted / closes"]');
   const dpart=k=>dates?(dates.querySelector(`[data-dpart="${k}"]`)||{}).value||"":"";
   const picked=(form.querySelector('.fld[data-df="jd"] input[type=file]')||{}).files;
+  const swOf=n=>{ const b=form.querySelector(`.fld[data-df="${n}"] .sw`); return b?b.dataset.on==="1":null; };
   const sw=form.querySelector('.fld[data-df="active"] .sw');
   const vals={ title:get("title"), dept:get("dept"), type:get("type"), loc:get("loc"),
                exp:get("exp"), about:get("about"), posted:dpart("posted").trim(), closes:dpart("closes").trim(),
                jd:(picked&&picked.length)?{name:picked[0].name,size:picked[0].size}:null,
-               active: sw ? sw.dataset.on==="1" : true };
-  const LABEL={title:"Position",loc:"Location",about:"About the role"};
+               active: sw ? sw.dataset.on==="1" : true,
+               portfolio: swOf("portfolio")===null ? false : swOf("portfolio") };
+  const LABEL={title:"Position",loc:"Location",exp:"Experience",about:"About the role"};
   const missing=Object.keys(LABEL).filter(n=>!vals[n]);
   Object.keys(LABEL).forEach(n=>form.querySelector(`.fld[data-df="${n}"]`)?.classList.toggle("is-miss",!vals[n]));
   const box=document.getElementById("roleErr");
@@ -7484,9 +7540,9 @@ function careerCreate(){
   const clean=x=>(x && !/^Select/.test(x)) ? x : "";
   CAREER_OPENINGS.unshift({
     id:nextRoleId(), title:v.title, dept:clean(v.dept)||"—", loc:v.loc,
-    type:clean(v.type)||"Full-time", exp:v.exp||"Not specified", active:v.active,
+    type:clean(v.type)||"Full-time", exp:v.exp, active:v.active,
     posted:v.posted||fmtDMY(new Date()), closes:v.closes||"", applicants:0,
-    about:v.about, jd:v.jd
+    about:v.about, jd:v.jd, portfolio:!!v.portfolio
   });
   tab="list"; carsub="openings"; render(); $(".stage").scrollTop=0;
 }
@@ -7495,7 +7551,7 @@ function careerCreate(){
 function careerSaveEdit(){
   const r=roleById(selCareer), v=roleFormRead();
   if(!r||!v) return;
-  r.active=v.active;
+  r.active=v.active; r.portfolio=!!v.portfolio;
   const set=(k,val)=>{ if(val && !/^Select/.test(val)) r[k]=val; };
   ["title","dept","type","loc","exp","about","posted","closes"].forEach(k=>set(k,v[k]));
   if(v.jd) r.jd=v.jd;                       // a new upload replaces what was there
@@ -7937,6 +7993,12 @@ document.addEventListener("click",e=>{
   const aCv=e.target.closest("[data-app-cv]");
   if(aCv){ const a=appById(aCv.dataset.appCv);
     if(a&&a.cv) careerOpenPdf(careerCvPdf(a), a.cv.name); return; }
+  /* The portfolio is a link the applicant typed, so it opens in a new tab as given.
+     The seeded links are stand-ins and will not resolve. */
+  const aPort=e.target.closest("[data-app-port]");
+  if(aPort){ const a=appById(aPort.dataset.appPort);
+    if(a&&a.portfolio) window.open(/^https?:\/\//.test(a.portfolio)?a.portfolio:"https://"+a.portfolio,"_blank","noopener");
+    return; }
   if(e.target.closest("[data-career-clear]")){ careerFDept=""; careerFType=""; careerFStatus="all"; render(); return; }
   const nav=e.target.closest(".mitem");
   if(nav){ current=nav.dataset.k; selP=0; selW=0; selB=0; selE=0; esub="details"; eventCats=new Set(); selBooking=0; tab="list"; sub="details"; csub="details"; editD=-1; selD=0; dsub="summary"; editCond=-1; condDraft=null; draftDiscount=null; addOpen=null; progKind="event"; progCat="Event"; schoolDraft=null; schtab="records"; schoolEmailView=null; schoolMsg=""; schoolEInvView=false; schoolEInvConfirm=false; schoolSaveConfirm=false; spDraft=null; sptab="records"; spEmailView=null; spMsg=""; spSaveConfirm=false; render(); $(".stage").scrollTop=0; return; }
