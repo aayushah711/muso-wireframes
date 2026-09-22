@@ -5086,7 +5086,9 @@ function productForm(editing=false){
   const section = (title,fields,note="") => `<section class="form-sec">
       <div class="form-sec-head"><span class="form-sec-title">${title}</span>${tip(note)}</div>
       <div class="form-sec-body">${fields.join("")}</div></section>`;
-  const basic=PROD_BASE.map(f=>f[0].split("|")[1]==="type"?typeField():field(f,values)).concat(field(PROD_REST[4],values));
+  // Active toggle replaces the Status dropdown, and sits at the end of Basic information.
+  const activeField=field(["Active|is_active","bool","Turn it off to take this off sale. A product that's currently in use (has bookings or slots on sale) can't be turned off."],values);
+  const basic=PROD_BASE.map(f=>f[0].split("|")[1]==="type"?typeField():field(f,values)).concat(activeField);
   const typeSettings=(isProd?PROD_PRODUCT_ONLY:PROD_ADDON_ONLY).map(f=>field(f,values));
   // Visitor-category ratio/pairing rules now live on the product's "Validation rules"
   // detail tab (persisted per product), so they are no longer duplicated on this form.
@@ -5105,7 +5107,6 @@ function productForm(editing=false){
         ${section("Booking rules",booking)}
         ${section("Tax / invoice code",finance)}
         ${section("Listing content",listing)}
-        ${section("Status",[field(["Active|is_active","bool","Turn it off to take this off sale. A product that's currently in use (has bookings or slots on sale) can't be turned off."],{is_active:true})])}
       </div>
       <div class="form-foot"><button class="btn" data-tab="list">Cancel</button><button class="btn btn-primary">${editing?"Save changes":"Create"}</button></div>
     </div>
@@ -5129,7 +5130,7 @@ function createForm(schema,label,footNote,values={},editing=false){
     // group by field name so sections are stable regardless of schema order
     const byName=names=>names.map(n=>schema.find(f=>(f[0].split("|")[1]||f[0])===n)).filter(Boolean);
     const secs = label==="program" ? [
-      ["Basic information",["code","title","category_id","min_age","status","is_active"]],
+      ["Basic information",["code","title","category_id","min_age","is_active"]],
       ["Booking rules",["visitor_categories[]","cutoff_days / cutoff_hours"]],
       ["Tax",["tax_rate_ids[]","hsn_sac_id"]],
       ["Listing content",["location_text","seo_title","subtitle","description","media[]","seo_description","seo_keywords","url_handle","unaccompanied_allowed"]]
