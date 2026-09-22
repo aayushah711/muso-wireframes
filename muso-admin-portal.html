@@ -1037,11 +1037,9 @@ const AGEFILTERS = [
    src:"The default for anything with no restriction"}
 ];
 const ADMITS = f => f.cats;
-/* Read from the visitor category master at the point of use. Nothing else holds this rule. */
-const needsOf = n => { const c = CATS.find(x=>x.name===n); return c && c.req ? c.req : null; };
-const needsText = c => c.req ? `${c.reqMin} × ${c.req}` : "—";
-/* Categories that normally need an adult, on a band that has no adult ticket. */
-const UNACCOMPANIED = f => f.cats.filter(c=>needsOf(c) && !f.cats.includes(needsOf(c)));
+/* needsOf/needsText/UNACCOMPANIED removed 2026-09-22: the "requires another
+   category" rule no longer lives on the visitor category master. It moves
+   to Products & add-ons, as a rule on the product/listing. */
 
 const LISTING_SCHEMA = [
  ["Description|description","richtext","§2: a text area with formatting. The listing copy, not the one-line subtitle."],
@@ -1350,34 +1348,30 @@ ORDER.forEach((k,i)=>{ M[k].g = PHASE[k]; M[k].step = i+1; });
 /* ---------------- view data ---------------- */
 
 const CATS = [
-  {code:"ADULT",  name:"Adult",       band:"18 and over", req:null, reqMin:0,
+  {code:"ADULT",  name:"Adult",       band:"18 and over",
    note:"Can be booked on its own."},
-  {code:"CH1217", name:"Child 12–17", band:"12 to 17",    req:null, reqMin:0,
+  {code:"CH1217", name:"Child 12–17", band:"12 to 17",
    note:"Can be booked without an adult."},
-  {code:"CH0311", name:"Child 3–11",  band:"3 to 11",     req:"Adult", reqMin:1,
-   note:"At least one adult must be on the same booking."},
-  {code:"BABY",   name:"Baby",        band:"0 to 2",      req:"Adult", reqMin:1,
+  {code:"CH0311", name:"Child 3–11",  band:"3 to 11",
+   note:"Whether an adult must also be on the booking is set on the product/listing, not here — see Products & add-ons."},
+  {code:"BABY",   name:"Baby",        band:"0 to 2",
    note:"Priced at ₹1 so the head is ticketed and countable."}
 ];
 
-const TAX_FIELDS = ["Place of supply state","Customer type","Always"];
 const TAXRATES = [
-  {code:"CGST-9",name:"CGST",comp:"cgst",pct:9,
-   field:"Place of supply state",op:"is",val:"Maharashtra",from:"01 Apr 2026",to:"open"},
-  {code:"SGST-9",name:"SGST",comp:"sgst",pct:9,
-   field:"Place of supply state",op:"is",val:"Maharashtra",from:"01 Apr 2026",to:"open"},
-  {code:"IGST-18",name:"IGST",comp:"igst",pct:18,
-   field:"Place of supply state",op:"is not",val:"Maharashtra",from:"01 Apr 2026",to:"open"},
+  {code:"CGST-9",name:"CGST",comp:"cgst",pct:9},
+  {code:"SGST-9",name:"SGST",comp:"sgst",pct:9},
+  {code:"IGST-18",name:"IGST",comp:"igst",pct:18},
   // ---- goods rates for the Shop / Merchandise module (5% / 12% / 28%); 0% items simply carry no rate ----
-  {code:"CGST-2.5",name:"CGST",comp:"cgst",pct:2.5,field:"Place of supply state",op:"is",val:"Maharashtra",from:"01 Apr 2026",to:"open"},
-  {code:"SGST-2.5",name:"SGST",comp:"sgst",pct:2.5,field:"Place of supply state",op:"is",val:"Maharashtra",from:"01 Apr 2026",to:"open"},
-  {code:"IGST-5",name:"IGST",comp:"igst",pct:5,field:"Place of supply state",op:"is not",val:"Maharashtra",from:"01 Apr 2026",to:"open"},
-  {code:"CGST-6",name:"CGST",comp:"cgst",pct:6,field:"Place of supply state",op:"is",val:"Maharashtra",from:"01 Apr 2026",to:"open"},
-  {code:"SGST-6",name:"SGST",comp:"sgst",pct:6,field:"Place of supply state",op:"is",val:"Maharashtra",from:"01 Apr 2026",to:"open"},
-  {code:"IGST-12",name:"IGST",comp:"igst",pct:12,field:"Place of supply state",op:"is not",val:"Maharashtra",from:"01 Apr 2026",to:"open"},
-  {code:"CGST-14",name:"CGST",comp:"cgst",pct:14,field:"Place of supply state",op:"is",val:"Maharashtra",from:"01 Apr 2026",to:"open"},
-  {code:"SGST-14",name:"SGST",comp:"sgst",pct:14,field:"Place of supply state",op:"is",val:"Maharashtra",from:"01 Apr 2026",to:"open"},
-  {code:"IGST-28",name:"IGST",comp:"igst",pct:28,field:"Place of supply state",op:"is not",val:"Maharashtra",from:"01 Apr 2026",to:"open"}
+  {code:"CGST-2.5",name:"CGST",comp:"cgst",pct:2.5},
+  {code:"SGST-2.5",name:"SGST",comp:"sgst",pct:2.5},
+  {code:"IGST-5",name:"IGST",comp:"igst",pct:5},
+  {code:"CGST-6",name:"CGST",comp:"cgst",pct:6},
+  {code:"SGST-6",name:"SGST",comp:"sgst",pct:6},
+  {code:"IGST-12",name:"IGST",comp:"igst",pct:12},
+  {code:"CGST-14",name:"CGST",comp:"cgst",pct:14},
+  {code:"SGST-14",name:"SGST",comp:"sgst",pct:14},
+  {code:"IGST-28",name:"IGST",comp:"igst",pct:28}
 ];
 const RATE = c => TAXRATES.find(x=>x.code===c);
 const HSNCODES = [
@@ -2459,7 +2453,7 @@ const OPTIONS = {
   "Discounts & offers":DISCOUNTS.map(d=>d.n),
   "Payment modes":["Card","UPI","Cash","Net banking"],
   "Time slots on this product":[...new Set(P.flatMap(p=>p.slots.map(s=>s.n)))],
-  "Tax rates":TAXRATES.map(t=>t.name+" "+t.pct+"% · "+t.op+" "+t.val),
+  "Tax rates":TAXRATES.map(t=>t.name+" "+t.pct+"%"),
   "HSN / SAC codes":HSNCODES.map(h=>h.kind+" "+h.code),
   "Referral sources":SOURCES,
   "Shop products":SHOP_ITEMS.map(x=>x.pd+" · "+x.n),
@@ -2532,8 +2526,6 @@ const SCHEMAS = {
     ["Name visitors see|name","string","Shown on the booking page and on every price row."],
     ["Is adult|is_adult","bool","On for adult ticket types — used to split adults from children in the live headcount."],
     ["Age range|from_age / to_age","int","Guidance shown to the buyer, who picks their own category. Date of birth is captured but optional, so this is not computed."],
-    ["Must be booked with|requires_category_id","fk","→ Visitor categories. Another category that must also be on the booking — a Child 3–11 cannot be booked without an Adult."],
-    ["How many of those|requires_min","int","How many of that category. Default 1."],
     ["Position in the list|sort_order","int","Order on the booking page."],
     ["Active|is_active","bool","Turn it off to retire this category. A category that's currently in use (priced on a product) can't be turned off."]],
 
@@ -2613,8 +2605,6 @@ categories:[["Visitor categories",[
  ["Short code|code","The short identifier used in reports and on the API.","CH0311 for Child 3–11.","Treat it as immutable once a booking exists against it. Changing it later orphans historic reports."],
  ["Name visitors see|name","What the visitor reads on the booking page.","“Child 3–11”.","The age range belongs in the name, because the buyer picks their own category. Rename it to just “Child” and nobody knows which band they are in."],
  ["Age range|from_age / to_age","The band, shown as guidance beside the name.","3 and 11.","Bands must not overlap or leave a gap. 0–2, 3–11, 12–17, 18+ covers everyone exactly once — set Child to 5–12 and Teen to 12–18 and a twelve-year-old is offered two prices."],
- ["Must be booked with|requires_category_id","Another category that must also be on the same booking.","Child 3–11 requires Adult.","Two children and no adult is refused. Two children and one adult is fine — and so is twenty children and one adult, because this is a presence test, not a ratio."],
- ["How many of those|requires_min","How many of that category are needed.","1.","Raising it to 2 means a single parent cannot book at all. If what you want is one adult per so many children, this field is the wrong tool."],
  ["Position in the list|sort_order","Position in the list on the booking page.","Adult first, Baby last.","None."],
  ["Active|is_active","Whether it can be sold.","Retiring a band mid-year.","Switching it off does not touch past bookings or existing price rows — those stay, so reports still reconcile."]]]],
 
@@ -2632,10 +2622,6 @@ tax:[["Tax rates",[
  ["Name on the invoice|name","Printed on the invoice line.","“CGST”.","Both halves must print separately. A single “GST 18%” line does not satisfy §12."],
  ["Which tax this is|component","Which of the three this row is.","cgst, sgst or igst.","This is what the return groups by. Mislabel SGST as CGST and the total is still right while the filing is wrong."],
  ["Rate|percentage","The rate.","9 for each half; 18 for IGST.","Two rows of 9, not one of 18. A single 18% row prints one line and fails §12's component breakup."],
- ["Charged when this field|condition_field","What the invoice is tested on.","Place of supply state.","Nothing about states is hard-coded. Change this to customer type and the same three rows are driven by something else, with no code change."],
- ["Matches or does not|condition_operator","Whether the row fires on a match or on everything else.","CGST and SGST are “is”; IGST is “is not”.","The “is not” row is what saves writing a rule for every other state in the country."],
- ["This value|condition_value","What the field is compared against.","Maharashtra, where MuSo is registered.","It lives on the row rather than in a hidden home-state setting, so a second registration elsewhere is three more rows and nothing else."],
- ["In force between|effective_from / effective_to","The window this rate is in force.","9% from 1 Apr 2026, open-ended.","Never edit a live row. Close it with an end date and open a new one, or a November credit note against a July invoice recomputes at the wrong rate."],
  ["In use|is_active","Whether it can be selected.","A row created with the wrong percentage, before anything used it.","Retiring a live rate is done with an end date, not this flag — otherwise past invoices lose the row they resolved against."]]]],
 
 hsn:[["HSN / SAC codes",[
@@ -4301,22 +4287,18 @@ const VIEWS = {
 
   categories(){
     return `<div class="note note-scope"><span class="note-mark">Structure</span><div>
-      This list does two jobs: it is the <b>unit every price is set against</b>, and it holds the one rule that constrains a booking — <b>which categories cannot travel alone</b>. Age bands are guidance shown to the buyer, who picks their own category; date of birth is captured but optional, so nothing is computed from it.
+      This list is the <b>unit every price is set against</b>. Age bands are guidance shown to the buyer, who picks their own category; date of birth is captured but optional, so nothing is computed from it. Whether a category requires another to also be on the booking (§1.11's "adult alongside younger children" rule) is set on the product/listing, in Products & add-ons — not here.
     </div></div>
     <div class="card">
       <div class="card-head"><span class="card-title">Categories</span>
         <span class="card-note">Priced per slot, on each product</span></div>
-      <table><thead><tr><th>Category</th><th>Age band</th><th>Must be booked with</th><th>Status</th><th>Actions</th></tr></thead>
+      <table><thead><tr><th>Category</th><th>Age band</th><th>Status</th><th>Actions</th></tr></thead>
       <tbody>${CATS.map((c,i)=>`<tr>
         <td><b style="font-weight:500">${c.name}</b><div class="code">${c.code}</div></td>
         <td class="code">${c.band}</td>
-        <td>${c.req?`<span class="mode">${needsText(c)}</span>`:'<span class="muted">Nothing — books alone</span>'}</td>
         <td>${c.is_active===false?'<span class="pill pill-off">Inactive</span>':'<span class="pill pill-ok"><i class="dot"></i>Active</span>'}</td>
         <td><button class="btn" data-medit="${i}">Edit</button></td></tr>`).join("")}
         ${addRowNew("Add category")}</tbody></table>
-      <div class="card-body" style="border-top:1px solid var(--rule);font-size:12.5px;color:var(--ink2);line-height:1.65">
-        <b style="color:var(--ink)">One rule, not a set of them.</b> §1.11 asks for an adult alongside younger children. Expressed as a requirement on the category rather than an age threshold, it is checked by counting what is in the cart — no age arithmetic, and it works the same whether the buyer supplied a date of birth or not.
-      </div>
     </div>
     <div class="note note-scope"><span class="note-mark">Settled</span><div>
       The four bands run <b>0–2, 3–11, 12–17, 18 and over</b> — no gaps and no overlaps anywhere between birth and adulthood, so no age can resolve to two categories and no age falls outside all four.
@@ -4457,9 +4439,6 @@ const VIEWS = {
         <td>${r.is_active===false?'<span class="pill pill-off">Inactive</span>':'<span class="pill pill-ok"><i class="dot"></i>Active</span>'}</td>
         <td><button class="btn" data-medit="${i}">Edit</button></td></tr>`).join("")}
         ${addRowNew("Add rate")}</tbody></table>
-      <div class="card-body" style="border-top:1px solid var(--rule);font-size:12.5px;color:var(--ink2);line-height:1.65">
-        Charged-when is what stops a product carrying all three from being taxed 36%. An invoice fires only the rows matching its place of supply — CGST plus SGST inside Maharashtra, IGST outside it.
-      </div>
     </div>`;
   },
 
@@ -5125,7 +5104,7 @@ function createForm(schema,label,footNote,values={},editing=false){
     groups=secs.map(s=>byName(s[1]));
   } else if(current==="categories"){   // Visitor category — field-based sections
     const byName=names=>names.map(n=>schema.find(f=>(f[0].split("|")[1]||f[0])===n)).filter(Boolean);
-    const secs=[["Basic information",["code","name","is_adult","from_age / to_age"]],["Booking rules",["requires_category_id","requires_min"]],["Display",["sort_order","is_active"]]];
+    const secs=[["Basic information",["code","name","is_adult","from_age / to_age"]],["Display",["sort_order","is_active"]]];
     headings=secs.map(s=>s[0]); groups=secs.map(s=>byName(s[1]));
   } else if(current==="pools"){   // Inventory pool — field-based sections (no schedule/booking config on a pool)
     const byName=names=>names.map(n=>schema.find(f=>(f[0].split("|")[1]||f[0])===n)).filter(Boolean);
@@ -7777,7 +7756,7 @@ function masterEditValues(k, i){
   if(k==="hsn")  return {code:row.code,kind:row.kind,description:row.desc,"tax_rate_ids[]":(row.tax||[]),is_active:true};
   if(k==="pools")return {code:row.code,name:row.name,capacity:String(row.cap||"").replace(/\D/g,"")};
   if(k==="categories"){ const b=/(\d+)\D+(\d+)/.exec(row.band||""); const over=/(\d+)\s*and over/.exec(row.band||"");
-    return {code:row.code,name:row.name,is_adult:row.code==="ADULT",from_age:b?+b[1]:(over?+over[1]:0),to_age:b?+b[2]:"",requires_category_id:row.req||"",requires_min:row.reqMin||0,is_active:true}; }
+    return {code:row.code,name:row.name,is_adult:row.code==="ADULT",from_age:b?+b[1]:(over?+over[1]:0),to_age:b?+b[2]:"",is_active:true}; }
   if(k==="progcats") return {name:row.name,format:row.format==="multi"?"multi-day batches":"single session",note:row.note,is_active:true};
   if(k==="shopcats") return {name:row.name,code:row.code,is_active:true};
   return row;   // school masters (fboptions/schoolslots/entryprices/sponsors/districts) — keys line up with the schema
