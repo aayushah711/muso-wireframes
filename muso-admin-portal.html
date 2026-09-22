@@ -940,7 +940,7 @@ const PREREQ = {
 };
 const SUBS = [
   ["details","Details"],["slots","Time slots"],["addons","Add-ons"],
-  ["availability","Capacity blocks"],["rules","Validation rules"],["tax","Tax rules"],["prices","Prices"]
+  ["availability","Capacity blocks"],["rules","Validation rules"],["prices","Prices"]
 ];
 const EVENT_SUBS = [["details","Details"],["pricing","Pricing"]];
 
@@ -2192,9 +2192,10 @@ const P = [
      {subject:"Adult",requires:["Child 3–11","Child 12–17"],mode:"any",min:1,max:5}
    ],addon:[]},
    blocks:[
-     {from:"15 Aug 2026",to:"15 Aug 2026",slot:"Five-hour afternoon",pool:"BUILDING",qty:20,reason:"School Booking",status:"Active"},
-     {from:"22 Aug 2026",to:"22 Aug 2026",slot:"Three-hour morning",pool:"BUILDING",qty:12,reason:"Birthday Booking",status:"Active"},
-     {from:"05 Sep 2026",to:"06 Sep 2026",slot:"Full day",pool:"BUILDING",qty:8,reason:"Private group",status:"Active"}],
+     {from:"15 Aug 2026",to:"15 Aug 2026",slot:"Five-hour afternoon",pool:"BUILDING",qtys:{"Five-hour afternoon":20},reason:"School Booking",status:"Active"},
+     {from:"22 Aug 2026",to:"22 Aug 2026",slot:"Three-hour morning",pool:"BUILDING",qtys:{"Three-hour morning":12},reason:"Birthday Booking",status:"Active"},
+     {from:"05 Sep 2026",to:"06 Sep 2026",slot:"Full day",pool:"BUILDING",qtys:{"Full day":8},reason:"Private group",status:"Active"},
+     {from:"12 Sep 2026",to:"12 Sep 2026",slot:"Three-hour morning, Five-hour morning",pool:"BUILDING",qtys:{"Three-hour morning":10,"Five-hour morning":15},reason:"School Booking",status:"Active"}],
    tax:["CGST-9","SGST-9","IGST-18"], sac:"999692",
    det:{"Type":"Product — the thing an add-on attaches to",
         "Named in":"Scope §4 — “Muso tickets”",
@@ -3464,6 +3465,8 @@ const $ = s => document.querySelector(s);
 let addOpen = null;   // which inline add-form is open: "slot"|"batch"|"day"|"addon"|"rate"|"block"|null
 let editSlot = -1;    // index of the time slot being edited in the slot flyout (-1 = adding a new one)
 let editBlock = -1;   // index of the quota block being edited in the block flyout (-1 = adding a new one)
+let blockDraft = null;   // quota-block flyout working copy {from,to,reason,slots:[],qtys:{}}
+let blockMselOpen = false;   // the block flyout's time-slot multi-select open state
 // Careers: which opening the apply form is open for (-1 = closed), the composed
 // email shown after a successful send, and whether submit has been attempted.
 let carsub = "openings", selCareer = "", carDsub = "details";
@@ -3675,20 +3678,55 @@ function rateFormCard(a){
       ${afFld("Tax rate",avail.length?afSel("af_rate",avail.map(r=>({v:r.code,t:r.name+" "+r.pct+"% ("+r.code+")"}))):`<div class="chips"><span class="muted" style="font-size:11.5px;padding:2px 4px">All rates are already associated</span></div>`,"",true)}
     </div>${afFoot("","Associate rate")}`);
 }
+/* A block's per-slot blocked amounts. Back-compat: an old single-quantity block
+   ({slot, qty}) reads as one entry keyed by its slot name. */
+const blockQtys = bk => bk && bk.qtys ? bk.qtys : (bk && bk.slot && bk.qty!=null ? {[bk.slot]:bk.qty} : {});
+/* The block flyout works on a draft so a slot multi-select can add/remove rows
+   without losing the dates, reason or per-slot amounts typed so far. */
+function seedBlockDraft(b){
+  const q=blockQtys(b);
+  return { from:b&&b.from&&b.from!=="—"?b.from:"", to:b&&b.to&&b.to!=="—"?b.to:"",
+    reason:b?b.reason:"Maintenance", slots:Object.keys(q), qtys:Object.assign({},q) };
+}
+function captureBlockFlyout(){
+  if(!blockDraft) return; const b=blockDraft;
+  const g=id=>{const el=document.getElementById(id);return el?el.value.trim():null;};
+  const f=g("af_kfrom"); if(f!=null) b.from=f;
+  const t=g("af_kto");   if(t!=null) b.to=t;
+  const r=g("af_kreason");if(r!=null) b.reason=r;
+  b.qtys=b.qtys||{};
+  (b.slots||[]).forEach((sn,i)=>{ const q=g("af_kqty_"+i); if(q!=null) b.qtys[sn]=q; });
+}
+/* Searchable time-slot multi-select for the block flyout (mirrors itemSelect). */
+function blockSlotSelect(a){
+  const sel=(blockDraft&&blockDraft.slots)||[]; const open=blockMselOpen;
+  const opts=a.slots.map(s=>s.n);
+  const tags=sel.length
+    ? sel.map(p=>`<span class="msel-tag">${escHtml(p)}<button type="button" data-blockslot="${escAttr(p)}" aria-label="Remove ${escAttr(p)}">&times;</button></span>`).join("")
+    : `<span class="msel-ph">Select time slots to block&#8230;</span>`;
+  const pop=open?`<div class="msel-pop"><input class="inp msel-search" id="block_slots_search" placeholder="Search time slots&#8230;" autocomplete="off">
+      <div class="msel-list">${opts.map(o=>`<button type="button" class="msel-opt${sel.includes(o)?" on":""}" data-blockslot="${escAttr(o)}" data-label="${escAttr(String(o).toLowerCase())}"><span>${escHtml(o)}</span>${sel.includes(o)?'<span class="msel-check">&#10003;</span>':''}</button>`).join("")}</div></div>`:"";
+  return `<div class="msel${open?" open":""}" id="block_slots"><div class="msel-field" data-blockmsel-toggle="1">${tags}<span class="msel-caret">${open?"&#9652;":"&#9662;"}</span></div>${pop}</div>`;
+}
 function blockFormCard(a){
-  const b=editBlock>=0?(a.blocks||[])[editBlock]:null;   // editing an existing block vs adding a new one
-  const dv=v=>(v!=null&&v!=="—")?escAttr(v):"";
-  const onSlots=b?String(b.slot||"").split(",").map(x=>x.trim()):[];
+  const d=blockDraft||(blockDraft=seedBlockDraft(editBlock>=0?(a.blocks||[])[editBlock]:null));
+  const editing=editBlock>=0;
   const reasons=["Maintenance","Staff allocation","Private group","School Booking","Birthday Booking","Safety","Other"];
-  const reasonSel=`<div class="selwrap"><select class="inp" id="af_kreason">${reasons.map(r=>`<option${b&&b.reason===r?" selected":""}>${r}</option>`).join("")}</select></div>`;
-  return afCard(b?"Edit quota block on "+a.n:"New quota block on "+a.n,"Withholds places from one slot on named dates",
+  const reasonSel=`<div class="selwrap"><select class="inp" id="af_kreason">${reasons.map(r=>`<option${d.reason===r?" selected":""}>${r}</option>`).join("")}</select></div>`;
+  const rows = d.slots.length ? afFld("Blocked quantity per time slot",`<div style="display:grid;gap:10px">${d.slots.map((sn,i)=>{
+      const s=a.slots.find(x=>x.n===sn)||{};
+      return `<div style="display:flex;gap:10px;align-items:center;border:1px solid var(--rule2);border-radius:7px;padding:9px 11px;background:#FBFCFA">
+        <span style="font-size:12px;font-weight:600;flex:1;min-width:0">${escHtml(sn)}${s.t1?`<span class="muted" style="font-weight:400"> · ${escHtml(s.t1)}–${escHtml(s.t2)}</span>`:""}</span>
+        <div class="inp-suffix" style="width:118px;flex:none"><input class="inp mono" id="af_kqty_${i}" value="${escAttr(d.qtys[sn]??"")}" placeholder="0"><span>blocked</span></div></div>`;}).join("")}</div>`,
+      "How many places to withhold from each selected slot. A block reserves places that already exist — it can't create an oversell.",true) : "";
+  return afCard(editing?"Edit quota block on "+a.n:"New quota block on "+a.n,"Withholds places from named slots on named dates",
     `<div class="form-body">
-      ${afFld("From date",`<input class="inp mono" id="af_kfrom" value="${b?dv(b.from):""}" placeholder="15 Aug 2026">`)}
-      ${afFld("To date",`<input class="inp mono" id="af_kto" value="${b?dv(b.to):""}" placeholder="15 Aug 2026">`,"Same date twice for a single day.")}
-      ${afFld("Slots",`<div class="chips" id="af_kslot">${a.slots.map(s=>`<button type="button" class="chip-add chip-opt" data-on="${onSlots.includes(s.n)?1:0}">${s.n}</button>`).join("")}</div>`,"Withhold places from one or more time slots.",true)}
-      ${afFld("Blocked quantity",`<input class="inp mono" id="af_kqty" value="${b?escAttr(b.qty||""):""}" placeholder="10">`,"Refused if it exceeds what is still available.")}
+      ${afFld("From date",`<input class="inp mono" id="af_kfrom" value="${escAttr(d.from)}" placeholder="15 Aug 2026">`)}
+      ${afFld("To date",`<input class="inp mono" id="af_kto" value="${escAttr(d.to)}" placeholder="15 Aug 2026">`,"Same date twice for a single day.")}
+      ${afFld("Time slots",blockSlotSelect(a),"Pick the slots to block — only the ones you choose appear below.",true)}
+      ${rows}
       ${afFld("Reason",reasonSel,"",true)}
-    </div>${afFoot("A block reserves places that exist; it cannot create an oversell.",b?"Save block":"Add block")}`);
+    </div>${afFoot("A block reserves places that exist; it cannot create an oversell.",editing?"Save block":"Add block")}`);
 }
 
 /* ---- product sub-tabs ---- */
@@ -3710,8 +3748,7 @@ const SUB = {
         row("Booking cutoff",`${days} days · ${hours} hours`),
         row("Time slots",a.slots.map(x=>x.n).join(", "))])}
       ${section("Tax",[
-        row("Tax rates",a.tax.map(c=>{const r=RATE(c);return r?`${r.name} ${r.pct}%`:c;}).join(", ")),
-        row("HSN / SAC code",`SAC ${a.sac}`)])}
+        row("HSN / SAC code",`SAC ${a.sac}`+(hsnTotalPct(a.sac)?` · ${hsnTotalPct(a.sac)}% (via the code)`:""))])}
       ${section("Inventory",[
         row("Inventory",a.pool==="BUILDING"?"Building Pool":"Own capacity"),
         ...(a.pool==="BUILDING"?[]:[row("Capacity","12 per slot")])])}
@@ -3772,17 +3809,17 @@ const SUB = {
     </div></div>
     <div class="card section-card">
       <div class="card-head card-head-tint"><span class="card-title">Quota blocks</span>
-        <span class="card-note">Slot · pool · dates · quantity</span></div>
+        <span class="card-note">Slots · pool · dates · per-slot quantity</span></div>
       <table><thead><tr><th>Dates</th><th>Slot</th><th>Pool</th><th>Blocked</th><th>Reason</th><th>Status</th><th></th></tr></thead>
       <tbody>${(a.blocks&&a.blocks.length)
-        ? a.blocks.map((bk,i)=>`<tr>
+        ? a.blocks.map((bk,i)=>{ const es=Object.entries(blockQtys(bk)); return `<tr>
             <td class="code">${bk.from}${bk.to&&bk.to!==bk.from?" – "+bk.to:""}</td>
-            <td><b style="font-weight:500">${bk.slot||"—"}</b></td>
+            <td><b style="font-weight:500">${es.length?es.map(([sn])=>`<div>${escHtml(sn)}</div>`).join(""):escHtml(bk.slot||"—")}</b></td>
             <td class="code muted">${bk.pool}</td>
-            <td class="code"><b style="color:var(--warn)">&minus;${bk.qty}</b></td>
+            <td class="code">${es.length?es.map(([,n])=>`<div><b style="color:var(--warn)">&minus;${n}</b></div>`).join(""):'<span class="muted">—</span>'}</td>
             <td>${bk.reason||"—"}</td>
             <td><span class="pill pill-ok"><i class="dot"></i>${bk.status||"Active"}</span></td>
-            <td style="text-align:right"><button class="btn" data-edit-block="${i}">Edit</button></td></tr>`).join("")
+            <td style="text-align:right"><button class="btn" data-edit-block="${i}">Edit</button></td></tr>`;}).join("")
              +`<tr><td colspan="7"><button class="rep-add" data-addopen="block" style="border-radius:4px">+ New block</button></td></tr>`
         : `<tr><td colspan="7" style="text-align:center;padding:32px 20px">
             <div style="font-size:13.5px;font-weight:600;margin-bottom:4px">No blocks</div>
@@ -5054,7 +5091,9 @@ function productForm(editing=false){
   // Visitor-category ratio/pairing rules now live on the product's "Validation rules"
   // detail tab (persisted per product), so they are no longer duplicated on this form.
   const booking=[field(PROD_REST[0],values), field(PROD_REST[1],values)];
-  const finance=PROD_REST.slice(2,4).map(f=>field(f,values));
+  // Tax rates are attached to the HSN / SAC code, not to the product — so the product
+  // only names its invoice code and inherits the rates from it.
+  const finance=[field(PROD_REST[3],values)];
   const listing=LISTING_FIELDS.map(f=>field(f,values));
   return `<div class="product-create">
     <div class="card">
@@ -5064,7 +5103,7 @@ function productForm(editing=false){
         ${section(isProd?"Product settings":"Add-on settings",typeSettings,
           isProd?"Choose which add-ons this product offers.":"Choose whether this add-on can also be bought on its own.")}
         ${section("Booking rules",booking)}
-        ${section("Tax",finance)}
+        ${section("Tax / invoice code",finance)}
         ${section("Listing content",listing)}
         ${section("Status",[field(["Active|is_active","bool","Turn it off to take this off sale. A product that's currently in use (has bookings or slots on sale) can't be turned off."],{is_active:true})])}
       </div>
@@ -7874,15 +7913,18 @@ function addSubmit(){
   } else if(addOpen==="rate"){
     const code=g("af_rate"); if(code && TAXRATES.some(r=>r.code===code) && !a.tax.includes(code)) a.tax.push(code);
   } else if(addOpen==="block"){
-    const kslots=[...document.querySelectorAll("#af_kslot .chip-opt")].filter(x=>x.dataset.on==="1").map(x=>x.textContent.trim());
+    captureBlockFlyout();
+    const d=blockDraft||{from:"",to:"",reason:"",slots:[],qtys:{}};
+    const qtys={}; (d.slots||[]).forEach(sn=>{ const v=+d.qtys[sn]||0; if(v>0) qtys[sn]=v; });
+    const slotStr=Object.keys(qtys).join(", ")||"—";
     a.blocks=a.blocks||[];
     if(editBlock>=0 && a.blocks[editBlock]){   // update the existing block, keeping its status
       const b=a.blocks[editBlock];
-      b.from=g("af_kfrom")||"—"; b.to=g("af_kto")||"—"; b.slot=kslots.join(", ")||"—"; b.qty=+g("af_kqty")||0; b.reason=g("af_kreason");
+      b.from=d.from||"—"; b.to=d.to||"—"; b.slot=slotStr; b.qtys=qtys; delete b.qty; b.reason=d.reason;
     } else {
-      a.blocks.push({ from:g("af_kfrom")||"—", to:g("af_kto")||"—", slot:kslots.join(", ")||"—", pool:a.pool, qty:+g("af_kqty")||0, reason:g("af_kreason"), status:"Active" });
+      a.blocks.push({ from:d.from||"—", to:d.to||"—", slot:slotStr, pool:a.pool, qtys, reason:d.reason, status:"Active" });
     }
-    editBlock=-1;
+    editBlock=-1; blockDraft=null; blockMselOpen=false;
   }
   addOpen=null; render(); $(".stage").scrollTop=0;
 }
@@ -8426,7 +8468,12 @@ document.addEventListener("click",e=>{
   const eslot=e.target.closest("[data-edit-slot]");
   if(eslot){ editSlot=+eslot.dataset.editSlot; addOpen="slot"; render(); $(".stage").scrollTop=0; return; }
   const eblock=e.target.closest("[data-edit-block]");
-  if(eblock){ editBlock=+eblock.dataset.editBlock; addOpen="block"; render(); $(".stage").scrollTop=0; return; }
+  if(eblock){ editBlock=+eblock.dataset.editBlock; blockDraft=seedBlockDraft((P[selP].blocks||[])[editBlock]); blockMselOpen=false; addOpen="block"; render(); $(".stage").scrollTop=0; return; }
+  // ---- quota-block flyout: time-slot multi-select ----
+  const bslot=e.target.closest("[data-blockslot]");
+  if(bslot){ captureBlockFlyout(); const sn=bslot.dataset.blockslot, d=blockDraft; if(d){ d.slots=d.slots||[]; const i=d.slots.indexOf(sn); if(i>=0){ d.slots.splice(i,1); delete d.qtys[sn]; } else { d.slots.push(sn); if(d.qtys[sn]==null) d.qtys[sn]=""; } } render(); return; }
+  const bmtog=e.target.closest("[data-blockmsel-toggle]");
+  if(bmtog){ captureBlockFlyout(); blockMselOpen=!blockMselOpen; render(); return; }
   // ---- product Validation-rules tab: add / remove a rule ----
   const radd=e.target.closest("[data-rule-add]");
   if(radd){ const ctx=radd.dataset.ruleAdd, a=P[selP]; a.rules=a.rules||{product:[],addon:[]}; a.rules[ctx]=a.rules[ctx]||[];
@@ -8440,10 +8487,10 @@ document.addEventListener("click",e=>{
   if(e.target.closest("[data-rule-del-cancel]")){ ruleDel=null; render(); return; }
   if(e.target.closest("[data-rule-del-confirm]")){ const a=P[selP]; if(ruleDel&&a.rules&&a.rules[ruleDel.ctx]) a.rules[ruleDel.ctx].splice(ruleDel.i,1); ruleDel=null; render(); return; }
   const ao=e.target.closest("[data-addopen]");
-  if(ao){ if(ao.dataset.addopen==="slot") editSlot=-1; if(ao.dataset.addopen==="block") editBlock=-1; addOpen=ao.dataset.addopen; render(); $(".stage").scrollTop=0; return; }
+  if(ao){ if(ao.dataset.addopen==="slot") editSlot=-1; if(ao.dataset.addopen==="block"){ editBlock=-1; blockDraft=seedBlockDraft(null); blockMselOpen=false; } addOpen=ao.dataset.addopen; render(); $(".stage").scrollTop=0; return; }
   const econds=e.target.closest("[data-editconds]");
   if(econds){ syncDiscountForm(); condDraft=condDraftFromDiscount(curDiscount()); condItemsOpen=false; addOpen="cond"; render(); $(".stage").scrollTop=0; return; }
-  if(e.target.closest("[data-addcancel]")){ addOpen=null; editCond=-1; condDraft=null; editSlot=-1; editBlock=-1; render(); return; }
+  if(e.target.closest("[data-addcancel]")){ addOpen=null; editCond=-1; condDraft=null; editSlot=-1; editBlock=-1; blockDraft=null; blockMselOpen=false; render(); return; }
   if(e.target.closest("[data-addsubmit]")){ addSubmit(); return; }
   const repAdd=e.target.closest(".rep-add");
   if(repAdd && !repAdd.dataset.addopen && !repAdd.dataset.tab && !repAdd.dataset.addcond && repAdd.closest(".rep")){

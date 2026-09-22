@@ -224,6 +224,22 @@ All verified with `node --check` + DOM-stub render sweep (0 failures) + targeted
 **Departments — Active toggle**
 - Added an **Active** field to the schema + seeds (all active), an **Active** toggle to both the create form and the rename/edit flyout (`deptEditLayer`/`deptSave` read it), and a **Status** column to the list. `deptCreate` reads the toggle.
 
+### 16. Product Validation rules tab + Tax-rate cleanup (latest session)
+All verified with `node --check` + DOM-stub render sweep (0 failures) + in-scope logic/render tests. Live browser checks skipped (chrome-devtools couldn't attach — a Chrome instance held its profile).
+
+**New "Validation rules" tab on the product detail** (`SUBS` + `SUB.rules(a)`)
+- Per-product entry rules on `P[i].rules = {product:[…], addon:[…]}` (display/config only — the POS/booking flow is **not** gated on them). A rule is `{subject, requires:<category|category[]>, mode:"any"|"all", min, max}` meaning *"for each `subject` ticket, require min–max of the required category(ies)."* `min 1` = mandatory; `min 0` = may enter alone; blank `max` = no limit.
+- **OR/AND support:** `requires` can be **multiple categories** with an **Any of (OR) / All of (AND)** match mode → e.g. "Every Adult needs 1–5 Child 3–11 **or** 1–5 Child 12–17."
+- Tab UI columns: **For each** (select) · **Match** (always a `needs any of / needs all of` dropdown) · **Requires** (category chips, toggle to include) · **Min** · **Max** · **In plain words** (live `ruleSentence`) · **Remove**. `+ Add rule` + empty state. Helpers `ruleSentence`/`ruleProblem`/`ruleReqs` (reuse `ratioInt`); category options from `a.cats`.
+- **Remove → confirm dialog** (`ruleDel` state + `.confirm-layer`): "Remove this rule?" quoting the rule; `data-rule-del` opens it, `data-rule-del-confirm`/`-cancel` resolve; `ruleDel` cleared on nav + `data-sub` switch.
+- Handlers: `data-rule-add` (seeds `{subject, requires:[firstOther], mode:"any", min:1, max:""}`), `data-rule-req` (chip toggle — placed **before** the generic `.chip-opt` handler so it intercepts), `data-rule-del`/`-del-confirm`/`-del-cancel`; `data-rule-field` (change) writes subject/requires/min/max/mode.
+- **Contexts:** originally rendered "As a product" + "As an add-on" cards; the **add-on section was removed** — now a single **Entry rules** card (product context) per product.
+- Seeds on the four products (MuSo Tour, Mini Golf, Lost Code of Play, Vroom): (1) every Child 3–11 needs 1–5 Adult; (2) every Adult needs **any of** 1–5 Child 3–11 or 1–5 Child 12–17 (Child 12–17 comes alone).
+- **Removed the old form ratio widget** (`ratioField` in `productForm`'s booking array — it was form-local and never saved); its helpers stay for reuse. `rebuildRatio`/`syncRatio` are now no-ops (guarded on a missing field).
+
+**Tax rates removed from Products & add-ons** (they belong to the HSN/SAC code, which already carries them)
+- Removed the **"Tax rules" tab** from the product detail (`SUBS`), the **Tax-rates multi-select** from the product form (`finance` now = HSN/SAC only; section renamed **"Tax / invoice code"**), and the **"Tax rates" row** from the Details tab's Tax section — which now shows just the **HSN / SAC code** plus the rate it inherits (e.g. `SAC 999692 · 18% (via the code)` via `hsnTotalPct`). The `P[i].tax` seed array is **left intact** so downstream invoice/GST math is unaffected; only the product-facing UI stopped duplicating it.
+
 ---
 
 ## Known wireframe simplifications / open notes
@@ -231,7 +247,7 @@ All verified with `node --check` + DOM-stub render sweep (0 failures) + targeted
 - Per "stack all", there is **no** mutual-exclusion (`no[]`) or biggest-saving enforcement in the POS — a member can get both the member add-on line and the Membership auto row.
 - `recalcBookingSummary()` / `renderBookingAttendees()` remain **dead code** (key off non-existent `[data-bookqty]`) — left untouched.
 - Seeds still carry some inert legacy fields (`prec`, `no`, old `apply` strings) — harmless.
-- Git HEAD is `ccc3d97` (branch `main`) — already contains sessions 12–14 (School Bookings, Sponsored School, the Downloads/Portfolio merge). Only **session 15 (this masters/records UI pass) is uncommitted** in the working tree (`muso-admin-portal.html` staged, `CONTEXT.md` modified) — commit when ready. Untracked docs (`CONTEXT.md`, `VENUE-MODULE-PLAN.md`, scope docs, etc.) remain untracked.
+- Git HEAD is `1c7e925` (branch `main`, "Add master-row editing and tidy Foundations/records UI") — contains sessions 12–15. Only **section 16 (the Product Validation rules tab + Tax-rate cleanup) is uncommitted** in the working tree (`muso-admin-portal.html` modified) — commit when ready. Untracked docs (`CONTEXT.md`, `VENUE-MODULE-PLAN.md`, scope docs, etc.) remain untracked.
 
 ## Quick reference — key seeds & helpers
 - Seeds: `P` (products/add-ons), `BOOKINGS`, `CUSTOMERS`, `DISCOUNTS`, `MEMBERSHIP_TIERS`, `MEMBERS`, `CATS`, `WORKSHOPS`, `EVENTS`, `PROGCATS`, `BLACKOUT_DATES` (records; `BLACKOUTS` = whole-museum dates derived from it), `SHOP_COUPONS` (carry `status` + `is_active`), `DEPARTMENTS` (carry `is_active`), `DASH`, `LOCATIONS` (none — Location is free-text).
