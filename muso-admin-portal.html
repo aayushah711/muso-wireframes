@@ -940,7 +940,7 @@ const PREREQ = {
 };
 const SUBS = [
   ["details","Details"],["slots","Time slots"],["addons","Add-ons"],
-  ["availability","Capacity blocks"],["tax","Tax rules"],["prices","Prices"]
+  ["availability","Capacity blocks"],["rules","Validation rules"],["tax","Tax rules"],["prices","Prices"]
 ];
 const EVENT_SUBS = [["details","Details"],["pricing","Pricing"]];
 
@@ -2193,6 +2193,10 @@ const P = [
            {n:"Vroom",bind:"within",src:"Your example"}],
    cats:["Adult","Child 12–17","Child 3–11","Baby"],
    pool:"BUILDING",
+   rules:{product:[
+     {subject:"Child 3–11",requires:"Adult",min:1,max:5},
+     {subject:"Adult",requires:["Child 3–11","Child 12–17"],mode:"any",min:1,max:5}
+   ],addon:[]},
    blocks:[
      {from:"15 Aug 2026",to:"15 Aug 2026",slot:"Five-hour afternoon",pool:"BUILDING",qty:20,reason:"School Booking",status:"Active"},
      {from:"22 Aug 2026",to:"22 Aug 2026",slot:"Three-hour morning",pool:"BUILDING",qty:12,reason:"Birthday Booking",status:"Active"},
@@ -2219,6 +2223,10 @@ const P = [
       pool:"",hold:0,cap:12,sold:4,price:{"Adult":450,"Child 12–17":350,"Child 3–11":300,"Baby":1},src:"August 2026 only, provisional"}],
    addons:[],cats:["Adult","Child 12–17","Child 3–11","Baby"],
    pool:"MG",
+   rules:{product:[
+     {subject:"Child 3–11",requires:"Adult",min:1,max:5},
+     {subject:"Adult",requires:["Child 3–11","Child 12–17"],mode:"any",min:1,max:5}
+   ],addon:[]},
    tax:["CGST-9","SGST-9","IGST-18"], sac:"999692",
    det:{"Type":"Add-on, <b>also sold on its own</b>",
         "Named in":"§1.5 — added to any ticket or bundle, <b>or purchased independently</b>",
@@ -2238,6 +2246,10 @@ const P = [
       pool:"",hold:0,cap:12,sold:11,price:{"Adult":500,"Child 12–17":400,"Child 3–11":350,"Baby":1},src:"August 2026 only, provisional"}],
    addons:[],cats:["Adult","Child 12–17","Child 3–11","Baby"],
    pool:"LCOP",
+   rules:{product:[
+     {subject:"Child 3–11",requires:"Adult",min:1,max:5},
+     {subject:"Adult",requires:["Child 3–11","Child 12–17"],mode:"any",min:1,max:5}
+   ],addon:[]},
    tax:["CGST-9","SGST-9","IGST-18"], sac:"999692",
    det:{"Type":"Add-on, <b>also sold on its own</b>",
         "Named in":"§1.5 — same wording as Mini Golf",
@@ -2253,6 +2265,10 @@ const P = [
       pool:"",hold:0,cap:12,sold:6,price:{"Adult":300,"Child 12–17":250,"Child 3–11":200,"Baby":1},src:"August 2026 only, provisional"}],
    addons:[],cats:["Adult","Child 12–17","Child 3–11","Baby"],
    pool:"VROOM",
+   rules:{product:[
+     {subject:"Child 3–11",requires:"Adult",min:1,max:5},
+     {subject:"Adult",requires:["Child 3–11","Child 12–17"],mode:"any",min:1,max:5}
+   ],addon:[]},
    tax:["CGST-9","SGST-9","IGST-18"], sac:"999692",
    det:{"Type":"Add-on, <b>also sold on its own</b>",
         "Named in":"<q>Not in the scope document — you named it</q>",
@@ -3469,6 +3485,7 @@ let selSchool = "", schsub = "overview", schtab = "records", schoolNewMode = "bo
     schoolQ = "", schoolFStatus = "", schoolRange = "Monthly",
     schoolDraft = null, schoolMsg = "", schoolEmailView = null, schoolEInvView = false, schoolEInvConfirm = false, schoolSaveConfirm = false;
 let mEdit = -1;   // generic Foundations master-row edit index
+let ruleDel = null;   // product Validation-rules: pending {ctx,i} awaiting delete confirmation
 let selSp = "", spsub = "overview", sptab = "records", spNewMode = "booking",
     spQ = "", spFStatus = "", spRange = "Monthly",
     spDraft = null, spMsg = "", spEmailView = null, spSaveConfirm = false;
@@ -3790,6 +3807,47 @@ const SUB = {
     <div class="note note-scope"><span class="note-mark">Settled</span><div>
       Creating a block is <b>permission-based</b> — whichever roles hold it may create one, and every block carries the name of whoever made it and the reason they gave. Because the overlapping slot patterns are deliberate, a block is also the intended lever for holding capacity back on a busy window rather than reducing a slot's own numbers.
     </div></div>`;
+  },
+
+  rules(a){
+    const cats=a.cats||[];
+    a.rules=a.rules||{product:[],addon:[]};
+    a.rules.product=a.rules.product||[]; a.rules.addon=a.rules.addon||[];
+    const catOpts=sel=>cats.map(c=>`<option${c===sel?" selected":""}>${escHtml(c)}</option>`).join("");
+    const ctxCard=(ctx,title,note)=>{
+      const list=a.rules[ctx];
+      const body = list.length ? list.map((r,i)=>{
+        const prob=ruleProblem(r,cats);
+        const reqs=ruleReqs(r);
+        const reqChips=cats.filter(c=>c!==r.subject).map(c=>
+          `<button type="button" class="chip-add chip-opt" data-on="${reqs.includes(c)?1:0}" data-rule-req="${ctx}|${i}|${escAttr(c)}">${escHtml(c)}</button>`).join("");
+        const mid = `<div class="selwrap"><select class="inp" style="min-width:110px" data-rule-field="${ctx}|${i}|mode"><option value="any"${r.mode==="all"?"":" selected"}>needs any of</option><option value="all"${r.mode==="all"?" selected":""}>needs all of</option></select></div>`;
+        return `<tr>
+          <td><div class="selwrap"><select class="inp" data-rule-field="${ctx}|${i}|subject">${catOpts(r.subject)}</select></div></td>
+          <td style="text-align:center;white-space:nowrap">${mid}</td>
+          <td><div class="chips">${reqChips}</div></td>
+          <td class="ctr"><input class="inp mono" style="width:60px;text-align:center" value="${escAttr(r.min)}" data-rule-field="${ctx}|${i}|min" aria-label="Minimum"></td>
+          <td class="ctr"><input class="inp mono" style="width:60px;text-align:center" value="${escAttr(r.max)}" placeholder="∞" data-rule-field="${ctx}|${i}|max" aria-label="Maximum (blank = no limit)"></td>
+          <td style="font-size:12px;color:${prob?"var(--stop)":"var(--ink2)"}">${prob?"⚠ "+escHtml(prob):escHtml(ruleSentence(r))}</td>
+          <td style="text-align:right"><button class="btn btn-danger" data-rule-del="${ctx}|${i}" aria-label="Remove rule">Remove</button></td></tr>`;
+      }).join("") : `<tr><td colspan="7" class="muted" style="text-align:center;padding:22px 16px">No rules — admits any mix of the categories it sells.</td></tr>`;
+      return `<div class="card section-card">
+        <div class="card-head card-head-tint"><span class="card-title">${title}</span><span class="card-note">${note}</span></div>
+        <div class="matrix-wrap"><table><thead><tr>
+          <th>For each</th><th>Match</th><th>Requires</th><th class="ctr">Min</th><th class="ctr">Max</th><th>In plain words</th><th></th></tr></thead>
+        <tbody>${body}
+          <tr><td colspan="7"><button class="rep-add" data-rule-add="${ctx}" style="border-radius:4px">+ Add rule</button></td></tr>
+        </tbody></table></div></div>`;
+    };
+    const intro=`<div class="note note-scope"><span class="note-mark">Structure</span><div>
+      Who may enter together, and in what ratio. Each rule reads <b>“for each <i>subject</i> ticket, require <i>min–max</i> of one or more other categories.”</b> Pick several required categories and choose <b>any of</b> (either satisfies the rule) or <b>all of</b> (each is required). <b>Min 1</b> makes them mandatory; <b>min 0</b> lets the subject enter alone; leave <b>Max</b> blank for no upper limit. These are shown for reference — the booking screen is not blocked on them yet.
+    </div></div>`;
+    const delRule = ruleDel && a.rules[ruleDel.ctx] ? a.rules[ruleDel.ctx][ruleDel.i] : null;
+    const delConfirm = delRule ? `<div class="confirm-layer"><button class="confirm-backdrop" data-rule-del-cancel="1" aria-label="Cancel"></button>
+      <div class="confirm-box" role="dialog" aria-modal="true"><div class="confirm-title">Remove this rule?</div>
+      <div class="confirm-body">${escHtml(ruleSentence(delRule))} This can't be undone.</div>
+      <div class="confirm-actions"><button class="btn" data-rule-del-cancel="1">Cancel</button><button class="btn btn-danger" data-rule-del-confirm="1">Remove rule</button></div></div></div>` : "";
+    return intro+ctxCard("product","Entry rules","who may enter this product together, and in what ratio")+delConfirm;
   },
 
   tax(a){
@@ -4887,6 +4945,40 @@ let prodRatio = { a:"", b:"", min:"1", max:"5" };
 const ratioInt = v => /^\d+$/.test(String(v).trim()) ? parseInt(v,10) : NaN;
 const isAdultCat = n => /adult/i.test(String(n));
 
+/* ---- Per-product entry rules (Validation rules tab) ------------------------
+   A rule reads "for each `subject` ticket, require min..max `requires` tickets".
+   min 1 makes the other category mandatory; min 0 lets the subject enter alone;
+   a blank max means no upper limit. Held per product on P[i].rules.{product,addon}. */
+const ruleReqs = r => Array.isArray(r.requires) ? r.requires.filter(Boolean) : (r.requires ? [r.requires] : []);
+function ruleSentence(r){
+  const S=r.subject||"—";
+  const reqs=ruleReqs(r);
+  const conj=(r.mode==="all")?" and ":" or ";
+  const mn=ratioInt(r.min);
+  const mx=(r.max===""||r.max==null)?Infinity:ratioInt(r.max);
+  if(!reqs.length) return "Pick at least one required category.";
+  if(!(mn>=0))     return "Set a whole-number minimum.";
+  if(mn>=1){
+    const range = mx===Infinity ? `at least ${mn}` : mx===mn ? `exactly ${mn}` : `${mn}–${mx}`;
+    return `Every ${S} needs ${reqs.map(q=>`${range} ${q}`).join(conj)}.`;
+  }
+  const names=reqs.join(conj);
+  if(mx===Infinity) return `${S} may enter alone — ${names} optional.`;
+  if(mx===0)        return `${S} may enter, but no ${names} alongside.`;
+  return `${S} may enter alone — up to ${mx} ${names} allowed.`;
+}
+function ruleProblem(r,cats){
+  const reqs=ruleReqs(r);
+  if(!r.subject||!reqs.length) return "Pick a subject and at least one required category.";
+  if(reqs.includes(r.subject)) return "A category can't require itself.";
+  if(cats&&(!cats.includes(r.subject)||reqs.some(q=>!cats.includes(q)))) return "This product doesn't sell one of these categories.";
+  const mn=ratioInt(r.min); if(!(mn>=0)) return "Min needs a whole number (0 or more).";
+  if(r.max!==""&&r.max!=null){ const mx=ratioInt(r.max);
+    if(!(mx>=0)) return "Max needs a whole number, or leave it blank for no limit.";
+    if(mx<mn) return `Max is below min — ${mx} cannot be fewer than ${mn}.`; }
+  return "";
+}
+
 /* The categories ticked on the form right now — the rule can only speak about these. */
 function ratioPickedCats(){
   const fld=document.querySelector('.fld[data-df="visitor_categories[]"]');
@@ -4980,8 +5072,9 @@ function productForm(editing=false){
       <div class="form-sec-body">${fields.join("")}</div></section>`;
   const basic=PROD_BASE.map(f=>f[0].split("|")[1]==="type"?typeField():field(f,values)).concat(field(PROD_REST[4],values));
   const typeSettings=(isProd?PROD_PRODUCT_ONLY:PROD_ADDON_ONLY).map(f=>field(f,values));
-  const booking=[field(PROD_REST[0],values), field(PROD_REST[1],values),
-                 ratioField(values["visitor_categories[]"]||[])];
+  // Visitor-category ratio/pairing rules now live on the product's "Validation rules"
+  // detail tab (persisted per product), so they are no longer duplicated on this form.
+  const booking=[field(PROD_REST[0],values), field(PROD_REST[1],values)];
   const finance=PROD_REST.slice(2,4).map(f=>field(f,values));
   const listing=LISTING_FIELDS.map(f=>field(f,values));
   return `<div class="product-create">
@@ -8056,7 +8149,7 @@ document.addEventListener("click",e=>{
     return; }
   if(e.target.closest("[data-career-clear]")){ careerFDept=""; careerFType=""; careerFStatus="all"; render(); return; }
   const nav=e.target.closest(".mitem");
-  if(nav){ current=nav.dataset.k; mEdit=-1; selP=0; selW=0; selB=0; selE=0; esub="details"; eventCats=new Set(); selBooking=0; tab="list"; sub="details"; csub="details"; editD=-1; selD=0; dsub="summary"; editCond=-1; condDraft=null; draftDiscount=null; addOpen=null; progKind="event"; progCat="Event"; schoolDraft=null; schtab="records"; schoolEmailView=null; schoolMsg=""; schoolEInvView=false; schoolEInvConfirm=false; schoolSaveConfirm=false; spDraft=null; sptab="records"; spEmailView=null; spMsg=""; spSaveConfirm=false; render(); $(".stage").scrollTop=0; return; }
+  if(nav){ current=nav.dataset.k; mEdit=-1; ruleDel=null; selP=0; selW=0; selB=0; selE=0; esub="details"; eventCats=new Set(); selBooking=0; tab="list"; sub="details"; csub="details"; editD=-1; selD=0; dsub="summary"; editCond=-1; condDraft=null; draftDiscount=null; addOpen=null; progKind="event"; progCat="Event"; schoolDraft=null; schtab="records"; schoolEmailView=null; schoolMsg=""; schoolEInvView=false; schoolEInvConfirm=false; schoolSaveConfirm=false; spDraft=null; sptab="records"; spEmailView=null; spMsg=""; spSaveConfirm=false; render(); $(".stage").scrollTop=0; return; }
   const goto=e.target.closest("[data-goto]");
   if(goto){ current=goto.dataset.goto; mEdit=-1; selP=0; selW=0; selB=0; selE=0; selD=0; selBooking=0; tab="list"; sub="details"; csub="details"; dsub="summary"; addOpen=null; render(); $(".stage").scrollTop=0; return; }
   const t=e.target.closest("[data-tab]");
@@ -8355,6 +8448,18 @@ document.addEventListener("click",e=>{
   if(eslot){ editSlot=+eslot.dataset.editSlot; addOpen="slot"; render(); $(".stage").scrollTop=0; return; }
   const eblock=e.target.closest("[data-edit-block]");
   if(eblock){ editBlock=+eblock.dataset.editBlock; addOpen="block"; render(); $(".stage").scrollTop=0; return; }
+  // ---- product Validation-rules tab: add / remove a rule ----
+  const radd=e.target.closest("[data-rule-add]");
+  if(radd){ const ctx=radd.dataset.ruleAdd, a=P[selP]; a.rules=a.rules||{product:[],addon:[]}; a.rules[ctx]=a.rules[ctx]||[];
+    const s=(a.cats||[])[0]||"", q=(a.cats||[]).find(c=>c!==s)||""; a.rules[ctx].push({subject:s,requires:[q],mode:"any",min:1,max:""}); render(); return; }
+  const rreq=e.target.closest("[data-rule-req]");
+  if(rreq){ const [ctx,i,cat]=rreq.dataset.ruleReq.split("|"), a=P[selP], rule=a.rules&&a.rules[ctx]&&a.rules[ctx][+i];
+    if(rule){ let arr=Array.isArray(rule.requires)?rule.requires.slice():(rule.requires?[rule.requires]:[]);
+      const j=arr.indexOf(cat); if(j>=0) arr.splice(j,1); else arr.push(cat); rule.requires=arr; render(); } return; }
+  const rdel=e.target.closest("[data-rule-del]");
+  if(rdel){ const [ctx,i]=rdel.dataset.ruleDel.split("|"); ruleDel={ctx,i:+i}; render(); return; }
+  if(e.target.closest("[data-rule-del-cancel]")){ ruleDel=null; render(); return; }
+  if(e.target.closest("[data-rule-del-confirm]")){ const a=P[selP]; if(ruleDel&&a.rules&&a.rules[ruleDel.ctx]) a.rules[ruleDel.ctx].splice(ruleDel.i,1); ruleDel=null; render(); return; }
   const ao=e.target.closest("[data-addopen]");
   if(ao){ if(ao.dataset.addopen==="slot") editSlot=-1; if(ao.dataset.addopen==="block") editBlock=-1; addOpen=ao.dataset.addopen; render(); $(".stage").scrollTop=0; return; }
   const econds=e.target.closest("[data-editconds]");
@@ -8414,7 +8519,7 @@ document.addEventListener("click",e=>{
       b.diff=""; });
     copyTo=new Set(); render(); return; }
   const sb=e.target.closest("[data-sub]");
-  if(sb){ sub=sb.dataset.sub; addOpen=null; render(); return; }
+  if(sb){ sub=sb.dataset.sub; addOpen=null; ruleDel=null; render(); return; }
   const eventCat=e.target.closest("[data-eventcat]");
   if(eventCat){ const cat=eventCat.dataset.eventcat; eventCats.has(cat)?eventCats.delete(cat):eventCats.add(cat); render(); return; }
   const cit=e.target.closest("[data-conditem]");
@@ -8450,6 +8555,9 @@ document.addEventListener("click",e=>{
 document.addEventListener("change",e=>{
   const rCat=e.target.closest&&e.target.closest("[data-ratio-cat]");
   if(rCat){ prodRatio[rCat.dataset.ratioCat]=rCat.value; syncRatio(); return; }
+  const rField=e.target.closest&&e.target.closest("[data-rule-field]");
+  if(rField){ const [ctx,i,field]=rField.dataset.ruleField.split("|"), a=P[selP];
+    if(a&&a.rules&&a.rules[ctx]&&a.rules[ctx][+i]){ a.rules[ctx][+i][field]=e.target.value.trim(); render(); } return; }
 
   const cFilt=e.target.closest&&e.target.closest("[data-career-filter]");
   if(cFilt){ const k=cFilt.dataset.careerFilter;
