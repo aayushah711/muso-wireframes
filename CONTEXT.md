@@ -240,6 +240,44 @@ All verified with `node --check` + DOM-stub render sweep (0 failures) + in-scope
 **Tax rates removed from Products & add-ons** (they belong to the HSN/SAC code, which already carries them)
 - Removed the **"Tax rules" tab** from the product detail (`SUBS`), the **Tax-rates multi-select** from the product form (`finance` now = HSN/SAC only; section renamed **"Tax / invoice code"**), and the **"Tax rates" row** from the Details tab's Tax section — which now shows just the **HSN / SAC code** plus the rate it inherits (e.g. `SAC 999692 · 18% (via the code)` via `hsnTotalPct`). The `P[i].tax` seed array is **left intact** so downstream invoice/GST math is unaffected; only the product-facing UI stopped duplicating it.
 
+### 17. Capacity blocks per-slot quantity, upstream merge, Status→Active swaps (latest session)
+All verified with `node --check` + DOM-stub render sweep (0 failures) + in-scope logic/render tests. Live browser attach still unavailable.
+
+**Capacity blocks — per-time-slot blocked quantity** (modeled on the Discounts "Quantity per item" flyout)
+- A block now carries `qtys:{ [slotName]:number }` instead of a scalar `qty`; `slot` stays as the joined blocked-slot names. Back-compat helper `blockQtys(bk)` reads either shape.
+- The block flyout (`blockFormCard`) gained a **searchable time-slot multi-select** (`blockSlotSelect`, msel — mirrors `itemSelect`); **only selected slots** appear below as rows (`slot · time` + its own `blocked` input). A `blockDraft` working copy + `captureBlockFlyout()` preserve dates/reason/typed amounts across the toggle re-renders (mirrors `condDraft`/`captureCondFlyout`). State: `blockDraft`, `blockMselOpen`; handlers `data-blockslot` (toggle, before the generic `.chip-opt` handler) and `data-blockmsel-toggle`; draft seeded in the `data-edit-block`/`data-addopen="block"` handlers and cleared on cancel/save.
+- `SUB.availability` Slot + Blocked columns render per-slot (aligned multi-line). `addSubmit` block branch reads the draft. Seeds migrated to `qtys`, plus one multi-slot demo block on MuSo Tour (Three-hour morning −10, Five-hour morning −15).
+
+**Upstream merge** — pulled `origin/main` (fast-forward `a1f861b..18da552`, RajShah2022 "refactor: drop tax conditions and category requires rule") over stashed local work; **stash popped with no conflicts**. Their refactor is **complementary** to ours: they removed the "requires another category" rule from the **visitor-category master** (dropped `req`/`reqMin`, `needsOf`/`needsText`/`UNACCOMPANIED`, the "Must be booked with" column + its schema fields `requires_category_id`/`requires_min`, and simplified the `"Tax rates"` OPTIONS + categories create-form/`masterEditValues`), pointing that rule "to the product/listing" — which is exactly our **Validation rules tab**. Post-merge verified: 0 conflict markers, 0 stale refs to the deleted helpers/fields, all our features present, sweep clean.
+
+**Status dropdown → Active toggle (create forms)**
+- **Product form** (`productForm`): removed the Status enum dropdown (`STATUS_FIELD`/`PROD_REST[4]`) from Basic information and put the **Active** switch in its place (`activeField`, seeded from `values`); removed the standalone bottom **Status** section.
+- **Program form** (`createForm` `label==="program"`): removed `"status"` from the Basic-information field list, leaving the existing `is_active` **Active** switch in its place. (No separate Status section for programs.)
+
+### 18. Venues master + venue-availability + booking-form parity (latest session)
+All verified with `node --check` + DOM-stub render sweep (0 failures) + live chrome-devtools checks (the browser was attachable this session).
+
+**Venues master (Foundations, step 13)** — sourced from `~/Downloads/Rentals.docx`
+- `VENUES` seed (10 rentable spaces: Field Area, Commons, Art Gallery, Connect Lab, Small MPA, Library, MPA, Classroom, Green Room, Grow Lab) with name/floor/size/seating/floating/is_active. Registered via `ORDER`/`PHASE`/`PREREQ`/`M`/`SING`/`masterData`; `VIEWS.venues()` list + per-row Edit (generic `data-medit` path).
+- The School/Sponsored visit **Optionals (venue blocks)** "Venue" free-text became a **dropdown** sourced from active venues (keeps a legacy value not in the master). The single **Time** field split into **Start Time / End Time** (parses/rebuilds `o.time` as `start–end`).
+
+**Venue availability** (a venue is shared by **Events and Experiences**, School, Birthdays — the module formerly called "Rentals" was renamed to "Events and Experiences", incl. `VENUE_BOOKINGS.module` labels + the Venues master owner/src; the §4 inventory-pool exclusion list keeps its own "Rentals"/"Events"/"Workshops" taxonomy)
+- `VENUE_BOOKINGS` seed = sample cross-module occupancy; `venueDayBookings(venue,date,src,skip)` = seed rows + the draft's own other same-venue/date optionals; `timeToMin`, `venueClashCheck`.
+- **"View availability"** button (per optional, before Start Time) opens `venueAvailCard()` — a drawer flyout with **Venue + Date filters** (venue dropdown auto-applies + carries the typed date; **Apply** button commits a typed date) and a **30-min time-table 09:00–19:00** showing booked slots greyed with module · who · purpose (no "…continued"). Header is just "Availability". Filters prefill from the block. State `venueAvail`; handlers `data-school-viewavail`/`data-sp-viewavail`, `data-venueavail-venue`/`-date`/`-apply`/`-close`. **NB:** `scrub()` (line ~5876) strips whole `.note note-scope`/`note-open` blocks — the flyout's banners use plain inline-styled divs, not `.note`.
+- **"Check availability"** button (per optional, in the Start/End row) — inline verdict (`runVenueCheck` → `optCheckBanner`): red "Clashes with …" / amber "Fill … first"; disabled until Venue+Date+Start+End filled (live-toggled by `syncOptCheckBtn` on input/change), and any edit clears a stale verdict. State `venueCheck`.
+- **Create/Save is blocked on a clash**: the "Create booking?/Save changes?" confirm dialog runs `bookingClashes(src)` across all venue blocks — a red clash list disables the confirm button (guarded again in the commit handler); no green "all-clear" box; the create copy was lengthened. Optional-box layout is now two 3-col rows: **Venue · Date · View availability** and **Start · End · Check availability**.
+
+**Careers — Portfolio (Applications)**
+- `portfolio` on an application is now **free text from a frontend textarea**, shown **plainly like the Notes column** (no link parsing, no click-to-open). `appPortText(a)` normalizes string-or-array; the role toggle copy → "Portfolio links … a textarea". The empty-but-asked state shows a muted **—** (was "Left blank").
+
+**Sponsored School — parity with School** (all forms/handlers mirror the school ones)
+- Added: **Other** chip in Education Board (`SP_BOARDS` gained "Other" → the conditional "Other Board" field, already wired), an **Additional Information** section (Message/Note, captured via `note`), a **Billing (for invoicing)** section after Visits (billName/billAddress/gstin/pan, captured; GST hint notes the sponsor invoice is against the sponsor).
+- **F&B options** (per-visit, both School & Sponsored) changed from multi-select chips to a **single `<select>`** (`data-vfsel`/`data-spvfsel`; `optionIds` holds 0/1).
+- **Underprivileged children remarks** (Impact & remarks) changed from a textarea to **repeatable Title+count rows** (`underprivileged` now `[{title,count}]`; `data-sp-uprow`/`data-spf-up`, add/remove handlers, seeds migrated, detail renders "Title: count · …").
+- Confirmed **post-visit event-photo upload** already exists on the Sponsored detail's **After visit** tab (`postVisit.images`, `data-sp-upload="images"`) — Sponsored-only.
+
+**Products — Tax** (from the merged upstream direction): removed the product's own tax-rates UI — the **Tax rules** tab, the form's tax-rate multi-select (section now "Tax / invoice code", HSN/SAC only), and the Details tax-rates row (shows HSN/SAC + the inherited rate). `P[i].tax` seed kept for downstream math.
+
 ---
 
 ## Known wireframe simplifications / open notes
@@ -247,9 +285,10 @@ All verified with `node --check` + DOM-stub render sweep (0 failures) + in-scope
 - Per "stack all", there is **no** mutual-exclusion (`no[]`) or biggest-saving enforcement in the POS — a member can get both the member add-on line and the Membership auto row.
 - `recalcBookingSummary()` / `renderBookingAttendees()` remain **dead code** (key off non-existent `[data-bookqty]`) — left untouched.
 - Seeds still carry some inert legacy fields (`prec`, `no`, old `apply` strings) — harmless.
-- Git HEAD is `1c7e925` (branch `main`, "Add master-row editing and tidy Foundations/records UI") — contains sessions 12–15. Only **section 16 (the Product Validation rules tab + Tax-rate cleanup) is uncommitted** in the working tree (`muso-admin-portal.html` modified) — commit when ready. Untracked docs (`CONTEXT.md`, `VENUE-MODULE-PLAN.md`, scope docs, etc.) remain untracked.
+- Git HEAD is `042a3c2` (branch `main`, "Remove the Status dropdown from Products & add-ons & Programs…") — sections 12–17 committed. **All of section 18 (Venues master, venue-availability, Careers portfolio, Sponsored parity, product-tax cleanup) is uncommitted** in the working tree (`muso-admin-portal.html`), plus this `CONTEXT.md` update — commit when ready. Untracked docs (`VENUE-MODULE-PLAN.md`, scope docs, `.xlsx`, etc.) remain untracked.
 
 ## Quick reference — key seeds & helpers
-- Seeds: `P` (products/add-ons), `BOOKINGS`, `CUSTOMERS`, `DISCOUNTS`, `MEMBERSHIP_TIERS`, `MEMBERS`, `CATS`, `WORKSHOPS`, `EVENTS`, `PROGCATS`, `BLACKOUT_DATES` (records; `BLACKOUTS` = whole-museum dates derived from it), `SHOP_COUPONS` (carry `status` + `is_active`), `DEPARTMENTS` (carry `is_active`), `DASH`, `LOCATIONS` (none — Location is free-text).
+- Seeds: `P` (products/add-ons — each with `rules:{product,addon}` for the Validation-rules tab and `blocks[]` with per-slot `qtys`), `BOOKINGS`, `CUSTOMERS`, `DISCOUNTS`, `MEMBERSHIP_TIERS`, `MEMBERS`, `CATS` (visitor categories — **no longer** carry `req`/`reqMin`; pairing rules moved to the product), `WORKSHOPS`, `EVENTS`, `PROGCATS`, `BLACKOUT_DATES` (records; `BLACKOUTS` = whole-museum dates derived from it), `SHOP_COUPONS` (carry `status` + `is_active`), `DEPARTMENTS` (carry `is_active`), `VENUES` (rentable spaces master), `VENUE_BOOKINGS` (sample cross-module occupancy for availability), `DASH`, `LOCATIONS` (none — Location is free-text). Sponsored records: `underprivileged` is now `[{title,count}]`; School/Sponsored visit `food.optionIds` holds 0/1 (single-select).
+- Availability helpers: `venueDayBookings`, `venueClashCheck`, `bookingClashes`, `runVenueCheck`, `timeToMin`; flyout `venueAvailCard` + state `venueAvail`/`venueCheck`.
 - Discount code that works in POS: **IND50, MUMKIDS150, JSW001–JSW100** (all now), plus auto discounts by cart condition.
 - Backups this session: `/tmp/pre-multislot-backup.html`, `/tmp/pre-merge-backup.html`.

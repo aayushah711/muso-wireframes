@@ -914,10 +914,10 @@ const GROUPS = [
   {name:"8 · People", color:"#0E6B8A"},
   {name:"9 · Bookings", color:"#1E7F3C"}
 ];
-const ORDER = ["categories","pools","tax","hsn","shopcats","progcats","departments","fboptions","schoolslots","entryprices","sponsors","districts","products","programs","blackout","bookings","checkin",
+const ORDER = ["categories","pools","tax","hsn","shopcats","progcats","departments","fboptions","schoolslots","entryprices","sponsors","districts","venues","products","programs","blackout","bookings","checkin",
                "discounts","sources","scripts","tiers","members",
                "shopitems","shopsales","shopcoupons","career","school","sponsored"];   // "shopreports", "affiliates", "paymodes" hidden from the rail (code kept)
-const PHASE = {categories:0,pools:0,tax:0,hsn:0,shopcats:0,progcats:0,departments:0,fboptions:0,schoolslots:0,entryprices:0,sponsors:0,districts:0, products:1, programs:1, blackout:2,
+const PHASE = {categories:0,pools:0,tax:0,hsn:0,shopcats:0,progcats:0,departments:0,fboptions:0,schoolslots:0,entryprices:0,sponsors:0,districts:0,venues:0, products:1, programs:1, blackout:2,
                discounts:3,affiliates:3,
                paymodes:4,sources:4,scripts:4,bookings:2,checkin:2,
                tiers:5,members:5,
@@ -926,7 +926,7 @@ const PHASE = {categories:0,pools:0,tax:0,hsn:0,shopcats:0,progcats:0,department
                school:8,sponsored:8};
 const PREREQ = {
   career:[], categories:[], pools:[], tax:[], hsn:[], shopcats:[], departments:[], paymodes:[], sources:[], scripts:[], progcats:[], bookings:["Products & add-ons"], checkin:["Products & add-ons"],
-  fboptions:[], schoolslots:["Products & add-ons"], entryprices:[], sponsors:[], districts:[],
+  fboptions:[], schoolslots:["Products & add-ons"], entryprices:[], sponsors:[], districts:[], venues:[],
   school:["School F&B options","School time slots"], sponsored:["Sponsored School Sponsors","School time slots"],
   products:["Visitor categories","Inventory pools","Tax rates","HSN / SAC codes"],
   programs:["Program categories","Visitor categories","Tax rates","HSN / SAC codes"],
@@ -1295,7 +1295,7 @@ const M = {
             ["Applications open between|posted / closes","date","The first and last day the role accepts applications."],
             ["About the role|about","richtext","A short summary candidates read under the job title."],
             ["Upload JD|jd","file","The job description candidates download from the careers page. PDF or Word."],
-            ["Portfolio link|portfolio","bool","On adds a portfolio link box to the application form."]]},
+            ["Portfolio links|portfolio","bool","On adds a portfolio-links box (a textarea — applicants can paste several links, one per line) to the application form."]]},
   fboptions:{g:0,n:"School F&B options",owner:"Sawood · F&B",perm:"master.fb.manage",src:"Scope §8",q:1,
     d:"The food & beverage options a school visit can add. Each carries a separate adult and child price; the school-booking form picks from this list and prices the food line off it.",
     view:"fboptions",
@@ -1332,6 +1332,15 @@ const M = {
     view:"districts",
     schema:[["District|name","string","District name, e.g. Palghar."],
             ["Active|is_active","bool","Turn it off to retire this district."]]},
+  venues:{g:0,n:"Venues",owner:"Events & Experiences",perm:"master.venue.manage",src:"Events and Experiences",q:1,
+    d:"The rentable spaces at MuSo — the halls and rooms a booking can block. A school visit's optional workshop/orientation slots pick their space from this list.",
+    view:"venues",
+    schema:[["Venue|name","string","The space as it reads on a booking, e.g. Art Gallery."],
+            ["Floor|floor","string","Which floor it sits on, e.g. 6th Floor."],
+            ["Size|size","string","Floor area, e.g. 2210 sq ft."],
+            ["Seating capacity|seating","int","Guests when seated."],
+            ["Floating capacity|floating","int","Guests standing / floating."],
+            ["Active|is_active","bool","Turn it off to retire this space from new bookings."]]},
   school:{g:8,n:"School",owner:"Visitor Experience",perm:"school.manage",src:"Scope §8",q:0,
     d:"School-visit enquiries and bookings in one place. A record starts as an enquiry and moves through its status to a confirmed, paid, completed visit — with its headcounts, food, schedule, proforma invoice, payments and email trail all on the booking.",
     view:"school"},
@@ -1439,10 +1448,10 @@ const CAREER_APPLICATIONS = [
 
   /* ROLE-015 — Workshop Facilitator, Robotics */
   {id:"APP-2066", role:"ROLE-015", name:"Meera Raghavan", email:"meera.raghavan@example.com",
-   phone:"90290 18874", exp:3, qual:"B.E. Electronics, VJTI", portfolio:"github.com/meera-raghavan", on:"10 Sep 2026", status:"Shortlisted", cv:{name:"Meera-Raghavan-CV.pdf",size:264000},
+   phone:"90290 18874", exp:3, qual:"B.E. Electronics, VJTI", portfolio:"github.com/meera-raghavan\nbehance.net/meera-r\nmeera-raghavan.dev", on:"10 Sep 2026", status:"Shortlisted", cv:{name:"Meera-Raghavan-CV.pdf",size:264000},
    note:"Teaches an after-school robotics club. Arduino and micro:bit."},
   {id:"APP-2061", role:"ROLE-015", name:"Siddharth Nair", email:"sid.nair@example.com",
-   phone:"98923 40117", exp:0, qual:"B.Tech Mechatronics (final year), SRM", portfolio:"sidnair.dev/projects", on:"08 Sep 2026", status:"New", cv:{name:"Siddharth-Nair-Portfolio.pdf",size:412000},
+   phone:"98923 40117", exp:0, qual:"B.Tech Mechatronics (final year), SRM", portfolio:"sidnair.dev/projects, github.com/sidnair", on:"08 Sep 2026", status:"New", cv:{name:"Siddharth-Nair-Portfolio.pdf",size:412000},
    note:"Mechatronics final year. Free on weekends."},
   {id:"APP-2057", role:"ROLE-015", name:"Tanvi Joshi", email:"tanvi.joshi@example.com",
    phone:"93211 76004", exp:2, qual:"B.Sc. Physics, Ruia College", on:"06 Sep 2026", status:"Interviewed", cv:{name:"Tanvi-Joshi-CV.pdf",size:158000}, note:""},
@@ -1816,12 +1825,102 @@ const DISTRICTS = [
   {name:"Raigad",          is_active:true}
 ];
 const sponsorByName = n => SPONSORS.find(s=>s.name===n);
+/* Rentable spaces (source: Rentals brochure) — a booking's optional workshop/orientation slots block one of these. */
+const VENUES = [
+  {name:"Field Area",   floor:"Ground Floor",        size:"1860 sq ft", seating:120, floating:120, is_active:true},
+  {name:"Commons",      floor:"Ground Floor",        size:"2520 sq ft", seating:220, floating:120, is_active:true},
+  {name:"Art Gallery",  floor:"1st Floor",           size:"2210 sq ft", seating:75,  floating:150, is_active:true},
+  {name:"Connect Lab",  floor:"6th Floor",           size:"1500 sq ft", seating:45,  floating:60,  is_active:true},
+  {name:"Small MPA",    floor:"6th Floor",           size:"606 sq ft",  seating:30,  floating:40,  is_active:true},
+  {name:"Library",      floor:"6th Floor",           size:"1010 sq ft", seating:30,  floating:45,  is_active:true},
+  {name:"MPA",          floor:"9th Floor",           size:"2210 sq ft", seating:60,  floating:75,  is_active:true},
+  {name:"Classroom",    floor:"7th Floor",           size:"500 sq ft",  seating:20,  floating:25,  is_active:true},
+  {name:"Green Room",   floor:"Ground Floor",        size:"—",          seating:0,   floating:0,   is_active:true},
+  {name:"Grow Lab",     floor:"10th Floor / Terrace",size:"—",          seating:0,   floating:0,   is_active:true}
+];
+/* Cross-module venue occupancy (a venue is shared by Events and Experiences, School and Birthdays).
+   Sample bookings so the school/sponsored optional's "View availability" time-table has data. */
+const VENUE_BOOKINGS = [
+  {venue:"Art Gallery", date:"15 Oct 2026", start:"09:30", end:"13:00", module:"Events and Experiences",   by:"Zephyr Films",        purpose:"Film shoot",              status:"Booked"},
+  {venue:"Art Gallery", date:"15 Oct 2026", start:"15:00", end:"18:00", module:"Birthdays",  by:"Mehta family",        purpose:"Regular birthday party",  status:"Booked"},
+  {venue:"Commons",     date:"15 Oct 2026", start:"10:00", end:"14:00", module:"School",     by:"Delhi Public School", purpose:"Workshop",                status:"Booked"},
+  {venue:"Small MPA",   date:"15 Oct 2026", start:"11:00", end:"12:00", module:"School",     by:"Ryan International",   purpose:"Orientation",             status:"Reserved"},
+  {venue:"MPA",         date:"14 Oct 2026", start:"09:00", end:"17:00", module:"Events and Experiences",    by:"Acme Corp",           purpose:"Corporate offsite",       status:"Booked"},
+  {venue:"Classroom",   date:"14 Oct 2026", start:"13:00", end:"13:30", module:"Birthdays",  by:"Rao family",          purpose:"Mini birthday party",     status:"Booked"},
+  {venue:"Art Gallery", date:"14 Oct 2026", start:"14:00", end:"15:00", module:"School",     by:"St. Xavier's",        purpose:"Workshop",                status:"Reserved"},
+  {venue:"Grow Lab",    date:"20 Oct 2026", start:"18:00", end:"22:00", module:"Events and Experiences",    by:"Penguin",             purpose:"Book launch",             status:"Booked"}
+];
+const timeToMin = t => { const m=/(\d{1,2}):(\d{2})/.exec(t||""); return m?(+m[1]*60 + +m[2]):null; };
+/* Everything blocking a venue on a date: seeded cross-module bookings + the current
+   draft's own other optionals on the same venue/date (so it flags its own clashes). */
+function venueDayBookings(venue,date,src,skip){
+  const list = VENUE_BOOKINGS.filter(b=>b.venue===venue && b.date===date).map(b=>Object.assign({},b));
+  const d = src==="sponsored"?spDraft:schoolDraft;
+  if(d && Array.isArray(d.visits)) d.visits.forEach((v,vi)=>(v.optionals||[]).forEach((o,oi)=>{
+    if(skip && skip.vi===vi && skip.oi===oi) return;
+    if(o.venue!==venue || o.date!==date) return;
+    const p=(o.time||"").split(/[–-]/).map(s=>s.trim());
+    const s=o.start||p[0]||"", e=o.end||p[1]||"";
+    if(!s && !e) return;
+    list.push({venue,date,start:s,end:e,module:(src==="sponsored"?"Sponsored":"School"),by:d.school||"This booking",purpose:o.kind||"Visit block",status:"This booking"});
+  }));
+  return list.sort((a,b)=>(timeToMin(a.start)||0)-(timeToMin(b.start)||0));
+}
+/* Inline verdict banner for the "Check availability" button. */
+function optCheckBanner(chk){
+  if(!chk) return "";
+  const c = chk.status==="ok" ? "background:#eaf7ee;border:1px solid #bfe6cb;color:#1e7f3c"
+          : chk.status==="clash" ? "background:#fdeceb;border:1px solid #f2b8b5;color:#9b2c2c"
+          : "background:#fff7e6;border:1px solid #f0d38a;color:#8a6100";
+  return `<div class="optcheck-result" style="margin-top:8px;padding:8px 11px;border-radius:6px;font-size:12px;${c}">${escHtml(chk.msg)}</div>`;
+}
+/* Bookings on a venue/date that overlap a proposed start–end (excluding the block being edited). */
+function venueClashCheck(venue,date,start,end,src,skip){
+  const ps=timeToMin(start), pe=timeToMin(end);
+  if(ps==null||pe==null) return [];
+  return venueDayBookings(venue,date,src,skip).filter(b=>{const bs=timeToMin(b.start),be=timeToMin(b.end);return bs!=null&&be!=null&&bs<pe&&be>ps;});
+}
+/* Compute the "Check availability" verdict for one optional block (from the draft). */
+function runVenueCheck(src,vi,oi){
+  const d = src==="sponsored"?spDraft:schoolDraft;
+  const o = (((d||{}).visits||[])[vi]||{}).optionals||[];
+  const opt = o[oi] || {};
+  const p=(opt.time||"").split(/[–-]/).map(s=>s.trim());
+  const st=opt.start||p[0]||"", en=opt.end||p[1]||"";
+  if(!opt.venue||!opt.date||!st||!en) return {src,vi,oi,status:"incomplete",msg:"Fill Venue, Date, Start and End time first."};
+  const cl=venueClashCheck(opt.venue,opt.date,st,en,src,{vi,oi});
+  if(!cl.length) return {src,vi,oi,status:"ok",msg:`No clashes — ${opt.venue} is free ${st}–${en} on ${opt.date}.`};
+  const f=cl[0];
+  return {src,vi,oi,status:"clash",msg:`Clashes with ${f.module} · ${f.by} (${f.start}–${f.end})${cl.length>1?` and ${cl.length-1} more`:""} on ${opt.venue}.`};
+}
+/* Scan every venue block on a draft booking for clashes — used on Create / Save. */
+function bookingClashes(src){
+  const d = src==="sponsored"?spDraft:schoolDraft;
+  const out=[];
+  (((d||{}).visits)||[]).forEach((v,vi)=>(v.optionals||[]).forEach((o,oi)=>{
+    const p=(o.time||"").split(/[–-]/).map(s=>s.trim());
+    const st=o.start||p[0]||"", en=o.end||p[1]||"";
+    if(!o.venue||!o.date||!st||!en) return;
+    const cl=venueClashCheck(o.venue,o.date,st,en,src,{vi,oi});
+    if(cl.length){ const f=cl[0]; out.push(`${o.venue} ${st}–${en} on ${o.date} — clashes with ${f.module} · ${f.by} (${f.start}–${f.end})${cl.length>1?` +${cl.length-1} more`:""}`); }
+  }));
+  return out;
+}
+/* Live-toggle an optional's Check-availability button as its fields fill, and clear a stale verdict. */
+function syncOptCheckBtn(rowEl){
+  const val=n=>{const el=rowEl.querySelector('[data-vof="'+n+'"],[data-spvof="'+n+'"]');return el?el.value.trim():"";};
+  const ok = !!(val("venue")&&val("date")&&val("start")&&val("end"));
+  const btn=rowEl.querySelector("[data-school-checkavail],[data-sp-checkavail]");
+  if(btn) btn.disabled=!ok;
+  venueCheck=null;
+  const r=rowEl.querySelector(".optcheck-result"); if(r) r.remove();
+}
 
 /* ---- Enums (funded-visitor context) ---- */
 const SP_ORG_TYPES = ["Funded (NGO)","School"];
 const SP_TRANSPORT = ["Yes","No","Maybe"];
 const SP_INTEREST  = ["Museum Tour","Workshop","Introduction to AI session","Future Maker Program"];   // + always-shown "Other"
-const SP_BOARDS    = ["SSC","ICSE","CBSE","IGCSE","IB","CIE","State board","Home schooling"];           // + always-shown "Other"
+const SP_BOARDS    = ["SSC","ICSE","CBSE","IGCSE","IB","CIE","State board","Home schooling","Other"];   // "Other" chip → the "Other Board" text field
 
 /* ---- Records ---- */
 const SPONSORED_BOOKINGS = [
@@ -1835,7 +1934,7 @@ const SPONSORED_BOOKINGS = [
     expChildren:80, expTeachers:8, note:"Underprivileged children; would value the AI session if it fits the budget.",
     proofDoc:"Aseema-12A-registration.pdf",
     visits:[], entryStudent:"", entryAdult:"",
-    ngoGstin:"", ngoPan:"AAATA1234N", authNumber:"", speciallyAbled:0, underprivileged:"",
+    ngoGstin:"", ngoPan:"AAATA1234N", authNumber:"", speciallyAbled:0, underprivileged:[],
     postVisit:{remark:"", images:[]}, students:{uploaded:false,total:0,girls:0,boys:0}, feedback:{sent:false},
     comments:"", invoice:{raised:false, on:""},
     timeline:[{on:"18 Sep 2026", who:"Website", what:"Enquiry received from the school-trips form — acknowledgement email sent to the POC."}] },
@@ -1852,7 +1951,7 @@ const SPONSORED_BOOKINGS = [
     visits:[{date:"28 Oct 2026", slotId:"Afternoon 14:00–18:00", students:120, adults:10, escorts:4, teachersComp:0,
              food:{students:0,adults:0,comp:0,optionIds:[]}, optionals:[]}],
     entryStudent:350, entryAdult:500,
-    ngoGstin:"", ngoPan:"AAATN5678K", authNumber:"", speciallyAbled:0, underprivileged:"",
+    ngoGstin:"", ngoPan:"AAATN5678K", authNumber:"", speciallyAbled:0, underprivileged:[],
     postVisit:{remark:"", images:[]}, students:{uploaded:false,total:0,girls:0,boys:0}, feedback:{sent:false},
     comments:"Awaiting sponsor confirmation and final numbers.", invoice:{raised:false, on:""},
     timeline:[{on:"10 Sep 2026", who:"Website", what:"Enquiry received — acknowledgement email sent to the POC."},
@@ -1871,7 +1970,7 @@ const SPONSORED_BOOKINGS = [
              food:{students:150,adults:12,comp:5,optionIds:["Snack box"]},
              optionals:[{kind:"Orientation", venue:"Auditorium", date:"14 Oct 2026", time:"14:15–14:45"}]}],
     entryStudent:350, entryAdult:500,
-    ngoGstin:"", ngoPan:"AAATT9012Q", authNumber:"JSW/CSR/2026/0417", speciallyAbled:6, underprivileged:"Specially abled: 6 · First-generation learners: ~120",
+    ngoGstin:"", ngoPan:"AAATT9012Q", authNumber:"JSW/CSR/2026/0417", speciallyAbled:6, underprivileged:[{title:"First-generation learners",count:"120"},{title:"Below poverty line",count:"45"}],
     postVisit:{remark:"", images:[]}, students:{uploaded:false,total:0,girls:0,boys:0}, feedback:{sent:false},
     comments:"Function Process circulated to staff; e-invoice to JSW on completion.", invoice:{raised:false, on:""},
     timeline:[{on:"30 Aug 2026", who:"Neha (CSR)", what:"Backend booking created; confirmation emailed to the NGO and Function Process circulated to staff."},
@@ -1889,7 +1988,7 @@ const SPONSORED_BOOKINGS = [
     visits:[{date:"06 Aug 2026", slotId:"Afternoon 14:00–18:00", students:90, adults:8, escorts:2, teachersComp:0,
              food:{students:90,adults:8,comp:2,optionIds:["Standard lunch"]}, optionals:[]}],
     entryStudent:350, entryAdult:500,
-    ngoGstin:"", ngoPan:"AAATP3456R", authNumber:"TT/CSR/2026/1180", speciallyAbled:4, underprivileged:"Specially abled: 4",
+    ngoGstin:"", ngoPan:"AAATP3456R", authNumber:"TT/CSR/2026/1180", speciallyAbled:4, underprivileged:[{title:"First-generation learners",count:"80"}],
     postVisit:{remark:"Wonderful, curious group — the light gallery was a hit. Two buses arrived 20 min late; noted for next time.",
                images:["group-atrium.jpg","light-gallery.jpg","lunch-courtyard.jpg"]},
     students:{uploaded:true,total:90,girls:48,boys:42}, feedback:{sent:true},
@@ -3466,6 +3565,8 @@ let addOpen = null;   // which inline add-form is open: "slot"|"batch"|"day"|"ad
 let editSlot = -1;    // index of the time slot being edited in the slot flyout (-1 = adding a new one)
 let editBlock = -1;   // index of the quota block being edited in the block flyout (-1 = adding a new one)
 let blockDraft = null;   // quota-block flyout working copy {from,to,reason,slots:[],qtys:{}}
+let venueAvail = null;   // venue-availability flyout {venue,date,start,end,src,vi,oi}
+let venueCheck = null;   // inline "Check availability" verdict {src,vi,oi,status,msg}
 let blockMselOpen = false;   // the block flyout's time-slot multi-select open state
 // Careers: which opening the apply form is open for (-1 = closed), the composed
 // email shown after a successful send, and whether submit has been attempted.
@@ -4867,6 +4968,23 @@ const VIEWS = {
         ${addRowNew("Add district")}</tbody></table></div></div>`;
   },
 
+  venues(){
+    return `<div class="note note-scope"><span class="note-mark">Structure</span><div>
+      The rentable spaces at MuSo — the halls and rooms a booking can block. A school visit's optional workshop / orientation slots pick their space from this list.
+    </div></div>
+    <div class="card"><div class="card-head"><span class="card-title">Venues</span><span class="card-note">${VENUES.length} on file</span></div>
+      <div class="matrix-wrap"><table><thead><tr><th>Venue</th><th>Floor</th><th>Size</th><th class="ctr">Seating</th><th class="ctr">Floating</th><th>Status</th><th>Actions</th></tr></thead>
+      <tbody>${VENUES.map((v,i)=>`<tr>
+        <td><b style="font-weight:500">${escHtml(v.name)}</b></td>
+        <td>${escHtml(v.floor||"—")}</td>
+        <td class="code">${escHtml(v.size||"—")}</td>
+        <td class="code" style="text-align:center">${v.seating||"—"}</td>
+        <td class="code" style="text-align:center">${v.floating||"—"}</td>
+        <td>${v.is_active===false?'<span class="pill pill-off">Inactive</span>':'<span class="pill pill-ok"><i class="dot"></i>Active</span>'}</td>
+        <td><button class="btn" data-medit="${i}">Edit</button></td></tr>`).join("")}
+        ${addRowNew("Add venue")}</tbody></table></div></div>`;
+  },
+
   sponsored(){
     const S=(p)=>`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${p}</svg>`;
     const kpi=(ico,color,label,value,sub)=>`<div class="setcard"><div class="kpi-top"><span class="kpi-ico kpi-${color}">${ico}</span><div class="set-k">${label}</div></div><div class="set-v pos">${value}</div><div class="kpi-sub">${sub}</div></div>`;
@@ -5567,7 +5685,7 @@ const SING={blackout:"blackout date",affiliates:"affiliate link",
   tax:"tax rate",hsn:"code",discounts:"discount",products:"product or add-on",
   programs:"program",progcats:"program category",departments:"department",events:"event",camps:"camp or workshop",bookings:"order",career:"role",
   fboptions:"F&B option",schoolslots:"school time slot",entryprices:"school entry price preset",school:"school booking",
-  sponsors:"sponsor",districts:"district",sponsored:"sponsored booking"};
+  sponsors:"sponsor",districts:"district",sponsored:"sponsored booking",venues:"venue"};
 const singular=(k,n)=>SING[k]||n.toLowerCase().replace(/s$/,"");
 const TYPE_LABEL={media:"Files",string:"Text",int:"Number",decimal:"Number",money:"Amount",
   date:"Date",datetime:"Date and time",time:"Time",bool:"Yes or no",enum:"Choose one",
@@ -6416,6 +6534,49 @@ function blankSchool(mode){
     billName:"",billAddress:"",gstin:"",pan:"",comments:"",
     payments:[], proformaUpload:null, timeline:[], _mode:mode};
 }
+/* Venue availability time-table flyout — a venue is shared across Events and Experiences,
+   School and Birthdays, so this shows the selected date's bookings (grey) to avoid double-booking. */
+function venueAvailCard(){
+  if(!venueAvail) return "";
+  const {venue,date,start,end,src,vi,oi}=venueAvail;
+  const close='data-venueavail-close="1"';
+  const venueSel=`<div class="selwrap"><select class="inp" data-venueavail-venue><option value=""${!venue?" selected":""}>Select venue…</option>${VENUES.filter(v=>v.is_active!==false).map(v=>`<option${venue===v.name?" selected":""}>${escHtml(v.name)}</option>`).join("")}${venue&&!VENUES.some(v=>v.name===venue)?`<option selected>${escHtml(venue)}</option>`:""}</select></div>`;
+  const filters=`<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px 16px;margin-bottom:14px">
+      <div class="fld" style="margin:0"><div class="lab"><span class="lab-n">Venue</span></div>${venueSel}</div>
+      <div class="fld" style="margin:0"><div class="lab"><span class="lab-n">Date</span></div>
+        <div style="display:flex;gap:8px"><input class="inp" data-venueavail-date value="${escAttr(date)}" placeholder="DD Mon YYYY" style="flex:1">
+          <button type="button" class="btn btn-primary" data-venueavail-apply="1">Apply</button></div></div>
+    </div>`;
+  let body;
+  if(!venue || !date){
+    body=`<div class="muted" style="padding:8px 4px">Pick a venue and a date above to see the day's bookings.</div>`;
+  } else {
+    const books=venueDayBookings(venue,date,src,{vi,oi});
+    const fmt=m=>`${String(Math.floor(m/60)).padStart(2,"0")}:${String(m%60).padStart(2,"0")}`;
+    const rows=[];
+    for(let s=9*60;s<19*60;s+=30){   // 30-min rows across operating hours 09:00–19:00
+      const e=s+30;
+      const hit=books.filter(b=>{const bs=timeToMin(b.start),be=timeToMin(b.end);return bs!=null&&be!=null&&bs<e&&be>s;});
+      const modPill=m=>`<span class="pill ${m==="This booking"?"pill-ok":"pill-off"}" style="font-size:10px">${escHtml(m)}</span>`;
+      const cell = hit.length
+        ? hit.map(b=>{const bs=timeToMin(b.start); const isStart=bs!=null&&bs>=s&&bs<e;
+            return isStart
+              ? `${modPill(b.module)} <b style="font-weight:500">${escHtml(b.by)}</b> <span class="muted">— ${escHtml(b.purpose)} · ${escHtml(b.start)}–${escHtml(b.end)}</span>`
+              : "";}).join("")
+        : '<span class="muted">Available</span>';
+      const bg = hit.length?"background:var(--rule)":"";
+      rows.push(`<tr><td class="code" style="white-space:nowrap;color:var(--ink3)">${fmt(s)}</td><td style="${bg}">${cell}</td></tr>`);
+    }
+    body=`<div class="matrix-wrap"><table class="reclist"><thead><tr><th style="width:64px">Time</th><th>Booking</th></tr></thead><tbody>${rows.join("")}</tbody></table></div>`;
+  }
+  return `<div class="drawer-layer" id="venueAvailCard">
+    <button class="drawer-backdrop" ${close} aria-label="Close"></button>
+    <aside class="drawer-panel" role="dialog" aria-modal="true" aria-label="Venue availability">
+      <div class="card-head"><span class="card-title">Availability</span>
+        <button class="drawer-close" ${close} aria-label="Close">&times;</button></div>
+      <div class="form-body" style="display:block">${filters}${body}</div>
+    </aside></div>`;
+}
 function schoolForm(editing){
   if(!schoolDraft) schoolDraft = editing ? Object.assign(JSON.parse(JSON.stringify(schoolById(selSchool)||blankSchool("booking"))),{_mode:"booking"}) : blankSchool(schoolNewMode);
   const d=schoolDraft;
@@ -6465,14 +6626,27 @@ function schoolForm(editing){
   const optKinds=["Workshop","Orientation","F&B"];
   const fbActive=FB_OPTIONS.filter(o=>o.is_active).map(o=>o.name);
   const subHead=t2=>`<div style="margin:12px 0 6px;padding-top:10px;border-top:1px solid var(--rule2)"><b style="font-size:11.5px;color:var(--ink2)">${t2}</b></div>`;
-  const optCard=(vi,o,oi)=>`<div class="fld wide" data-vorow="${vi}|${oi}" style="border:1px dashed var(--rule2);border-radius:6px;padding:10px;margin:0">
+  const optCard=(vi,o,oi)=>{
+    const p=(o.time||"").split(/[–-]/).map(s=>s.trim());const st=o.start??p[0]??"";const en=o.end??p[1]??"";
+    const filled=!!(o.venue&&o.date&&st&&en);
+    const chk=(venueCheck&&venueCheck.src==="school"&&venueCheck.vi===vi&&venueCheck.oi===oi)?venueCheck:null;
+    return `<div class="fld wide" data-vorow="${vi}|${oi}" style="border:1px dashed var(--rule2);border-radius:6px;padding:10px;margin:0">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px"><b style="font-size:11px">Optional ${oi+1}</b><button type="button" class="btn" data-school-del-optional="${vi}|${oi}">Remove</button></div>
-      <div class="form-sec-body" style="padding:0">
+      <div style="display:grid;gap:12px 16px">
         ${fld("Kind",`<div class="selwrap"><select class="inp" data-vof="kind">${optKinds.map(k=>`<option${k===o.kind?" selected":""}>${k}</option>`).join("")}</select></div>`)}
-        ${fld("Venue",`<input class="inp" data-vof="venue" value="${esc(o.venue)}" placeholder="e.g. Studio 2">`,"Blocks that space for this window.")}
-        ${fld("Date",`<input class="inp" data-vof="date" value="${esc(o.date)}" placeholder="DD Mon YYYY">`)}
-        ${fld("Time",`<input class="inp" data-vof="time" value="${esc(o.time)}" placeholder="11:30–12:30">`)}
-      </div></div>`;
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px 16px;align-items:end">
+          ${fld("Venue",`<div class="selwrap"><select class="inp" data-vof="venue"><option value=""${!o.venue?" selected":""}>Select venue…</option>${VENUES.filter(v=>v.is_active!==false).map(v=>`<option${o.venue===v.name?" selected":""}>${esc(v.name)}</option>`).join("")}${o.venue&&!VENUES.some(v=>v.name===o.venue)?`<option selected>${esc(o.venue)}</option>`:""}</select></div>`)}
+          ${fld("Date",`<input class="inp" data-vof="date" value="${esc(o.date)}" placeholder="DD Mon YYYY">`)}
+          ${fld("Time slot",`<button type="button" class="btn" data-school-viewavail="${vi}|${oi}" style="width:100%">View availability</button>`)}
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px 16px;align-items:end">
+          ${fld("Start Time",`<input class="inp" data-vof="start" value="${esc(st)}" placeholder="11:30">`)}
+          ${fld("End Time",`<input class="inp" data-vof="end" value="${esc(en)}" placeholder="12:30">`)}
+          ${fld("Confirm slot",`<button type="button" class="btn btn-primary" data-school-checkavail="${vi}|${oi}" style="width:100%"${filled?"":" disabled"}>Check availability</button>`)}
+        </div>
+      </div>
+      ${optCheckBanner(chk)}
+    </div>`;};
   const gridAuto="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px 16px";
   const numFld=(label,key,val,h)=>fld(label,`<input class="inp mono" type="number" min="0" data-vf="${key}" value="${esc(val)}">`,h);
   const visitCard=(v,i)=>{ const f=v.food||{};
@@ -6494,7 +6668,7 @@ function schoolForm(editing){
       ${numFld("F&B — adults / teachers","foodAdults",f.adults)}
       ${numFld("F&B — complementary","foodComp",f.comp,"Charged ₹0.")}
     </div>
-    <div style="margin-top:12px">${fld("F&B options",`<div class="chips" data-vfchips="foodopts|${i}">${fbActive.map(o=>`<button type="button" class="chip-add chip-opt" data-on="${(f.optionIds||[]).includes(o)?1:0}" data-chipval="${escAttr(o)}">${o}</button>`).join("")}</div>`,"Adult & child pricing from the F&B options master.")}</div>
+    <div style="margin-top:12px">${fld("F&B option",`<div class="selwrap"><select class="inp" data-vfsel="foodopt|${i}"><option value="">— none —</option>${fbActive.map(o=>`<option${(f.optionIds||[])[0]===o?" selected":""}>${escHtml(o)}</option>`).join("")}</select></div>`,"Adult & child pricing from the F&B options master.")}</div>
     ${subHead("Optionals (venue blocks)")}
     <div style="display:flex;flex-direction:column;gap:10px">${(v.optionals||[]).map((o,oi)=>optCard(i,o,oi)).join("")}
       <button type="button" class="rep-add" data-school-add-optional="${i}" style="border-radius:4px;align-self:flex-start">+ Add optional</button></div>
@@ -6524,18 +6698,21 @@ function schoolForm(editing){
              +secPricing+secVisits+secBill+secStatus;
   const title = editing ? "Edit school booking" : "New school booking";
   const saveLbl = editing ? "Save changes" : "Create booking";
+  const schClashes = schoolSaveConfirm ? bookingClashes("school") : [];
+  const clashBlock = cs => cs.length?`<div style="margin-top:12px;padding:8px 11px;border-radius:6px;font-size:12px;background:#fdeceb;border:1px solid #f2b8b5;color:#9b2c2c"><b>Venue ${cs.length>1?"clashes":"clash"} detected</b><ul style="margin:6px 0 4px;padding-left:18px">${cs.map(c=>`<li>${escHtml(c)}</li>`).join("")}</ul><b>Change the venue, date or time to continue — a clashing booking can't be created.</b></div>`:"";
   const saveConfirm = schoolSaveConfirm?`<div class="confirm-layer"><button class="confirm-backdrop" data-school-save-cancel="1" aria-label="Cancel"></button>
     <div class="confirm-box" role="dialog" aria-modal="true"><div class="confirm-title">${editing?"Save changes?":"Create booking?"}</div>
-    <div class="confirm-body">${editing?"Apply your edits to this booking.":"Create this booking."}
+    <div class="confirm-body">${editing?"Apply your edits to this booking and refresh its proforma invoice.":"This creates the school booking — its visits, headcounts, food and venue blocks — and generates the proforma invoice. It opens as a new booking and moves to confirmed once a payment is received."}
+      ${clashBlock(schClashes)}
       <label style="display:flex;gap:8px;align-items:flex-start;margin-top:12px;font-size:12.5px;cursor:pointer"><input type="checkbox" id="schoolNotify" checked style="margin-top:2px"><span>${editing?"Email the POC about this update.":"Email the POC — booking confirmation and proforma."}</span></label></div>
-    <div class="confirm-actions"><button class="btn" data-school-save-cancel="1">Cancel</button><button class="btn btn-primary" data-school-save-confirm="1">${editing?"Save changes":"Create booking"}</button></div></div></div>`:"";
+    <div class="confirm-actions"><button class="btn" data-school-save-cancel="1">Cancel</button><button class="btn btn-primary" data-school-save-confirm="1"${schClashes.length?" disabled":""}>${editing?"Save changes":"Create booking"}</button></div></div></div>`:"";
   return `<div><div class="card">
       <div class="card-head"><span class="card-title">${title}</span></div>
       <div class="form-body product-form">${body}</div>
       <div class="form-foot"><span class="form-err" id="schoolErr"></span>
         <button class="btn" data-school-cancel="1">Cancel</button>
         <button class="btn btn-primary" data-school-save="1">${saveLbl}</button></div>
-    </div></div>${saveConfirm}`;
+    </div></div>${saveConfirm}${venueAvailCard()}`;
 }
 /* Read the open form's fields back into the draft (so add/remove/preset keep typed values). */
 function schoolCaptureForm(){
@@ -6554,13 +6731,14 @@ function schoolCaptureForm(){
     const f=v.food||(v.food={});
     const fs=vg("foodStudents"),fa=vg("foodAdults"),fc=vg("foodComp");
     if(fs!==undefined)f.students=+fs||0; if(fa!==undefined)f.adults=+fa||0; if(fc!==undefined)f.comp=+fc||0;
-    const fchips=rowEl.querySelector(`[data-vfchips="foodopts|${i}"]`);
-    if(fchips) f.optionIds=[...fchips.querySelectorAll('.chip-opt[data-on="1"]')].map(c=>c.dataset.chipval);
+    const fsel=rowEl.querySelector(`[data-vfsel="foodopt|${i}"]`);
+    if(fsel) f.optionIds=fsel.value?[fsel.value]:[];
     // per-visit Optionals
     v.optionals=v.optionals||[];
     rowEl.querySelectorAll("[data-vorow]").forEach(orowEl=>{const oi=+orowEl.dataset.vorow.split("|")[1],o=v.optionals[oi];if(!o)return;
       const og=n=>{const el=orowEl.querySelector(`[data-vof="${n}"]`);return el?el.value:undefined;};
-      ["kind","venue","date","time"].forEach(n=>{const x=og(n);if(x!==undefined)o[n]=x;});});
+      ["kind","venue","date","start","end"].forEach(n=>{const x=og(n);if(x!==undefined)o[n]=x;});
+      o.time=(o.start||o.end)?[o.start,o.end].filter(Boolean).join("–"):"";});
   });
 }
 function schoolCommit(notify){
@@ -6820,7 +6998,7 @@ function blankSp(mode){
     orgType:"Funded (NGO)", sponsor:"", district:"", transport:{need:"No",vendor:""},
     interested:[],interestedOther:"",prefDate:"",expChildren:"",expTeachers:"",note:"",proofDoc:"",
     visits:[], entryStudent:"", entryAdult:"",
-    ngoGstin:"", ngoPan:"", authNumber:"", speciallyAbled:0, underprivileged:"",
+    ngoGstin:"", ngoPan:"", authNumber:"", speciallyAbled:0, underprivileged:[],
     postVisit:{remark:"",images:[]}, students:{uploaded:false,total:0,girls:0,boys:0}, feedback:{sent:false},
     comments:"", invoice:{raised:false,on:""}, timeline:[], _mode:mode};
 }
@@ -6867,6 +7045,9 @@ function spForm(editing){
     fld("Interested in (choose multiple if needed)",chips("interested",d.interested,SP_INTEREST),"","",true)+
     fld("Other Interests",t("interestedOther",d.interestedOther,"Specify special topics, events or sessions of interest"),"","",true));
 
+  const secAdditional=section("Additional Information",
+    fld("Message / Note",ta("note",d.note),"Special assistance requests, lunch planning, etc.","",true));
+
   const secSponsor=section("Sponsor &amp; funding",
     fld("Sponsor",sel("sponsor",d.sponsor,SPONSORS.filter(s=>s.is_active).map(s=>s.name),"— choose a sponsor —"),"The visit's e-invoice is raised against this sponsor. The school pays nothing.")+
     fld("Authorisation number",t("authNumber",d.authNumber,"Sponsor's CSR authorisation / PO no."))+
@@ -6887,14 +7068,27 @@ function spForm(editing){
   const subHead=t2=>`<div style="margin:12px 0 6px;padding-top:10px;border-top:1px solid var(--rule2)"><b style="font-size:11.5px;color:var(--ink2)">${t2}</b></div>`;
   const gridAuto="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px 16px";
   const numV=(label,key,val,h)=>fld(label,`<input class="inp mono" type="number" min="0" data-spvf="${key}" value="${esc(val)}">`,h);
-  const optCard=(vi,o,oi)=>`<div class="fld wide" data-spvorow="${vi}|${oi}" style="border:1px dashed var(--rule2);border-radius:6px;padding:10px;margin:0">
+  const optCard=(vi,o,oi)=>{
+    const p=(o.time||"").split(/[–-]/).map(s=>s.trim());const st=o.start??p[0]??"";const en=o.end??p[1]??"";
+    const filled=!!(o.venue&&o.date&&st&&en);
+    const chk=(venueCheck&&venueCheck.src==="sponsored"&&venueCheck.vi===vi&&venueCheck.oi===oi)?venueCheck:null;
+    return `<div class="fld wide" data-spvorow="${vi}|${oi}" style="border:1px dashed var(--rule2);border-radius:6px;padding:10px;margin:0">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px"><b style="font-size:11px">Optional ${oi+1}</b><button type="button" class="btn" data-sp-del-optional="${vi}|${oi}">Remove</button></div>
-      <div class="form-sec-body" style="padding:0">
+      <div style="display:grid;gap:12px 16px">
         ${fld("Kind",`<div class="selwrap"><select class="inp" data-spvof="kind">${optKinds.map(k=>`<option${k===o.kind?" selected":""}>${k}</option>`).join("")}</select></div>`)}
-        ${fld("Venue",`<input class="inp" data-spvof="venue" value="${esc(o.venue)}" placeholder="e.g. Studio 2">`,"Blocks that space for this window.")}
-        ${fld("Date",`<input class="inp" data-spvof="date" value="${esc(o.date)}" placeholder="DD Mon YYYY">`)}
-        ${fld("Time",`<input class="inp" data-spvof="time" value="${esc(o.time)}" placeholder="14:15–14:45">`)}
-      </div></div>`;
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px 16px;align-items:end">
+          ${fld("Venue",`<div class="selwrap"><select class="inp" data-spvof="venue"><option value=""${!o.venue?" selected":""}>Select venue…</option>${VENUES.filter(v=>v.is_active!==false).map(v=>`<option${o.venue===v.name?" selected":""}>${esc(v.name)}</option>`).join("")}${o.venue&&!VENUES.some(v=>v.name===o.venue)?`<option selected>${esc(o.venue)}</option>`:""}</select></div>`)}
+          ${fld("Date",`<input class="inp" data-spvof="date" value="${esc(o.date)}" placeholder="DD Mon YYYY">`)}
+          ${fld("Time slot",`<button type="button" class="btn" data-sp-viewavail="${vi}|${oi}" style="width:100%">View availability</button>`)}
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px 16px;align-items:end">
+          ${fld("Start Time",`<input class="inp" data-spvof="start" value="${esc(st)}" placeholder="14:15">`)}
+          ${fld("End Time",`<input class="inp" data-spvof="end" value="${esc(en)}" placeholder="14:45">`)}
+          ${fld("Confirm slot",`<button type="button" class="btn btn-primary" data-sp-checkavail="${vi}|${oi}" style="width:100%"${filled?"":" disabled"}>Check availability</button>`)}
+        </div>
+      </div>
+      ${optCheckBanner(chk)}
+    </div>`;};
   const visitCard=(v,i)=>{ const f=v.food||{};
     return `<div class="fld wide" data-spvrow="${i}" style="border:1px solid var(--rule2);border-radius:8px;padding:14px;margin:0;gap:0">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px"><b style="font-size:12.5px">Visit ${i+1}</b>${i>0?`<button type="button" class="btn" data-sp-del-visit="${i}">Remove</button>`:""}</div>
@@ -6913,7 +7107,7 @@ function spForm(editing){
       ${numV("F&B — adults / teachers","foodAdults",f.adults)}
       ${numV("F&B — complementary","foodComp",f.comp,"Charged ₹0.")}
     </div>
-    <div style="margin-top:12px">${fld("F&B options",`<div class="chips" data-spvfchips="foodopts|${i}">${fbActive.map(o=>`<button type="button" class="chip-add chip-opt" data-on="${(f.optionIds||[]).includes(o)?1:0}" data-chipval="${escAttr(o)}">${o}</button>`).join("")}</div>`,"Adult & child pricing from the F&B options master.")}</div>
+    <div style="margin-top:12px">${fld("F&B option",`<div class="selwrap"><select class="inp" data-spvfsel="foodopt|${i}"><option value="">— none —</option>${fbActive.map(o=>`<option${(f.optionIds||[])[0]===o?" selected":""}>${escHtml(o)}</option>`).join("")}</select></div>`,"Adult & child pricing from the F&B options master.")}</div>
     ${subHead("Optionals (venue blocks)")}
     <div style="display:flex;flex-direction:column;gap:10px">${(v.optionals||[]).map((o,oi)=>optCard(i,o,oi)).join("")}
       <button type="button" class="rep-add" data-sp-add-optional="${i}" style="border-radius:4px;align-self:flex-start">+ Add optional</button></div>
@@ -6922,9 +7116,24 @@ function spForm(editing){
     `<div class="fld" style="grid-column:1/-1;gap:14px">${(d.visits||[]).map(visitCard).join("")}
       <button type="button" class="rep-add" data-sp-add-visit="1" style="border-radius:4px;align-self:flex-start">+ Add visit</button></div>`);
 
+  const uprows = Array.isArray(d.underprivileged) ? d.underprivileged : [];
+  const upList = `<div style="display:flex;flex-direction:column;gap:8px" data-sp-uprows>${
+    uprows.length ? uprows.map((r,ri)=>`<div style="display:grid;grid-template-columns:1fr 150px auto;gap:10px;align-items:center" data-sp-uprow="${ri}">
+        <input class="inp" data-spf-up="title" value="${esc(r.title)}" placeholder="e.g. First-generation learners">
+        <input class="inp mono" data-spf-up="count" value="${esc(r.count)}" placeholder="Count">
+        <button type="button" class="btn" data-sp-del-uprow="${ri}">Remove</button>
+      </div>`).join("") : '<div class="muted" style="font-size:12px">No categories added yet.</div>'
+    }</div>
+    <button type="button" class="rep-add" data-sp-add-uprow="1" style="border-radius:4px;align-self:flex-start;margin-top:8px">+ Add category</button>`;
   const secImpact=section("Impact &amp; remarks",
     fld("Specially-abled children",num("speciallyAbled",d.speciallyAbled))+
-    fld("Underprivileged children remarks",ta("underprivileged",d.underprivileged),"e.g. Specially abled: 6 · First-generation learners: ~120","",true));
+    fld("Underprivileged children remarks",upList,"A title and a count per category, e.g. First-generation learners · 120.","",true));
+
+  const secBill=section("Billing (for invoicing)",
+    fld("Billing name",t("billName",d.billName))+
+    fld("Billing address",t("billAddress",d.billAddress),"","",true)+
+    fld("GST number",t("gstin",d.gstin),"For the beneficiary's records — the sponsor invoice is raised against the sponsor's GSTIN.")+
+    fld("PAN",t("pan",d.pan)));
 
   const statusLocked=false;
   const statusOpts = SCHOOL_MANUAL_STATUSES.includes(d.status) ? SCHOOL_MANUAL_STATUSES : SCHOOL_MANUAL_STATUSES.concat([d.status]);
@@ -6932,26 +7141,31 @@ function spForm(editing){
     fld("Status",sel("status",d.status,statusOpts),"Confirmed / Live / Ended follow the visit; set the rest here.")+
     fld("Comments",ta("comments",d.comments),"","",true));
 
-  const body = secOrg+secBoard+secVisitDetails+secPOC+secInterested+secSponsor+secPricing+secVisits+secImpact+secStatus;
+  const body = secOrg+secBoard+secVisitDetails+secPOC+secInterested+secAdditional+secSponsor+secPricing+secVisits+secBill+secImpact+secStatus;
   const title = editing ? "Edit sponsored booking" : "New sponsored booking";
   const saveLbl = editing ? "Save changes" : "Create booking";
+  const spClashes = spSaveConfirm ? bookingClashes("sponsored") : [];
+  const spClashBlock = cs => cs.length?`<div style="margin-top:12px;padding:8px 11px;border-radius:6px;font-size:12px;background:#fdeceb;border:1px solid #f2b8b5;color:#9b2c2c"><b>Venue ${cs.length>1?"clashes":"clash"} detected</b><ul style="margin:6px 0 4px;padding-left:18px">${cs.map(c=>`<li>${escHtml(c)}</li>`).join("")}</ul><b>Change the venue, date or time to continue — a clashing booking can't be created.</b></div>`:"";
   const saveConfirm = spSaveConfirm?`<div class="confirm-layer"><button class="confirm-backdrop" data-sp-save-cancel="1" aria-label="Cancel"></button>
     <div class="confirm-box" role="dialog" aria-modal="true"><div class="confirm-title">${editing?"Save changes?":"Create booking?"}</div>
-    <div class="confirm-body">${editing?"Apply your edits to this booking.":"Create this sponsored booking."}
+    <div class="confirm-body">${editing?"Apply your edits to this booking and refresh its invoice.":"This creates the sponsored booking — its visits, headcounts and venue blocks — billed to the sponsor. It opens as a new booking, and the sponsor invoice is raised on completion."}
+      ${spClashBlock(spClashes)}
       <label style="display:flex;gap:8px;align-items:flex-start;margin-top:12px;font-size:12.5px;cursor:pointer"><input type="checkbox" id="spNotify" checked style="margin-top:2px"><span>${editing?"Email the POC about this update.":"Email the POC — booking confirmation, and circulate the Function Process to staff."}</span></label></div>
-    <div class="confirm-actions"><button class="btn" data-sp-save-cancel="1">Cancel</button><button class="btn btn-primary" data-sp-save-confirm="1">${editing?"Save changes":"Create booking"}</button></div></div></div>`:"";
+    <div class="confirm-actions"><button class="btn" data-sp-save-cancel="1">Cancel</button><button class="btn btn-primary" data-sp-save-confirm="1"${spClashes.length?" disabled":""}>${editing?"Save changes":"Create booking"}</button></div></div></div>`:"";
   return `<div><div class="card">
       <div class="card-head"><span class="card-title">${title}</span></div>
       <div class="form-body product-form">${body}</div>
       <div class="form-foot"><span class="form-err" id="spErr"></span>
         <button class="btn" data-sp-cancel="1">Cancel</button>
         <button class="btn btn-primary" data-sp-save="1">${saveLbl}</button></div>
-    </div></div>${saveConfirm}`;
+    </div></div>${saveConfirm}${venueAvailCard()}`;
 }
 function spCaptureForm(){
   const d=spDraft; if(!d) return;
   const g=k=>{const el=document.querySelector(`[data-spf="${k}"]`);return el?el.value:undefined;};
-  ["school","location","orgType","district","boardsOther","grade","prefDate","poc","designation","email","phone","interestedOther","sponsor","authNumber","ngoGstin","ngoPan","proofDoc","entryStudent","entryAdult","speciallyAbled","underprivileged","status","comments","expChildren","expTeachers"].forEach(k=>{const v=g(k);if(v!==undefined)d[k]=v;});
+  ["school","location","orgType","district","boardsOther","grade","prefDate","poc","designation","email","phone","interestedOther","note","sponsor","authNumber","ngoGstin","ngoPan","proofDoc","entryStudent","entryAdult","billName","billAddress","gstin","pan","speciallyAbled","status","comments","expChildren","expTeachers"].forEach(k=>{const v=g(k);if(v!==undefined)d[k]=v;});
+  const upEl=document.querySelector("[data-sp-uprows]");
+  if(upEl) d.underprivileged=[...upEl.querySelectorAll("[data-sp-uprow]")].map(r=>({title:(r.querySelector('[data-spf-up="title"]')||{}).value||"",count:(r.querySelector('[data-spf-up="count"]')||{}).value||""})).filter(x=>x.title||x.count);
   const tn=g("transport_need"), tv=g("transport_vendor"); d.transport=d.transport||{}; if(tn!==undefined)d.transport.need=tn; if(tv!==undefined)d.transport.vendor=tv;
   const chipVals=key=>[...document.querySelectorAll(`[data-spfchips="${key}"] .chip-opt[data-on="1"]`)].map(c=>c.dataset.chipval);
   if(document.querySelector('[data-spfchips="boards"]')) d.boards=chipVals("boards");
@@ -6962,12 +7176,13 @@ function spCaptureForm(){
     ["students","adults","escorts"].forEach(n=>{const x=vg(n);if(x!==undefined)v[n]=+x||0;});
     const f=v.food||(v.food={}); const fs=vg("foodStudents"),fa=vg("foodAdults"),fc=vg("foodComp");
     if(fs!==undefined)f.students=+fs||0; if(fa!==undefined)f.adults=+fa||0; if(fc!==undefined)f.comp=+fc||0;
-    const fchips=rowEl.querySelector(`[data-spvfchips="foodopts|${i}"]`);
-    if(fchips) f.optionIds=[...fchips.querySelectorAll('.chip-opt[data-on="1"]')].map(c=>c.dataset.chipval);
+    const fsel=rowEl.querySelector(`[data-spvfsel="foodopt|${i}"]`);
+    if(fsel) f.optionIds=fsel.value?[fsel.value]:[];
     v.optionals=v.optionals||[];
     rowEl.querySelectorAll("[data-spvorow]").forEach(orowEl=>{const oi=+orowEl.dataset.spvorow.split("|")[1],o=v.optionals[oi];if(!o)return;
       const og=n=>{const el=orowEl.querySelector(`[data-spvof="${n}"]`);return el?el.value:undefined;};
-      ["kind","venue","date","time"].forEach(n=>{const x=og(n);if(x!==undefined)o[n]=x;});});
+      ["kind","venue","date","start","end"].forEach(n=>{const x=og(n);if(x!==undefined)o[n]=x;});
+      o.time=(o.start||o.end)?[o.start,o.end].filter(Boolean).join("–"):"";});
   });
 }
 function spCommit(notify){
@@ -7085,7 +7300,7 @@ function spDetail(){
       ${row("Sub total",money(c.subtotal))}${row("GST (18%)",money(c.gst))}${row("Grand total",`<b>${money(c.grand)}</b>`)}
     </tbody></table></div></div>
     <div class="card"><div class="card-head"><span class="card-title">Impact &amp; comments</span></div><div class="matrix-wrap"><table class="reclist"><tbody>
-      ${row("Specially-abled children",rec.speciallyAbled?`<b>${rec.speciallyAbled}</b>`:"")}${row("Underprivileged remarks",escHtml(rec.underprivileged))}${row("Comments",escHtml(rec.comments))}
+      ${row("Specially-abled children",rec.speciallyAbled?`<b>${rec.speciallyAbled}</b>`:"")}${row("Underprivileged children",(Array.isArray(rec.underprivileged)?rec.underprivileged:[]).filter(r=>r.title||r.count).map(r=>escHtml(r.title||"—")+(r.count?": "+escHtml(r.count):"")).join(" · "))}${row("Comments",escHtml(rec.comments))}
     </tbody></table></div></div>`;
 
   /* After visit */
@@ -7330,8 +7545,8 @@ const APP_SORT = {
   role:{get:a=>{ const r=roleById(a.role); return r?r.title:a.role; }},
   exp:{get:a=>(a.exp||0), type:"num"}, qual:{get:a=>a.qual||""},
   /* Links first, then the ones a role asked for and did not get, then the rest. */
-  portfolio:{get:a=>{ const r=roleById(a.role);
-    return a.portfolio ? "1 "+a.portfolio : (r&&r.portfolio) ? "2" : "3"; }},
+  portfolio:{get:a=>{ const r=roleById(a.role); const t=appPortText(a);
+    return t ? "1 "+t : (r&&r.portfolio) ? "2" : "3"; }},
   on:{get:a=>a.on, type:"date"}, cv:{get:a=>(a.cv&&a.cv.name)||""}, note:{get:a=>a.note},
   status:{get:a=>a.status, type:"rank", rank:["New","Shortlisted","Interviewed","Rejected"]}
 };
@@ -7592,10 +7807,12 @@ function appExp(a){
 /* Three different things, and HR needs to tell them apart: a link that was given, a role
    that asked and got nothing back, and a role that never asked at all. The middle one is
    an ordinary outcome, not a failure — the field is offered, not enforced. */
+/* Portfolio is free text the applicant pastes into a textarea — shown as-is, like Notes. */
+const appPortText = a => Array.isArray(a.portfolio) ? a.portfolio.filter(Boolean).join("\n") : (a.portfolio||"");
 function appPortfolio(a, role){
-  if(a.portfolio) return `<button class="app-file" data-app-port="${a.id}"
-    title="Open ${escAttr(a.portfolio)}">${escHtml(a.portfolio)}</button>`;
-  if(role && role.portfolio) return `<span class="app-port-miss">Left blank</span>`;
+  const t=appPortText(a);
+  if(t) return `<div style="white-space:pre-wrap">${escHtml(t)}</div>`;
+  if(role && role.portfolio) return '<span class="muted">—</span>';
   return `<span class="muted" title="This role does not ask for a portfolio">NA</span>`;
 }
 function appTable(list, id, open=false, showRole=true, showPort=true){
@@ -7609,7 +7826,7 @@ function appTable(list, id, open=false, showRole=true, showPort=true){
     ${sortTh("Notes","note",appSort)}</tr></thead>
   <tbody>${list.length?list.map(a=>{
     const role=roleById(a.role);
-    const hay=`${a.id} ${a.name} ${a.email} ${a.phone} ${role?role.title:""} ${a.qual||""} ${appExp(a)} ${a.portfolio||""}`.toLowerCase();
+    const hay=`${a.id} ${a.name} ${a.email} ${a.phone} ${role?role.title:""} ${a.qual||""} ${appExp(a)} ${appPortText(a)}`.toLowerCase();
     return `<tr${open?` data-app-open="${a.id}"`:""} data-app-row data-search="${escAttr(hay)}">
     <td class="code" style="white-space:nowrap">${a.id}</td>
     <td class="career-title"><b style="font-weight:500">${escHtml(a.name)}</b>
@@ -7789,7 +8006,7 @@ function careerApplications(){
 /* Foundations master-row edit: the data array behind each simple master, so a row's
    Edit button can open the create form prefilled from that row (display-only). */
 const masterData = k => ({categories:CATS, tax:TAXRATES, hsn:HSNCODES, shopcats:SHOP_CATEGORIES, progcats:PROGCATS,
-  fboptions:FB_OPTIONS, schoolslots:SCHOOL_SLOTS, entryprices:ENTRY_PRICES, sponsors:SPONSORS, districts:DISTRICTS, pools:[POOLS.shared]}[k]);
+  fboptions:FB_OPTIONS, schoolslots:SCHOOL_SLOTS, entryprices:ENTRY_PRICES, sponsors:SPONSORS, districts:DISTRICTS, venues:VENUES, pools:[POOLS.shared]}[k]);
 function masterEditValues(k, i){
   const row=(masterData(k)||[])[i]||{};
   if(k==="tax")  return {code:row.code,name:row.name,percentage:row.pct,is_active:true};
@@ -8163,19 +8380,13 @@ document.addEventListener("click",e=>{
   const aCv=e.target.closest("[data-app-cv]");
   if(aCv){ const a=appById(aCv.dataset.appCv);
     if(a&&a.cv) careerOpenPdf(careerCvPdf(a), a.cv.name); return; }
-  /* The portfolio is a link the applicant typed, so it opens in a new tab as given.
-     The seeded links are stand-ins and will not resolve. */
-  const aPort=e.target.closest("[data-app-port]");
-  if(aPort){ const a=appById(aPort.dataset.appPort);
-    if(a&&a.portfolio) window.open(/^https?:\/\//.test(a.portfolio)?a.portfolio:"https://"+a.portfolio,"_blank","noopener");
-    return; }
   if(e.target.closest("[data-career-clear]")){ careerFDept=""; careerFType=""; careerFStatus="all"; render(); return; }
   const nav=e.target.closest(".mitem");
-  if(nav){ current=nav.dataset.k; mEdit=-1; ruleDel=null; selP=0; selW=0; selB=0; selE=0; esub="details"; eventCats=new Set(); selBooking=0; tab="list"; sub="details"; csub="details"; editD=-1; selD=0; dsub="summary"; editCond=-1; condDraft=null; draftDiscount=null; addOpen=null; progKind="event"; progCat="Event"; schoolDraft=null; schtab="records"; schoolEmailView=null; schoolMsg=""; schoolEInvView=false; schoolEInvConfirm=false; schoolSaveConfirm=false; spDraft=null; sptab="records"; spEmailView=null; spMsg=""; spSaveConfirm=false; render(); $(".stage").scrollTop=0; return; }
+  if(nav){ current=nav.dataset.k; mEdit=-1; ruleDel=null; venueAvail=null; venueCheck=null; selP=0; selW=0; selB=0; selE=0; esub="details"; eventCats=new Set(); selBooking=0; tab="list"; sub="details"; csub="details"; editD=-1; selD=0; dsub="summary"; editCond=-1; condDraft=null; draftDiscount=null; addOpen=null; progKind="event"; progCat="Event"; schoolDraft=null; schtab="records"; schoolEmailView=null; schoolMsg=""; schoolEInvView=false; schoolEInvConfirm=false; schoolSaveConfirm=false; spDraft=null; sptab="records"; spEmailView=null; spMsg=""; spSaveConfirm=false; render(); $(".stage").scrollTop=0; return; }
   const goto=e.target.closest("[data-goto]");
   if(goto){ current=goto.dataset.goto; mEdit=-1; selP=0; selW=0; selB=0; selE=0; selD=0; selBooking=0; tab="list"; sub="details"; csub="details"; dsub="summary"; addOpen=null; render(); $(".stage").scrollTop=0; return; }
   const t=e.target.closest("[data-tab]");
-  if(t){ tab=t.dataset.tab; if(tab==="new"&&current==="bookings") resetBooking(); if(tab==="new"&&current==="shopsales") resetShopSale(); if(tab==="new"&&current==="programs"){progKind=progFormat(progCat)==="multi"?"camp":"event";eventCats=new Set();} if(tab==="new"&&current==="events") eventCats=new Set(); if(tab==="new"&&current==="discounts") draftDiscount=null; if((tab==="new"||tab==="edit")&&current==="tiers") seedTierDraft(tab==="edit"); if(tab==="new"&&(current==="products"||current==="programs")) prodBuildingPool=false; if(tab==="new"&&current==="school") schoolDraft=blankSchool(schoolNewMode); if(tab==="new"&&current==="sponsored") spDraft=blankSp(spNewMode); if(tab==="list"){ schoolDraft=null; spDraft=null; } mEdit=-1; addOpen=null; render(); $(".stage").scrollTop=0; return; }
+  if(t){ tab=t.dataset.tab; if(tab==="new"&&current==="bookings") resetBooking(); if(tab==="new"&&current==="shopsales") resetShopSale(); if(tab==="new"&&current==="programs"){progKind=progFormat(progCat)==="multi"?"camp":"event";eventCats=new Set();} if(tab==="new"&&current==="events") eventCats=new Set(); if(tab==="new"&&current==="discounts") draftDiscount=null; if((tab==="new"||tab==="edit")&&current==="tiers") seedTierDraft(tab==="edit"); if(tab==="new"&&(current==="products"||current==="programs")) prodBuildingPool=false; if(tab==="new"&&current==="school") schoolDraft=blankSchool(schoolNewMode); if(tab==="new"&&current==="sponsored") spDraft=blankSp(spNewMode); if(tab==="list"){ schoolDraft=null; spDraft=null; } mEdit=-1; venueAvail=null; venueCheck=null; addOpen=null; render(); $(".stage").scrollTop=0; return; }
   const medit=e.target.closest("[data-medit]");
   if(medit){ mEdit=+medit.dataset.medit; tab="edit"; render(); $(".stage").scrollTop=0; return; }
   if(e.target.closest("[data-medit-save]")){ mEdit=-1; tab="list"; render(); $(".stage").scrollTop=0; return; }
@@ -8334,7 +8545,19 @@ document.addEventListener("click",e=>{
   if(schSuggest){ schoolCaptureForm(); const src=schoolDirectory().find(m=>m.name===schSuggest.dataset.schoolSuggest); if(src&&schoolDraft){ const r=src.rec; Object.assign(schoolDraft,{school:r.school,location:r.location,boards:(r.boards||[]).slice(),boardsOther:r.boardsOther||"",grade:r.grade,poc:r.poc,designation:r.designation,email:r.email,phone:r.phone,interested:(r.interested||[]).slice(),interestedOther:r.interestedOther||""}); } render(); return; }
   if(e.target.closest("[data-school-save]")){ schoolCaptureForm(); schoolSaveConfirm=true; render(); return; }
   if(e.target.closest("[data-school-save-cancel]")){ schoolSaveConfirm=false; render(); return; }
-  if(e.target.closest("[data-school-save-confirm]")){ const cb=document.getElementById("schoolNotify"); const notify=cb?cb.checked:true; schoolSaveConfirm=false; schoolCommit(notify); return; }
+  if(e.target.closest("[data-school-save-confirm]")){ if(bookingClashes("school").length) return; const cb=document.getElementById("schoolNotify"); const notify=cb?cb.checked:true; schoolSaveConfirm=false; schoolCommit(notify); return; }
+  const schVA=e.target.closest("[data-school-viewavail]");
+  if(schVA){ schoolCaptureForm(); const [vi,oi]=schVA.dataset.schoolViewavail.split("|").map(Number);
+    const o=(((schoolDraft||{}).visits||[])[vi]||{}).optionals?.[oi]||{}; const p=(o.time||"").split(/[–-]/).map(s=>s.trim());
+    venueAvail={venue:o.venue||"",date:o.date||"",start:o.start||p[0]||"",end:o.end||p[1]||"",src:"school",vi,oi}; render(); $(".stage").scrollTop=0; return; }
+  const schCA=e.target.closest("[data-school-checkavail]");
+  if(schCA){ schoolCaptureForm(); const [vi,oi]=schCA.dataset.schoolCheckavail.split("|").map(Number);
+    venueCheck=runVenueCheck("school",vi,oi); render(); $(".stage").scrollTop=0; return; }
+  const spCA=e.target.closest("[data-sp-checkavail]");
+  if(spCA){ spCaptureForm(); const [vi,oi]=spCA.dataset.spCheckavail.split("|").map(Number);
+    venueCheck=runVenueCheck("sponsored",vi,oi); render(); $(".stage").scrollTop=0; return; }
+  if(e.target.closest("[data-venueavail-apply]")){ if(venueAvail){ const v=document.querySelector("[data-venueavail-venue]"), d=document.querySelector("[data-venueavail-date]"); if(v) venueAvail.venue=v.value; if(d) venueAvail.date=d.value.trim(); } render(); return; }
+  if(e.target.closest("[data-venueavail-close]")){ venueAvail=null; render(); return; }
   const schAddV=e.target.closest("[data-school-add-visit]");
   if(schAddV){ schoolCaptureForm(); const d=schoolDraft; if(d){ (d.visits=d.visits||[]).push(blankVisit()); } render(); return; }
   const schDelV=e.target.closest("[data-school-del-visit]");
@@ -8378,7 +8601,11 @@ document.addEventListener("click",e=>{
   if(spSuggest){ spCaptureForm(); const src=spDirectory().find(m=>m.name===spSuggest.dataset.spSuggest); if(src&&spDraft){ const r=src.rec; Object.assign(spDraft,{school:r.school,location:r.location,orgType:r.orgType,district:r.district,boards:(r.boards||[]).slice(),boardsOther:r.boardsOther||"",grade:r.grade,poc:r.poc,designation:r.designation,email:r.email,phone:r.phone,interested:(r.interested||[]).slice(),interestedOther:r.interestedOther||"",sponsor:r.sponsor,transport:{need:(r.transport||{}).need||"No",vendor:(r.transport||{}).vendor||""},ngoGstin:r.ngoGstin||"",ngoPan:r.ngoPan||"",proofDoc:r.proofDoc||""}); } render(); return; }
   if(e.target.closest("[data-sp-save]")){ spCaptureForm(); spSaveConfirm=true; render(); return; }
   if(e.target.closest("[data-sp-save-cancel]")){ spSaveConfirm=false; render(); return; }
-  if(e.target.closest("[data-sp-save-confirm]")){ const cb=document.getElementById("spNotify"); const notify=cb?cb.checked:true; spSaveConfirm=false; spCommit(notify); return; }
+  if(e.target.closest("[data-sp-save-confirm]")){ if(bookingClashes("sponsored").length) return; const cb=document.getElementById("spNotify"); const notify=cb?cb.checked:true; spSaveConfirm=false; spCommit(notify); return; }
+  const spVA=e.target.closest("[data-sp-viewavail]");
+  if(spVA){ spCaptureForm(); const [vi,oi]=spVA.dataset.spViewavail.split("|").map(Number);
+    const o=(((spDraft||{}).visits||[])[vi]||{}).optionals?.[oi]||{}; const p=(o.time||"").split(/[–-]/).map(s=>s.trim());
+    venueAvail={venue:o.venue||"",date:o.date||"",start:o.start||p[0]||"",end:o.end||p[1]||"",src:"sponsored",vi,oi}; render(); $(".stage").scrollTop=0; return; }
   const spAddV=e.target.closest("[data-sp-add-visit]");
   if(spAddV){ spCaptureForm(); const d=spDraft; if(d){ (d.visits=d.visits||[]).push(blankVisit()); } render(); return; }
   const spDelV=e.target.closest("[data-sp-del-visit]");
@@ -8387,6 +8614,9 @@ document.addEventListener("click",e=>{
   if(spAddO){ spCaptureForm(); const d=spDraft; const vi=+spAddO.dataset.spAddOptional; const v=d&&(d.visits||[])[vi]; if(v){ (v.optionals=v.optionals||[]).push({kind:"Workshop",venue:"",date:"",time:""}); } render(); return; }
   const spDelO=e.target.closest("[data-sp-del-optional]");
   if(spDelO){ spCaptureForm(); const d=spDraft; const [vi,oi]=spDelO.dataset.spDelOptional.split("|").map(Number); const v=d&&(d.visits||[])[vi]; if(v&&v.optionals) v.optionals.splice(oi,1); render(); return; }
+  if(e.target.closest("[data-sp-add-uprow]")){ spCaptureForm(); const d=spDraft; if(d){ if(!Array.isArray(d.underprivileged)) d.underprivileged=[]; d.underprivileged.push({title:"",count:""}); } render(); return; }
+  const spDelUp=e.target.closest("[data-sp-del-uprow]");
+  if(spDelUp){ spCaptureForm(); const d=spDraft; if(d&&Array.isArray(d.underprivileged)) d.underprivileged.splice(+spDelUp.dataset.spDelUprow,1); render(); return; }
   const spTabBtn=e.target.closest("[data-sptab]");
   if(spTabBtn){ sptab=spTabBtn.dataset.sptab; render(); $(".stage").scrollTop=0; return; }
   const spDsub=e.target.closest("[data-spsub]");
@@ -8580,6 +8810,9 @@ document.addEventListener("click",e=>{
     sw.querySelector("span").textContent=on?"Off":"On"; }
 });
 document.addEventListener("change",e=>{
+  const oRowC=e.target.closest&&e.target.closest("[data-vorow],[data-spvorow]"); if(oRowC) syncOptCheckBtn(oRowC);
+  const vaV=e.target.closest&&e.target.closest("[data-venueavail-venue]");
+  if(vaV){ if(venueAvail){ venueAvail.venue=vaV.value; const d=document.querySelector("[data-venueavail-date]"); if(d) venueAvail.date=d.value.trim(); } render(); return; }
   const rCat=e.target.closest&&e.target.closest("[data-ratio-cat]");
   if(rCat){ prodRatio[rCat.dataset.ratioCat]=rCat.value; syncRatio(); return; }
   const rField=e.target.closest&&e.target.closest("[data-rule-field]");
@@ -8645,6 +8878,7 @@ function ageFromDOB(str){
 }
 function ageLabel(str){ const a=ageFromDOB(str); return a===null?"":(a===0?"Under 1 yr":a+(a===1?" yr":" yrs")); }
 document.addEventListener("input",e=>{
+  const oRow=e.target.closest&&e.target.closest("[data-vorow],[data-spvorow]"); if(oRow) syncOptCheckBtn(oRow);
   if(e.target.matches&&e.target.matches("[data-app-search]")){ appQ=e.target.value; syncCareerSearch(); return; }
   if(e.target.matches&&e.target.matches("[data-career-search]")){ careerQ=e.target.value; syncCareerSearch(); return; }
   if(e.target.matches&&e.target.matches("[data-school-search]")){ schoolQ=e.target.value; syncSchoolSearch(); return; }
