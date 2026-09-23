@@ -2271,19 +2271,19 @@ const P = [
    cutoff:"12 hours before the slot starts",
    slots:[
      {n:"Summer weekday morning",from:"01 Jul 2026",to:"31 Aug 2026",days:"Tue – Fri",t1:"09:00",t2:"12:00",
-      pool:"",hold:0,cap:40,sold:38,price:{"Adult":800,"Child 12–17":600,"Child 3–11":500,"Baby":1},src:"Your example"},
+      pool:"",cap:40,sold:38,price:{"Adult":800,"Child 12–17":600,"Child 3–11":500,"Baby":1},src:"Your example"},
      {n:"Three-hour morning",from:"01 Apr 2026",to:"31 Mar 2027",days:"Tue – Sun",t1:"10:00",t2:"13:00",
-      pool:"",hold:30,cap:40,sold:22,price:{"Adult":1500,"Child 12–17":1100,"Child 3–11":900,"Baby":1},src:"§4 Example 2 · §1.3 gives ₹1500 for Tue 10–1"},
+      pool:"",cap:40,sold:22,price:{"Adult":1500,"Child 12–17":1100,"Child 3–11":900,"Baby":1},src:"§4 Example 2 · §1.3 gives ₹1500 for Tue 10–1"},
      {n:"Five-hour morning",from:"01 Apr 2026",to:"31 Mar 2027",days:"Tue – Sun",t1:"10:00",t2:"15:00",
-      pool:"",hold:50,cap:40,sold:40,price:PRICE_T,src:"§4 Example 1"},
+      pool:"",cap:40,sold:40,price:PRICE_T,src:"§4 Example 1"},
      {n:"Five-hour afternoon",from:"01 Apr 2026",to:"31 Mar 2027",days:"Tue – Sun",t1:"14:00",t2:"19:00",
-      pool:"",hold:50,cap:40,sold:15,price:PRICE_T,src:"§4 Example 1 — overlaps the slot above"},
+      pool:"",cap:40,sold:15,price:PRICE_T,src:"§4 Example 1 — overlaps the slot above"},
      {n:"Full day",from:"01 Apr 2026",to:"31 Mar 2027",days:"Tue – Sun",t1:"10:00",t2:"19:00",
-      pool:"",hold:0,cap:20,sold:17,price:{"Adult":1800,"Child 12–17":1400,"Child 3–11":1100,"Baby":1},
+      pool:"",cap:20,sold:17,price:{"Adult":1800,"Child 12–17":1400,"Child 3–11":1100,"Baby":1},
       src:"§4 — the FD ticket. A slot like any other, it just runs longer"}],
-   addons:[{n:"Mini Golf",bind:"within",src:"§1.5"},
-           {n:"Lost Code of Play",bind:"within",src:"§1.5"},
-           {n:"Vroom",bind:"within",src:"Your example"}],
+   addons:[{n:"Mini Golf",src:"§1.5"},
+           {n:"Lost Code of Play",src:"§1.5"},
+           {n:"Vroom",src:"Your example"}],
    cats:["Adult","Child 12–17","Child 3–11","Baby"],
    pool:"BUILDING",
    rules:{product:[
@@ -2310,11 +2310,11 @@ const P = [
    cutoff:"2 hours before the session",
    slots:[
      {n:"Golf morning",from:"01 Aug 2026",to:"31 Aug 2026",days:"Tue – Sun",t1:"10:00",t2:"11:30",
-      pool:"",hold:0,cap:12,sold:12,price:{"Adult":400,"Child 12–17":300,"Child 3–11":250,"Baby":1},src:"August 2026 only, provisional"},
+      pool:"",cap:12,sold:12,price:{"Adult":400,"Child 12–17":300,"Child 3–11":250,"Baby":1},src:"August 2026 only, provisional"},
      {n:"Golf midday",from:"01 Aug 2026",to:"31 Aug 2026",days:"Tue – Sun",t1:"12:00",t2:"13:30",
-      pool:"",hold:0,cap:12,sold:9,price:{"Adult":400,"Child 12–17":300,"Child 3–11":250,"Baby":1},src:"August 2026 only, provisional"},
+      pool:"",cap:12,sold:9,price:{"Adult":400,"Child 12–17":300,"Child 3–11":250,"Baby":1},src:"August 2026 only, provisional"},
      {n:"Golf afternoon",from:"01 Aug 2026",to:"31 Aug 2026",days:"Tue – Sun",t1:"15:00",t2:"16:30",
-      pool:"",hold:0,cap:12,sold:4,price:{"Adult":450,"Child 12–17":350,"Child 3–11":300,"Baby":1},src:"August 2026 only, provisional"}],
+      pool:"",cap:12,sold:4,price:{"Adult":450,"Child 12–17":350,"Child 3–11":300,"Baby":1},src:"August 2026 only, provisional"}],
    addons:[],cats:["Adult","Child 12–17","Child 3–11","Baby"],
    pool:"MG",
    rules:{product:[
@@ -2335,9 +2335,9 @@ const P = [
    cutoff:"2 hours before the session",
    slots:[
      {n:"LCOP morning",from:"01 Aug 2026",to:"31 Aug 2026",days:"Tue – Sun",t1:"10:30",t2:"12:00",
-      pool:"",hold:0,cap:12,sold:5,price:{"Adult":500,"Child 12–17":400,"Child 3–11":350,"Baby":1},src:"August 2026 only, provisional"},
+      pool:"",cap:12,sold:5,price:{"Adult":500,"Child 12–17":400,"Child 3–11":350,"Baby":1},src:"August 2026 only, provisional"},
      {n:"LCOP afternoon",from:"01 Aug 2026",to:"31 Aug 2026",days:"Tue – Sun",t1:"14:30",t2:"16:00",
-      pool:"",hold:0,cap:12,sold:11,price:{"Adult":500,"Child 12–17":400,"Child 3–11":350,"Baby":1},src:"August 2026 only, provisional"}],
+      pool:"",cap:12,sold:11,price:{"Adult":500,"Child 12–17":400,"Child 3–11":350,"Baby":1},src:"August 2026 only, provisional"}],
    addons:[],cats:["Adult","Child 12–17","Child 3–11","Baby"],
    pool:"LCOP",
    rules:{product:[
@@ -2356,7 +2356,7 @@ const P = [
   {c:"VROOM",n:"Vroom",type:"Add-on",tag:"a",standalone:false,src:"Your example",
    cutoff:"2 hours before the session",
    slots:[{n:"Vroom session",from:"01 Aug 2026",to:"31 Aug 2026",days:"Sat – Sun",t1:"11:00",t2:"12:00",
-      pool:"",hold:0,cap:12,sold:6,price:{"Adult":300,"Child 12–17":250,"Child 3–11":200,"Baby":1},src:"August 2026 only, provisional"}],
+      pool:"",cap:12,sold:6,price:{"Adult":300,"Child 12–17":250,"Child 3–11":200,"Baby":1},src:"August 2026 only, provisional"}],
    addons:[],cats:["Adult","Child 12–17","Child 3–11","Baby"],
    pool:"VROOM",
    rules:{product:[
@@ -2434,8 +2434,7 @@ function SEGMENTS(a){
   }
   return out;
 }
-const ATTACHED_TO = n => P.filter(x=>x.addons.some(a=>a.n===n))
-  .map(x=>({p:x.n, bind:x.addons.find(a=>a.n===n).bind}));
+const ATTACHED_TO = n => P.filter(x=>x.addons.some(a=>a.n===n)).map(x=>({p:x.n}));
 
 const DISC_OPS = ["at least","exactly","at most","more than","fewer than"];
 const DISC_PM  = ["any of","all of"];
@@ -2576,7 +2575,7 @@ const PROD_ADDON_ONLY = [
   ["Available separately|sold_standalone","bool","§1.5: Mini Golf and Lost Code of Play may be “purchased independently”, so this is on for both. Off means the item only ever sells attached."],
 ];
 const PROD_PRODUCT_ONLY = [
-  ["Available add-ons|addons[]","fk[]","→ Add-ons. Which add-ons a visitor is offered when buying this. Slot binding for each is set on the Add-ons tab after saving, because the same add-on can be bound here and free elsewhere."]
+  ["Available add-ons|addons[]","fk[]","→ Add-ons. Which add-ons a visitor is offered when buying this. An add-on's slot must always sit inside the parent's chosen slot window."]
 ];
 const PROD_REST = [
   ["Visitor categories|visitor_categories[]","fk[]","→ Visitor categories. Which categories this is sold to. A category with no price row simply is not sold."],
@@ -2641,17 +2640,14 @@ const SCHEMAS = {
     ["Runs between these dates|valid_from / valid_to","date","Both required. Without an end date a seasonal pattern never expires and next season's hours land on top of it."],
     ["Days it runs|days_of_week[]","enum[]","Mon · Tue · Wed · Thu · Fri · Sat · Sun","Which days inside that window. §1.3: admin can disable days."],
     ["Start and end time|start_time / end_time","time","A slot ending 13:00 and one starting 13:00 must not count as overlapping."],
-    
-    ["Places held back every day|standing_hold","int","Heads withheld from this slot every day it runs — the per-slot version of §4's overlap buffer. Set it on slots that share the building with others at their busiest moment; leave it at zero elsewhere."],
     ["Active|is_active","bool",""]],
   addon:[
     ["Which extra|addon_product_id","fk","→ Products & add-ons. What is offered alongside this product."],
-    ["Must it fit inside the main booking's time|slot_binding","enum","must fall inside this product's slot · free choice on the same day","An add-on booked with a ticket either shares the main slot's time range, or is a free choice among its own slots on the same day. Set per attachment."],
     ["Ticked by default|is_default","bool","Pre-ticked in the booking flow."],
     ["Most that can be added|max_quantity","int","Per parent line. Blank for no limit."],
     ["Position in the list|sort_order","int",""]],
   block:[
-    ["Dates affected|date_from / date_to","date","Same date twice for a single day. Unlike reserved capacity, a block is for named dates."],
+    ["Dates affected|date_from / date_to","date","Same date twice for a single day. A block is for named dates, not a standing rule."],
     ["Which time|slot_id","fk","→ Time slots on this product."],
     ["Which places|pool_id","fk","→ Inventory pools. Which pool the heads come out of."],
     ["How many to hold back|blocked_quantity","int","Refused if it exceeds what is still available. A block reserves what is left; it cannot create an oversell on paper."],
@@ -2750,18 +2746,16 @@ products:[
  ["Runs between these dates|valid_from / valid_to","The dates this pattern runs between.","1 Jul to 31 Aug for a summer schedule.","Both required. Without an end date the pattern never expires and next summer's hours sit silently on top of this summer's."],
  ["Days it runs|days_of_week[]","Which days inside that window.","Tue–Sun, since Mondays are closed.","A day here that is also a blackout date does not run. Blackout wins."],
  ["Start and end time|start_time / end_time","The window itself.","10:00–15:00.","A slot ending 13:00 and one starting 13:00 do <b>not</b> overlap — they touch. That distinction decides whether their occupants are counted together."],
- ["Places held back every day|standing_hold","Heads withheld every day this slot runs.","50 on the five-hour slots, for changeover crowding.","Permanent until edited, unlike a quota block, which is dated and carries a reason."],
  ["Active|is_active","Whether the slot is sold.","Pausing the summer morning slot during a wet week.","Existing bookings in that slot stand. Only new sales stop."]]],
 
  ["Add-on attachment",[
  ["Which extra|addon_product_id","Which add-on is offered with this product.","Mini Golf on MuSo Tour.","The add-on must exist first."],
- ["Must it fit inside the main booking's time|slot_binding","Whether the add-on's slot must sit inside the parent's.","Bound: a 10:00–15:00 tour offers golf at 10:00 and 12:00, but not 15:00–16:30, which finishes after the visit ends.","Set per attachment. The same golf can be bound on the tour and free elsewhere — and free binding is what makes the visitor count against the building twice, in two windows."],
  ["Ticked by default|is_default","Pre-ticked in the booking flow.","Off for Mini Golf. You might turn it on for something free, like an audio guide.","A pre-ticked paid extra is a complaint waiting to happen, and in some markets a regulatory one."],
  ["Most that can be added|max_quantity","Cap per parent line.","2 per ticket, so a family with four tickets cannot book eight golf rounds.","Blank means the only cap is the add-on's own slot capacity — twelve people could take every golf place on one booking."],
  ["Position in the list|sort_order","Order shown to the visitor.","Mini Golf first, because it is the one most people want.","None mechanically, though a paid add-on placed first reads as a hard sell."]]],
 
  ["Quota block",[
- ["Dates affected|date_from / date_to","The dates held back.","14 August to 14 August for a single day.","Same date twice is a one-day block. Unlike reserved capacity, this is dated."],
+ ["Dates affected|date_from / date_to","The dates held back.","14 August to 14 August for a single day.","Same date twice is a one-day block — dated, not a standing rule."],
  ["Which time|slot_id","Which slot is reduced.","The five-hour morning.","A block is per slot, not per product. Blocking the morning leaves the afternoon untouched."],
  ["Which places|pool_id","Which pool the places come out of.","BUILDING, or MG for a golf block.","Required, because a slot can decrement more than one pool through the parent chain."],
  ["How many to hold back|blocked_quantity","How many places to withhold.","40.","Refused if it exceeds what is still available. Thirty left and someone blocks forty — rejected, not floored."],
@@ -3769,7 +3763,6 @@ function addonFormCard(a){
   return afCard("Attach an add-on to "+a.n,"Which add-ons a visitor is offered with this product",
     `<div class="form-body">
       ${afFld("Add-on",avail.length?afSel("af_an",avail.map(x=>x.n)):`<div class="chips"><span class="muted" style="font-size:11.5px;padding:2px 4px">All add-ons are already attached</span></div>`,"",true)}
-      ${afFld("Slot binding",afSel("af_abind",[{v:"within",t:"Must fall inside this product's slot"},{v:"free",t:"Free choice on the same day"}]),"How the add-on's time relates to the chosen ticket slot. Same day means any of the add-on's own slots on the booking's date.",true)}
     </div>${afFoot("","Attach add-on")}`);
 }
 function rateFormCard(a){
@@ -3868,14 +3861,13 @@ const SUB = {
       <div class="card-head card-head-tint"><span class="card-title">Time slots</span>
         <span class="card-note">${a.slots.length} slot${a.slots.length===1?"":"s"}</span></div>
       <div class="matrix-wrap"><table><thead><tr>
-        <th>Slot</th><th>From date</th><th>To date</th><th>Days</th><th>From time</th><th>To time</th><th>Reserved capacity</th><th></th></tr></thead>
+        <th>Slot</th><th>From date</th><th>To date</th><th>Days</th><th>From time</th><th>To time</th><th></th></tr></thead>
       <tbody>${a.slots.map((x,i)=>`<tr>
         <td><b style="font-weight:500">${x.n}</b></td>
         <td class="code">${rq(x.from)}</td><td class="code">${rq(x.to)}</td><td>${nq(x.days)}</td>
         <td class="code">${nq(x.t1)}</td><td class="code">${nq(x.t2)}</td>
-        <td class="code">${x.hold?`<b>${x.hold}</b>`:'<span class="muted">0</span>'}</td>
         <td style="text-align:right"><button class="btn" data-edit-slot="${i}">Edit</button></td></tr>`).join("")}
-        <tr><td colspan="8"><button class="rep-add" data-addopen="slot" style="border-radius:4px">+ Add slot</button></td></tr></tbody></table></div>
+        <tr><td colspan="7"><button class="rep-add" data-addopen="slot" style="border-radius:4px">+ Add slot</button></td></tr></tbody></table></div>
     </div>
     ${addOpen==="slot"?slotFormCard(a):""}
     <div class="note note-scope"><span class="note-mark">Settled</span><div>
@@ -3891,15 +3883,14 @@ const SUB = {
     <div class="card section-card">
       <div class="card-head card-head-tint"><span class="card-title">Add-ons</span>
         <span class="card-note">${a.addons.length} record${a.addons.length===1?"":"s"}</span></div>
-      <table><thead><tr><th>Add-on</th><th>Slot binding</th><th>Available separately</th></tr></thead>
+      <table><thead><tr><th>Add-on</th><th>Available separately</th></tr></thead>
       <tbody>${a.addons.length?a.addons.map(x=>{
         const rec=P.find(y=>y.n===x.n)||{};
         return `<tr>
         <td><b style="font-weight:500">${x.n}</b></td>
-        <td>${x.bind==="within"?'<span class="mode">Must fall inside '+a.n+"'s slot</span>":'<span class="pill pill-off">Free choice on the same day</span>'}</td>
         <td class="muted">${rec.standalone?"Yes":"No"}</td></tr>`}).join("")
-        :`<tr><td colspan="3" class="muted" style="text-align:center;padding:30px">No add-ons.</td></tr>`}
-        ${a.type==="Product"?`<tr><td colspan="3"><button class="rep-add" data-addopen="addon" style="border-radius:4px">+ Attach an add-on</button></td></tr>`:""}</tbody></table>
+        :`<tr><td colspan="2" class="muted" style="text-align:center;padding:30px">No add-ons.</td></tr>`}
+        ${a.type==="Product"?`<tr><td colspan="2"><button class="rep-add" data-addopen="addon" style="border-radius:4px">+ Attach an add-on</button></td></tr>`:""}</tbody></table>
     </div>
     ${addOpen==="addon"?addonFormCard(a):""}`;
   },
@@ -8115,7 +8106,7 @@ function addSubmit(){
     } else {
       a.slots.push({ n:g("slotName")||"New slot", from:g("slotFrom")||"—", to:g("slotTo")||"—",
         days:days.join(", ")||"—", t1:g("slotT1")||"—", t2:g("slotT2")||"—",
-        pool:g("slotPool"), cap:+g("slotCap")||0, sold:0, hold:0, is_active:slotLive, price:{} });
+        pool:g("slotPool"), cap:+g("slotCap")||0, sold:0, is_active:slotLive, price:{} });
     }
     editSlot=-1;
   } else if(addOpen==="batch"){
@@ -8127,7 +8118,7 @@ function addSubmit(){
   } else if(addOpen==="day"){
     const b=w.batches[selB]; if(b) b.days.push({ d:g("af_dd")||"New day", t1:g("af_dt1")||"—", t2:g("af_dt2")||"—", note:g("af_dnote") });
   } else if(addOpen==="addon"){
-    const nm=g("af_an"); if(nm && P.some(x=>x.n===nm) && !a.addons.some(y=>y.n===nm)) a.addons.push({ n:nm, bind:g("af_abind")||"within" });
+    const nm=g("af_an"); if(nm && P.some(x=>x.n===nm) && !a.addons.some(y=>y.n===nm)) a.addons.push({ n:nm });
   } else if(addOpen==="rate"){
     const code=g("af_rate"); if(code && TAXRATES.some(r=>r.code===code) && !a.tax.includes(code)) a.tax.push(code);
   } else if(addOpen==="block"){
