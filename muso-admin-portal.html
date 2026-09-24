@@ -6531,7 +6531,7 @@ function blankSchool(mode){
     school:"",location:"",boards:[],boardsOther:"",grade:"",poc:"",designation:"",email:"",phone:"",
     interested:[],interestedOther:"",prefDate:"",expChildren:"",expTeachers:"",note:"",
     visits:[], entryStudent:"", entryAdult:"",
-    billName:"",billAddress:"",gstin:"",pan:"",comments:"",
+    billName:"",billAddress:"",gstin:"",pan:"",comments:"",assignee:"",
     payments:[], proformaUpload:null, timeline:[], _mode:mode};
 }
 /* Venue availability time-table flyout — a venue is shared across Events and Experiences,
@@ -6691,6 +6691,7 @@ function schoolForm(editing){
   const statusOpts = SCHOOL_MANUAL_STATUSES.includes(d.status) ? SCHOOL_MANUAL_STATUSES : SCHOOL_MANUAL_STATUSES.concat([d.status]);
   const statusCtl = statusLocked ? schoolStatusPill(d) : sel("status",d.status,statusOpts);
   const secStatus=section("Status & comments",
+    fld("Assignee",t("assignee",d.assignee,"e.g. Faiz Khan"),"Optional — the MuSo staff member handling this booking.")+
     fld("Status",statusCtl, statusLocked?"":"Confirmed, Live and Ended are set automatically from payment and the visit date.")+
     fld("Comments",ta("comments",d.comments),"","",true));
 
@@ -6718,7 +6719,7 @@ function schoolForm(editing){
 function schoolCaptureForm(){
   const d=schoolDraft; if(!d) return;
   const g=k=>{const el=document.querySelector(`[data-sf="${k}"]`);return el?el.value:undefined;};
-  ["school","location","boardsOther","grade","poc","designation","email","phone","interestedOther","prefDate","note","entryStudent","entryAdult","billName","billAddress","gstin","pan","status","comments","expChildren","expTeachers"].forEach(k=>{const v=g(k);if(v!==undefined)d[k]=v;});
+  ["school","location","boardsOther","grade","poc","designation","email","phone","interestedOther","prefDate","note","entryStudent","entryAdult","billName","billAddress","gstin","pan","status","comments","assignee","expChildren","expTeachers"].forEach(k=>{const v=g(k);if(v!==undefined)d[k]=v;});
   const chipVals=key=>[...document.querySelectorAll(`[data-sfchips="${key}"] .chip-opt[data-on="1"]`)].map(c=>c.dataset.chipval);
   if(document.querySelector('[data-sfchips="boards"]')) d.boards=chipVals("boards");
   if(document.querySelector('[data-sfchips="interested"]')) d.interested=chipVals("interested");
@@ -6867,6 +6868,7 @@ function schoolDetail(){
       ${row("Point of contact",escHtml(rec.poc)+(rec.designation?` <span class="muted">· ${escHtml(rec.designation)}</span>`:""))}
       ${row("Email",rec.email?`<span class="code">${escHtml(rec.email)}</span>`:"")}${row("Phone",rec.phone?`<span class="code">${escHtml(rec.phone)}</span>`:"")}
       ${row("Preferred date",rec.prefDate)}${row("Expected",`${rec.expChildren||"—"} children · ${rec.expTeachers||"—"} staff`)}
+      ${rec.assignee?row("Assignee",escHtml(rec.assignee)):""}
       ${row("Note",escHtml(rec.note))}
     </tbody></table></div></div>
     <div class="card"><div class="card-head"><span class="card-title">Visits &amp; headcount</span><span class="card-note">each visit carries its own food &amp; optionals</span></div>
@@ -7000,7 +7002,7 @@ function blankSp(mode){
     visits:[], entryStudent:"", entryAdult:"",
     ngoGstin:"", ngoPan:"", authNumber:"", speciallyAbled:0, underprivileged:[],
     postVisit:{remark:"",images:[]}, students:{uploaded:false,total:0,girls:0,boys:0}, feedback:{sent:false},
-    comments:"", invoice:{raised:false,on:""}, timeline:[], _mode:mode};
+    comments:"",assignee:"", invoice:{raised:false,on:""}, timeline:[], _mode:mode};
 }
 function spForm(editing){
   if(!spDraft) spDraft = editing ? Object.assign(JSON.parse(JSON.stringify(spById(selSp)||blankSp("booking"))),{_mode:"booking"}) : blankSp(spNewMode);
@@ -7138,6 +7140,7 @@ function spForm(editing){
   const statusLocked=false;
   const statusOpts = SCHOOL_MANUAL_STATUSES.includes(d.status) ? SCHOOL_MANUAL_STATUSES : SCHOOL_MANUAL_STATUSES.concat([d.status]);
   const secStatus=section("Status & comments",
+    fld("Assignee",t("assignee",d.assignee,"e.g. Faiz Khan"),"Optional — the MuSo staff member handling this booking.")+
     fld("Status",sel("status",d.status,statusOpts),"Confirmed / Live / Ended follow the visit; set the rest here.")+
     fld("Comments",ta("comments",d.comments),"","",true));
 
@@ -7163,7 +7166,7 @@ function spForm(editing){
 function spCaptureForm(){
   const d=spDraft; if(!d) return;
   const g=k=>{const el=document.querySelector(`[data-spf="${k}"]`);return el?el.value:undefined;};
-  ["school","location","orgType","district","boardsOther","grade","prefDate","poc","designation","email","phone","interestedOther","note","sponsor","authNumber","ngoGstin","ngoPan","proofDoc","entryStudent","entryAdult","billName","billAddress","gstin","pan","speciallyAbled","status","comments","expChildren","expTeachers"].forEach(k=>{const v=g(k);if(v!==undefined)d[k]=v;});
+  ["school","location","orgType","district","boardsOther","grade","prefDate","poc","designation","email","phone","interestedOther","note","sponsor","authNumber","ngoGstin","ngoPan","proofDoc","entryStudent","entryAdult","billName","billAddress","gstin","pan","speciallyAbled","status","comments","assignee","expChildren","expTeachers"].forEach(k=>{const v=g(k);if(v!==undefined)d[k]=v;});
   const upEl=document.querySelector("[data-sp-uprows]");
   if(upEl) d.underprivileged=[...upEl.querySelectorAll("[data-sp-uprow]")].map(r=>({title:(r.querySelector('[data-spf-up="title"]')||{}).value||"",count:(r.querySelector('[data-spf-up="count"]')||{}).value||""})).filter(x=>x.title||x.count);
   const tn=g("transport_need"), tv=g("transport_vendor"); d.transport=d.transport||{}; if(tn!==undefined)d.transport.need=tn; if(tv!==undefined)d.transport.vendor=tv;
@@ -7284,7 +7287,7 @@ function spDetail(){
       ${row("Email",rec.email?`<span class="code">${escHtml(rec.email)}</span>`:"")}${row("Phone",rec.phone?`<span class="code">${escHtml(rec.phone)}</span>`:"")}
       ${row("Preferred date",rec.prefDate)}${row("Expected",`${rec.expChildren||"—"} children · ${rec.expTeachers||"—"} staff`)}
       ${row("Transport",rec.transport&&rec.transport.need==="Yes"?("Yes"+(rec.transport.vendor?" · "+escHtml(rec.transport.vendor):"")):((rec.transport&&rec.transport.need)||"—"))}
-      ${row("Proof of identity",escHtml(rec.proofDoc))}${row("Note",escHtml(rec.note))}
+      ${row("Proof of identity",escHtml(rec.proofDoc))}${rec.assignee?row("Assignee",escHtml(rec.assignee)):""}${row("Note",escHtml(rec.note))}
     </tbody></table></div></div>
     <div class="card"><div class="card-head"><span class="card-title">Sponsor &amp; funding</span></div><div class="matrix-wrap"><table class="reclist"><tbody>
       ${row("Sponsor",escHtml(rec.sponsor)||'<span class="muted">To be assigned</span>')}${row("Authorisation no.",escHtml(rec.authNumber))}
