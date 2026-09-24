@@ -939,7 +939,7 @@ const PREREQ = {
   shopitems:["Tax rates","HSN / SAC codes"], shopsales:["Shop products"], shopcoupons:[], shopreports:["Shop products"]
 };
 const SUBS = [
-  ["details","Details"],["slots","Time slots"],["addons","Add-ons"],
+  ["details","Details"],["slots","Time slots"],
   ["availability","Capacity blocks"],["rules","Validation rules"],["prices","Prices"]
 ];
 const EVENT_SUBS = [["details","Details"],["pricing","Pricing"]];
@@ -1049,12 +1049,12 @@ const LISTING_SCHEMA = [
  ["Meta description|seo_description","string","The two lines under that headline. Around 155 characters before it is cut off."],
  ["Meta keywords|seo_keywords","string","Comma-separated keywords for search, e.g. summer camp, kids workshop, Mumbai."],
  ["URL slug|url_handle","string","§2's handle. “kinetic-kids” gives muso.in/whats-on/kinetic-kids."],
- ["Status|status","enum","draft · active · paused · archived","§2 asks for Active and Draft. Paused keeps a live listing visible but unbookable; archived takes it off the site while keeping its history."]
+ ["Active|is_active","bool","Turn it off to take this off sale. Something currently in use (has bookings) can't be turned off."]
 ];
 
 /* Shared field definitions used on BOTH Products & add-ons and Programs. */
 const CUTOFF_NOTE = "First day/hour (from today/now) that is available for booking. Set 0 for today, 1 for tomorrow, etc.";
-const STATUS_FIELD = ["Status|status","enum","draft · active · paused · archived","Draft is not on the site yet; active is live and bookable; paused stays visible but not bookable; archived is off the site but keeps its history."];
+const ACTIVE_FIELD = ["Active|is_active","bool","Turn it off to take this off sale. Something currently in use (has bookings) can't be turned off."];
 const LISTING_FIELDS = [
  ["Where it runs (floor location)|location_text","string","The floor or location shown on the confirmation, e.g. Ground floor, Museum of Solutions."],
  ["Page title|seo_title","string","The headline a search engine shows on results. Falls back to the name when blank."],
@@ -1074,9 +1074,7 @@ const PROGRAM_SCHEMA = [
  ["Minimum age|min_age","string","Free text shown on the listing, e.g. “9 years and over”. Guidance for display only."],
  ["Visitor categories|visitor_categories[]","fk[]","→ Visitor categories. Which visitor categories this is sold to and priced for."],
  ["Booking cutoff|cutoff_days / cutoff_hours","int",CUTOFF_NOTE],
- ["Tax rates|tax_rate_ids[]","fk[]","→ Tax rates"],
  ["HSN / SAC code|hsn_sac_id","fk","→ HSN / SAC codes"],
- STATUS_FIELD,
  ["Active|is_active","bool","Turn it off to take this program off sale. A program that's currently in use (has bookings) can't be turned off."],
  ...LISTING_FIELDS
 ];
@@ -1090,7 +1088,6 @@ const CAMP_SCHEMA = [
  ["Minimum age|min_age","string","Free text shown on the listing, e.g. “9 years and over”. Guidance to the parent, for display only."],
  ["Where it runs|location_text","string","Printed on the confirmation. §2's example is Museum of Solutions, Lower Parel."],
  ["Bookings close this long before it starts|cutoff_days / cutoff_hours","int","Days then hours, counted back from the start of <b>each batch</b> rather than the workshop. §2 asks for two days, which is 2 and 0."],
- ["Tax rates that can apply|tax_rate_ids[]","fk[]","→ Tax rates"],
  ["Invoice code|hsn_sac_id","fk","→ HSN / SAC codes"],
  ["Subtitle|subtitle","string","§2's “Learnings” line — Creativity • Design Thinking • Problem Solving."],
  ...LISTING_SCHEMA
@@ -1120,7 +1117,6 @@ const EVENT_SCHEMA = [
  ["Start time|start_time","time","One start time. An event is a single day and a single session."],
  ["Visitor categories|visitor_categories[]","fk[]","→ Visitor categories. Unlike a workshop, an event is priced per category — an adult attending pays an adult price."],
  ["Booking cutoff|cutoff_days / cutoff_hours","int","Days then hours before the event begins. One date means one cut-off, with none of the per-batch complication a camp has."],
- ["Tax rates|tax_rate_ids[]","fk[]","→ Tax rates"],
  ["HSN / SAC code|hsn_sac_id","fk","→ HSN / SAC codes"],
  ...LISTING_SCHEMA
 ];
@@ -1134,7 +1130,6 @@ const FAQ_CAMPS = [["The workshop",[
  ["Where it runs|location_text","Printed on the confirmation and the reminder.","Museum of Solutions, Lower Parel.","Free text. If a batch runs somewhere else, that is a per-batch fact this field cannot express."],
  ["Default seats|capacity","The number a newly added batch starts with.","9, from §2.","This is only a starting value — <b>each batch owns its own number</b>. Changing it here does not touch batches already created, which is what the copy control on the Pricing tab is for."],
  ["Bookings close this long before it starts|cutoff_days / cutoff_hours","Days then hours before the batch begins.","2 and 0, so a Tuesday batch closes on the Sunday.","Measured from <b>each batch's</b> start, not the workshop's — August stays open long after July has closed. Two days is comfortable for a camp buying materials per child; set both to zero and someone books at midnight for a ten o'clock start."],
- ["Tax rates that can apply|tax_rate_ids[]","The rate rows that could apply.","All three components.","Place of supply picks which fire, exactly as for a ticket."],
  ["Invoice code|hsn_sac_id","The code this invoices under.","SAC 999692.","A workshop is a service like admission, so it shares the code. If MuSo ever charges separately for materials, that part would need its own."],
  ["Description|description","The listing copy, with formatting.","Five mornings of building things that move.","§2 gives this a formatted text area, separate from the one-line subtitle. Both appear on the page and they are not interchangeable."],
  ["Photos and video|media[]","Files shown on the listing.","Four images and a video for Kinetic Kids.","The first image is the What\u2019s On card. Upload them in the wrong order and the card shows the wrong picture, which nothing warns you about."],
@@ -1143,7 +1138,7 @@ const FAQ_CAMPS = [["The workshop",[
  ["Page title|seo_title","The headline a search engine shows.","Kinetic Kids summer camp at MuSo, Mumbai.","Falls back to the name when blank, which is usually too short to be useful in a search result."],
  ["Meta description|seo_description","The two lines under that headline.","A five-day making camp for children 9 and over\u2026","Around 155 characters before it is cut. Left blank, the search engine picks whatever the page starts with, which is often a navigation menu."],
  ["Web address|url_handle","The last part of the page address.","kinetic-kids gives muso.in/whats-on/kinetic-kids.","Changing it after the page has been shared breaks every existing link. Treat it as fixed once published."],
- ["Status|status","Where this sits between written and retired.","Draft while it is being built; Active once it is on sale.","<b>Draft is not the same as unavailable.</b> A draft has never been on the site; paused is a live page that has stopped taking bookings, which is what you want when a batch fills mid-season; archived takes it off the site but keeps its history."]]],
+ ["Active|is_active","Whether it is on sale.","Off while it is being built; on once it is on sale.","A workshop with bookings can't be turned off — cancel or move those bookings first."]]],
 
  ["Each batch",[
  ["Batch name|name","What a parent picks between.","“Batch 1”.","§2 shows parents choosing “Batch 1 (July 14th–18th)”, so the dates matter more than the name. A name alone is not enough to choose by."],
@@ -1168,7 +1163,6 @@ const FAQ_EVENTS = [["Events",[
  ["Seats|capacity","How many this event takes.","20.","Belongs to this event alone. §4 excludes events from the building's 400, so a full event does not close the museum and a full museum does not close the event."],
  ["Who it can be sold to|visitor_categories[]","Which categories can book.","Adult, Child 12–17, Child 3–11.","This is the difference from a workshop. An event is priced per category, so an accompanying adult pays an adult price; a workshop is one price a seat."],
  ["Bookings close this long before it starts|cutoff_days / cutoff_hours","Days then hours before the event begins.","1 and 0.","One date means one cut-off, with none of the per-batch complication a camp has."],
- ["Tax rates that can apply|tax_rate_ids[]","The rate rows that could apply.","All three components.","Place of supply picks which fire, the same as everywhere else."],
  ["Invoice code|hsn_sac_id","The code this invoices under.","SAC 999692.","Shared with admission and the activities, since all of it is a service."],
  ["Children may attend without an adult|unaccompanied_allowed","Whether a younger child can be booked with no adult on the same booking.","On for the robotics taster, a drop-off. Off for the storytelling afternoon, which an adult sits through.","It belongs to the activity, not the age band — two listings on the same band can differ. Setting it off while the band offers no adult ticket makes the listing unsellable, and the master refuses that pair."],
  ["Description|description","The listing copy, with formatting.","A two-hour introduction to building and programming a small robot.","§2 gives this a formatted text area, separate from the subtitle."],
@@ -1177,7 +1171,7 @@ const FAQ_EVENTS = [["Events",[
  ["Page title|seo_title","The headline a search engine shows.","Storytelling afternoons at MuSo.","Falls back to the name when blank, which is usually too short to be useful."],
  ["Meta description|seo_description","The two lines under that headline.","Not set on either event yet.","Left blank, the search engine picks whatever the page starts with \u2014 often a navigation menu."],
  ["Web address|url_handle","The last part of the page address.","robotics-taster.","Events repeat as separate records, so two runs of the same thing need two handles. Add the month."],
- ["Status|status","Where this sits between written and retired.","Robotics taster is a Draft; Storytelling is Active.","Pulling an event by pausing or archiving it does not tell anyone who has already booked. That message is someone\u2019s job, and the register is where they get the numbers."]]]];
+ ["Active|is_active","Whether it is on sale.","Robotics taster is off; Storytelling is on.","Turning an event off does not tell anyone who has already booked. That message is someone\u2019s job, and the register is where they get the numbers."]]]];
 
 
 
@@ -2291,10 +2285,10 @@ const P = [
      {subject:"Adult",requires:["Child 3–11","Child 12–17"],mode:"any",min:1,max:5}
    ],addon:[]},
    blocks:[
-     {from:"15 Aug 2026",to:"15 Aug 2026",slot:"Five-hour afternoon",pool:"BUILDING",qtys:{"Five-hour afternoon":20},reason:"School Booking",status:"Active"},
-     {from:"22 Aug 2026",to:"22 Aug 2026",slot:"Three-hour morning",pool:"BUILDING",qtys:{"Three-hour morning":12},reason:"Birthday Booking",status:"Active"},
-     {from:"05 Sep 2026",to:"06 Sep 2026",slot:"Full day",pool:"BUILDING",qtys:{"Full day":8},reason:"Private group",status:"Active"},
-     {from:"12 Sep 2026",to:"12 Sep 2026",slot:"Three-hour morning, Five-hour morning",pool:"BUILDING",qtys:{"Three-hour morning":10,"Five-hour morning":15},reason:"School Booking",status:"Active"}],
+     {from:"15 Aug 2026",to:"15 Aug 2026",slot:"Five-hour afternoon",qtys:{"Five-hour afternoon":20},reason:"School Booking",cal:true,status:"Active"},
+     {from:"22 Aug 2026",to:"22 Aug 2026",slot:"Three-hour morning",qtys:{"Three-hour morning":12},reason:"Birthday Booking",status:"Active"},
+     {from:"05 Sep 2026",to:"06 Sep 2026",slot:"Full day",qtys:{"Full day":8},reason:"Private group",status:"Active"},
+     {from:"12 Sep 2026",to:"12 Sep 2026",slot:"Three-hour morning, Five-hour morning",qtys:{"Three-hour morning":10,"Five-hour morning":15},reason:"School Booking",cal:true,status:"Active"}],
    tax:["CGST-9","SGST-9","IGST-18"], sac:"999692",
    det:{"Type":"Product — the thing an add-on attaches to",
         "Named in":"Scope §4 — “Muso tickets”",
@@ -2545,8 +2539,8 @@ const TAX_DRIVERS = [
 ];
 
 const OPTIONS = {
-  "Products & add-ons":P.map(p=>p.n+" · "+p.type),
-  "Add-ons":P.filter(p=>p.type==="Add-on").map(p=>p.n+(p.standalone?" · also sold alone":" · attached only")),
+  "Products & add-ons":P.map(p=>p.n),
+  "Add-ons":P.map(p=>p.n),
   "Visitor categories":CATS.map(c=>c.name),
   "Inventory pools":["BUILDING · Building capacity, 400"],
   "Discounts & offers":DISCOUNTS.map(d=>d.n),
@@ -2568,23 +2562,18 @@ const OPTIONS = {
 /* ---- create-form schemas ---- */
 const PROD_BASE = [
   ["Short code|code","string","Short code used on POS and in reports."],
-  ["Name|name","string","The name a visitor sees."],
-  ["Sold as|type","enum","product · add-on","A <b>product</b> is the thing an add-on attaches to. An <b>add-on</b> attaches to a product — and may also be sold on its own."]
-];
-const PROD_ADDON_ONLY = [
-  ["Available separately|sold_standalone","bool","§1.5: Mini Golf and Lost Code of Play may be “purchased independently”, so this is on for both. Off means the item only ever sells attached."],
+  ["Name|name","string","The name a visitor sees."]
 ];
 const PROD_PRODUCT_ONLY = [
-  ["Available add-ons|addons[]","fk[]","→ Add-ons. Which add-ons a visitor is offered when buying this. An add-on's slot must always sit inside the parent's chosen slot window."]
+  ["Available add-ons|addons[]","fk[]","→ Add-ons. Any other product can be offered as an add-on — there is no separate add-on type. A product can't be its own add-on. An add-on's slot must always sit inside the parent's chosen slot window."]
 ];
 const PROD_REST = [
   ["Visitor categories|visitor_categories[]","fk[]","→ Visitor categories. Which categories this is sold to. A category with no price row simply is not sold."],
   ["Booking cutoff|cutoff_days / cutoff_hours","int",CUTOFF_NOTE],
-  ["Tax rates|tax_rate_ids[]","fk[]","→ Tax rates. A product carries every rate that could apply to it — CGST and SGST for a local sale, IGST for one outside the state. Which of them actually charge is resolved per invoice from the place of supply, so nothing needs a second product."],
-  ["HSN / SAC code|hsn_sac_id","fk","→ HSN / SAC codes"],
-  STATUS_FIELD
+  ["HSN / SAC code|hsn_sac_id","fk","→ HSN / SAC codes. Tax rates come from the code, not the product."],
+  ACTIVE_FIELD
 ];
-const PROD_SCHEMA = PROD_BASE.concat(PROD_ADDON_ONLY, PROD_PRODUCT_ONLY, PROD_REST);
+const PROD_SCHEMA = PROD_BASE.concat(PROD_PRODUCT_ONLY, PROD_REST);
 
 const SCHEMAS = {
   products: PROD_SCHEMA,
@@ -2642,14 +2631,12 @@ const SCHEMAS = {
     ["Start and end time|start_time / end_time","time","A slot ending 13:00 and one starting 13:00 must not count as overlapping."],
     ["Active|is_active","bool",""]],
   addon:[
-    ["Which extra|addon_product_id","fk","→ Products & add-ons. What is offered alongside this product."],
-    ["Ticked by default|is_default","bool","Pre-ticked in the booking flow."],
-    ["Most that can be added|max_quantity","int","Per parent line. Blank for no limit."],
+    ["Which extra|addon_product_id","fk","→ Products & add-ons. What is offered alongside this product. Never the product itself."],
     ["Position in the list|sort_order","int",""]],
   block:[
     ["Dates affected|date_from / date_to","date","Same date twice for a single day. A block is for named dates, not a standing rule."],
     ["Which time|slot_id","fk","→ Time slots on this product."],
-    ["Which places|pool_id","fk","→ Inventory pools. Which pool the heads come out of."],
+    ["Show this on calendar|show_on_calendar","bool","When on, the block's dates are marked on the calendar so staff see the reduced capacity at a glance."],
     ["How many to hold back|blocked_quantity","int","Refused if it exceeds what is still available. A block reserves what is left; it cannot create an oversell on paper."],
     ["Why|reason","enum","maintenance · staff allocation · private group · school booking · birthday booking · safety · other","Required. A block means those places cannot be sold, so the reason is the record of why."],
     ["Extra notes|notes","string",""],
@@ -2657,12 +2644,7 @@ const SCHEMAS = {
   price:[
     ["Which time|slot_id","fk","→ Time slots on this product."],
     ["Which visitor type|category_id","fk","→ Visitor categories"],
-    ["Price before tax|price","money","Excludes GST, which resolves separately from the product's tax rules."],
-    ["Price applies between|effective_from / effective_to","date","Defaults to the slot's own window. Narrow it only if a price changes mid-season."]],
-  producttax:[
-    ["Tax rate|tax_rate_id","fk","→ Tax rates. One rate per product."],
-    ["Invoice code|hsn_sac_id","fk","→ HSN / SAC codes"],
-    ["In force between|effective_from / effective_to","date","A rate change closes this row and opens a new one. Both stay, so a November credit note resolves the rate that was charged in July."]],
+    ["Price before tax|price","money","Excludes GST, which resolves separately from the product's tax rules."]],
   discounts:[
     ["Discount code|name","string","The code a customer enters at checkout to get this discount."],
     ["What must be in the order|conditions[]","rows","product · category · operator · quantity","§1.6's “(2+2 ticket + LCOP) → 10% off total” is three conditions."],
@@ -2730,13 +2712,9 @@ products:[
  ["The product itself",[
  ["Short code|code","Short identifier on POS and in reports.","MUSO, MG, LCOP.","Immutable once sold against."],
  ["Name visitors see|name","What the visitor sees.","“MuSo Tour”.","Visitor-facing. Renaming it changes what a resent ticket email would say about a booking already taken."],
- ["Sold as|type","Whether this is the thing an add-on attaches to, or the thing that attaches.","MuSo Tour is a product. Mini Golf is an add-on.","Type does <b>not</b> decide whether it can be bought alone — <span class='code'>sold_standalone</span> does. An add-on can be both."],
- ["Can be bought on its own|sold_standalone","Whether it appears in the catalogue on its own.","On for Mini Golf, per §1.5.","An add-on with this off and no product offering it is unsellable — nothing anywhere will surface it."],
- ["Extras offered with this|addons[]","Which add-ons a visitor is offered alongside this.","MuSo Tour offers golf, LCOP and Vroom.","Only products carry this. An add-on's list of parents is derived from whoever chose it, and is read-only on its own screen."],
+ ["Extras offered with this|addons[]","Which add-ons a visitor is offered alongside this.","MuSo Tour offers golf, LCOP and Vroom.","Every product can carry this list — there is no separate add-on type. A product can't list itself; the picker leaves it out."],
  ["Who it can be sold to|visitor_categories[]","Which categories this is sold to.","The tour sells to all four.","Listing a category here does not create a price. A category with no price row for a slot is simply not sold in that slot."],
  ["Bookings close this long before it starts|cutoff_days / cutoff_hours","Two numbers, days then hours, counted back from the moment it begins.","0 and 12 on the tour, so a 10:00 slot stops selling at 22:00 the night before.","The same pair on products, events and camps, so one idea has one shape. It is an <b>offset</b>, not a clock time — “midnight the day before” cannot be expressed exactly, because midnight is 10 hours before a 10:00 slot and 14 before a 14:00 one."],
- ["How long places are held at checkout|checkout_hold_minutes","How long places leave circulation once someone reaches payment.","10.","Set it below the payment gateway's own session timeout and a slow payment finds its places already resold."],
- ["Tax rates that can apply|tax_rate_ids[]","The rate rows that could apply.","All three components.","Associating all three does not mean 36%. Place of supply picks which fire."],
  ["Invoice code|hsn_sac_id","The code this invoices under.","SAC 999692.","Merchandise would need an HSN instead. Nothing in retail does today, so every product here shares one SAC."],
  ["Takes places from|pool_id","The one pool a sale decrements.","BUILDING for the tour.","Capacity is not here. It lives on the pool, and the parent chain decides what else is reduced."],
  ["Active|is_active","Whether it is in the catalogue.","Taking Vroom off sale over winter.","Past bookings, prices and slots all survive. Reactivating restores it exactly as it was."]]],
@@ -2749,15 +2727,13 @@ products:[
  ["Active|is_active","Whether the slot is sold.","Pausing the summer morning slot during a wet week.","Existing bookings in that slot stand. Only new sales stop."]]],
 
  ["Add-on attachment",[
- ["Which extra|addon_product_id","Which add-on is offered with this product.","Mini Golf on MuSo Tour.","The add-on must exist first."],
- ["Ticked by default|is_default","Pre-ticked in the booking flow.","Off for Mini Golf. You might turn it on for something free, like an audio guide.","A pre-ticked paid extra is a complaint waiting to happen, and in some markets a regulatory one."],
- ["Most that can be added|max_quantity","Cap per parent line.","2 per ticket, so a family with four tickets cannot book eight golf rounds.","Blank means the only cap is the add-on's own slot capacity — twelve people could take every golf place on one booking."],
+ ["Which extra|addon_product_id","Which add-on is offered with this product.","Mini Golf on MuSo Tour.","The add-on must exist first, and can't be the product itself."],
  ["Position in the list|sort_order","Order shown to the visitor.","Mini Golf first, because it is the one most people want.","None mechanically, though a paid add-on placed first reads as a hard sell."]]],
 
  ["Quota block",[
  ["Dates affected|date_from / date_to","The dates held back.","14 August to 14 August for a single day.","Same date twice is a one-day block — dated, not a standing rule."],
  ["Which time|slot_id","Which slot is reduced.","The five-hour morning.","A block is per slot, not per product. Blocking the morning leaves the afternoon untouched."],
- ["Which places|pool_id","Which pool the places come out of.","BUILDING, or MG for a golf block.","Required, because a slot can decrement more than one pool through the parent chain."],
+ ["Show this on calendar|show_on_calendar","Whether the block is marked on the calendar.","On for a school group holding 40 places on 15 Aug.","Display only — the places are withheld either way. Off keeps small routine holds from cluttering the calendar."],
  ["How many to hold back|blocked_quantity","How many places to withhold.","40.","Refused if it exceeds what is still available. Thirty left and someone blocks forty — rejected, not floored."],
  ["Why|reason","Why, from a fixed list.","Private group.","Required. It is the record of why those places could not be sold."],
  ["Extra notes|notes","Anything the reason code does not cover.","“Sixth-floor lift out of service, reduced capacity agreed with ops.”","Free text, so it is not reportable. Writing the same note repeatedly means it should have been a reason code."],
@@ -2766,13 +2742,7 @@ products:[
  ["Prices",[
  ["Which time|slot_id","Which slot this price is for.","The five-hour morning.","Price is per slot. The same category costs different amounts in different slots."],
  ["Which visitor type|category_id","Which visitor category.","Adult.","Only categories the product sells to can be priced. The picker will not offer the rest."],
- ["Price before tax|price","The amount, excluding GST.","₹1,200.","No row means not sold. A baby at ₹1 is a row; a blank cell is a refusal, and the two look identical to the visitor but not in reports."],
- ["Price applies between|effective_from / effective_to","When this price applies.","Defaults to the slot's own window.","Narrow it only if a price changes mid-season, so a July booking still reprices at July's rate in November."]]],
-
- ["Product tax",[
- ["Tax rate|tax_rate_id","The rate row.","CGST-9.","All three components are associated on every product. Place of supply decides which fire, so this is not a choice between them."],
- ["Invoice code|hsn_sac_id","The code it invoices under.","SAC 999692.","In practice the same code across every product here, since it is all admission and activities."],
- ["In force between|effective_from / effective_to","The window.","From 1 Apr 2026.","A change closes this row and opens another. Both stay live so past invoices resolve correctly."]]]],
+ ["Price before tax|price","The amount, excluding GST.","₹1,200.","No row means not sold. A baby at ₹1 is a row; a blank cell is a refusal, and the two look identical to the visitor but not in reports."]]]],
 
 blackout:[["Blackout dates",[
  ["Date closed|date","The day affected.","15 August.","One row per date. A week-long closure is seven rows, which is deliberate — each carries its own reason."],
@@ -3578,7 +3548,7 @@ let qryQ = "";
 let qryExpanded = new Set();
 let deptEditing = "", deptDeleting = "";
 let careerFDept = "", careerFType = "", careerFStatus = "all";
-let current = "dashboard", selP = 0, tab = "list", sub = "details", pType = "product",
+let current = "dashboard", selP = 0, tab = "list", sub = "details",
     selW = 0, selB = 0, selE = 0, esub = "details", eventCats = new Set(), selBooking = 0, bookingProduct = 0, bookingSlot = "", bookingDiscountCode = "", csub = "details", copyFrom = 0, copyTo = new Set(), copyWhat = new Set(["price","seats"]), editD = -1,
     progKind = "event", progCat = "Event", prodBuildingPool = false,
     bookingProducts = new Map(), bookingAddons = new Map(), bookingPrograms = new Map(), bookingPay = "Cash", bookingTab = "products",
@@ -3758,13 +3728,6 @@ function dayFormCard(b){
       ${afFld("Active",`<button type="button" class="sw" data-on="1"><i></i><span>On</span></button>`,"Turn it off to drop this session. A day that's currently in use (has attendees) can't be turned off.")}
     </div>${afFoot("","Add day")}`);
 }
-function addonFormCard(a){
-  const avail=P.filter(x=>x.type==="Add-on" && !a.addons.some(y=>y.n===x.n));
-  return afCard("Attach an add-on to "+a.n,"Which add-ons a visitor is offered with this product",
-    `<div class="form-body">
-      ${afFld("Add-on",avail.length?afSel("af_an",avail.map(x=>x.n)):`<div class="chips"><span class="muted" style="font-size:11.5px;padding:2px 4px">All add-ons are already attached</span></div>`,"",true)}
-    </div>${afFoot("","Attach add-on")}`);
-}
 function rateFormCard(a){
   const avail=TAXRATES.filter(r=>!a.tax.includes(r.code));
   return afCard("Associate a tax rate with "+a.n,"The invoice fires whichever associated rates match the place of supply",
@@ -3780,7 +3743,7 @@ const blockQtys = bk => bk && bk.qtys ? bk.qtys : (bk && bk.slot && bk.qty!=null
 function seedBlockDraft(b){
   const q=blockQtys(b);
   return { from:b&&b.from&&b.from!=="—"?b.from:"", to:b&&b.to&&b.to!=="—"?b.to:"",
-    reason:b?b.reason:"Maintenance", slots:Object.keys(q), qtys:Object.assign({},q) };
+    reason:b?b.reason:"Maintenance", cal:!!(b&&b.cal), slots:Object.keys(q), qtys:Object.assign({},q) };
 }
 function captureBlockFlyout(){
   if(!blockDraft) return; const b=blockDraft;
@@ -3788,6 +3751,7 @@ function captureBlockFlyout(){
   const f=g("af_kfrom"); if(f!=null) b.from=f;
   const t=g("af_kto");   if(t!=null) b.to=t;
   const r=g("af_kreason");if(r!=null) b.reason=r;
+  const cal=document.getElementById("af_kcal"); if(cal) b.cal=cal.dataset.on==="1";
   b.qtys=b.qtys||{};
   (b.slots||[]).forEach((sn,i)=>{ const q=g("af_kqty_"+i); if(q!=null) b.qtys[sn]=q; });
 }
@@ -3820,6 +3784,7 @@ function blockFormCard(a){
       ${afFld("Time slots",blockSlotSelect(a),"Pick the slots to block — only the ones you choose appear below.",true)}
       ${rows}
       ${afFld("Reason",reasonSel,"",true)}
+      ${afFld("Show this on calendar",`<button type="button" class="sw" id="af_kcal" data-on="${d.cal?1:0}"><i></i><span>${d.cal?"On":"Off"}</span></button>`,"Marks the block's dates on the calendar. Display only — the places are withheld either way.")}
     </div>${afFoot("A block reserves places that exist; it cannot create an oversell.",editing?"Save block":"Add block")}`);
 }
 
@@ -3830,13 +3795,11 @@ const SUB = {
     const section=(title,rows)=>`<section class="form-sec"><div class="form-sec-head">
       <span class="form-sec-title">${title}</span></div><div class="summary-grid">${rows.join("")}</div></section>`;
     const [days,hours]=offsetValues(a.cutoff);
-    const settings=a.type==="Product"
-      ?[row("Available add-ons",a.addons.map(x=>x.n).join(", ")||"None"),row("Active","Yes")]
-      :[row("Available separately",a.standalone?"Yes":"No"),row("Active","Yes")];
+    const settings=[row("Available add-ons",a.addons.map(x=>x.n).join(", ")||"None"),row("Active",a.active===false?"No":"Yes")];
     return `<div style="display:grid;gap:14px">
       ${section("Basic information",[
-        row("Code",a.c),row("Name",a.n),row("Sold as",a.type)])}
-      ${section(a.type==="Product"?"Product settings":"Add-on settings",settings)}
+        row("Code",a.c),row("Name",a.n)])}
+      ${section("Product settings",settings)}
       ${section("Booking rules",[
         row("Visitor categories",a.cats.join(", ")),
         row("Booking cutoff",`${days} days · ${hours} hours`),
@@ -3878,38 +3841,21 @@ const SUB = {
     </div></div>`;
   },
 
-  addons(a){
-    return `
-    <div class="card section-card">
-      <div class="card-head card-head-tint"><span class="card-title">Add-ons</span>
-        <span class="card-note">${a.addons.length} record${a.addons.length===1?"":"s"}</span></div>
-      <table><thead><tr><th>Add-on</th><th>Available separately</th></tr></thead>
-      <tbody>${a.addons.length?a.addons.map(x=>{
-        const rec=P.find(y=>y.n===x.n)||{};
-        return `<tr>
-        <td><b style="font-weight:500">${x.n}</b></td>
-        <td class="muted">${rec.standalone?"Yes":"No"}</td></tr>`}).join("")
-        :`<tr><td colspan="2" class="muted" style="text-align:center;padding:30px">No add-ons.</td></tr>`}
-        ${a.type==="Product"?`<tr><td colspan="2"><button class="rep-add" data-addopen="addon" style="border-radius:4px">+ Attach an add-on</button></td></tr>`:""}</tbody></table>
-    </div>
-    ${addOpen==="addon"?addonFormCard(a):""}`;
-  },
-
   availability(a){
     return `<div class="note note-scope"><span class="note-mark">Two tools</span><div>
       <b>A quota block</b> withholds tickets from one slot on named dates — it stays open with fewer left. <b>A blackout</b> removes it entirely and is building-wide by default, because a public holiday shuts everything.
     </div></div>
     <div class="card section-card">
       <div class="card-head card-head-tint"><span class="card-title">Quota blocks</span>
-        <span class="card-note">Slots · pool · dates · per-slot quantity</span></div>
-      <table><thead><tr><th>Dates</th><th>Slot</th><th>Pool</th><th>Blocked</th><th>Reason</th><th>Status</th><th></th></tr></thead>
+        <span class="card-note">Slots · dates · per-slot quantity</span></div>
+      <table><thead><tr><th>Dates</th><th>Slot</th><th>Blocked</th><th>Reason</th><th>On calendar</th><th>Status</th><th></th></tr></thead>
       <tbody>${(a.blocks&&a.blocks.length)
         ? a.blocks.map((bk,i)=>{ const es=Object.entries(blockQtys(bk)); return `<tr>
             <td class="code">${bk.from}${bk.to&&bk.to!==bk.from?" – "+bk.to:""}</td>
             <td><b style="font-weight:500">${es.length?es.map(([sn])=>`<div>${escHtml(sn)}</div>`).join(""):escHtml(bk.slot||"—")}</b></td>
-            <td class="code muted">${bk.pool}</td>
             <td class="code">${es.length?es.map(([,n])=>`<div><b style="color:var(--warn)">&minus;${n}</b></div>`).join(""):'<span class="muted">—</span>'}</td>
             <td>${bk.reason||"—"}</td>
+            <td class="muted">${bk.cal?"Yes":"No"}</td>
             <td><span class="pill pill-ok"><i class="dot"></i>${bk.status||"Active"}</span></td>
             <td style="text-align:right"><button class="btn" data-edit-block="${i}">Edit</button></td></tr>`;}).join("")
              +`<tr><td colspan="7"><button class="rep-add" data-addopen="block" style="border-radius:4px">+ New block</button></td></tr>`
@@ -4382,12 +4328,11 @@ const VIEWS = {
     </tbody></table></div></div>`;
   },
   products(){
-    return `${toolbar("Search products & add-ons",P.length+" records")}
+    return `${toolbar("Search products",P.length+" records")}
     <div class="card"><div class="matrix-wrap"><table class="reclist"><thead><tr>
-      <th>Name</th><th>Type</th><th class="ctr">Slots</th><th>From price</th><th>Pool</th><th>Status</th><th>Actions</th></tr></thead>
+      <th>Name</th><th class="ctr">Slots</th><th>From price</th><th>Pool</th><th>Status</th><th>Actions</th></tr></thead>
     <tbody>${P.map((r,i)=>`<tr data-open="prod:${i}">
       <td><b style="font-weight:500">${r.n}</b><div class="code">${r.c}</div></td>
-      <td><span class="tag tag-${r.tag}">${r.type}</span></td>
       <td class="ctr code">${r.slots.length}</td>
       <td class="code">${money(Math.min(...r.slots.map(s=>s.price.Adult||Infinity)))}</td>
       <td class="code muted">${r.pool}</td>
@@ -4396,7 +4341,7 @@ const VIEWS = {
         <button class="btn" data-open="prod:${i}" aria-label="View ${r.n}">View</button>
         <button class="btn" data-editp="${i}" aria-label="Edit ${r.n}">Edit</button>
       </div></td></tr>`).join("")}
-      <tr><td colspan="7"><button class="rep-add" data-tab="new" style="border-radius:4px">+ New product or add-on</button></td></tr>
+      <tr><td colspan="6"><button class="rep-add" data-tab="new" style="border-radius:4px">+ New product</button></td></tr>
     </tbody></table></div></div>`;
   },
 
@@ -5186,33 +5131,31 @@ function productForm(editing=false){
   const cutoff=record&&record.cutoff.match(/(?:(\d+)\s*days?\s*)?(\d+)\s*hours?/i);
   const values=record?{
     code:record.c,name:record.n,"addons[]":record.addons.map(x=>x.n),
-    sold_standalone:record.standalone,"visitor_categories[]":record.cats,
+    "visitor_categories[]":record.cats,
     "cutoff_days / cutoff_hours":[cutoff&&cutoff[1]||"0",cutoff&&cutoff[2]||"0"],
-    checkout_hold_minutes:record.det&&record.det["Checkout hold"]?record.det["Checkout hold"].match(/\d+/)?.[0]||"10":"10",
-    "tax_rate_ids[]":record.tax.map(c=>RATE(c)?.name||c),hsn_sac_id:"SAC "+record.sac,pool_id:record.pool,is_active:true
+    hsn_sac_id:"SAC "+record.sac,pool_id:record.pool,is_active:true
   }:{};
-  const isProd = pType==="product";
   const section = (title,fields,note="") => `<section class="form-sec">
       <div class="form-sec-head"><span class="form-sec-title">${title}</span>${tip(note)}</div>
       <div class="form-sec-body">${fields.join("")}</div></section>`;
   // Active toggle replaces the Status dropdown, and sits at the end of Basic information.
   const activeField=field(["Active|is_active","bool","Turn it off to take this off sale. A product that's currently in use (has bookings or slots on sale) can't be turned off."],values);
-  const basic=PROD_BASE.map(f=>f[0].split("|")[1]==="type"?typeField():field(f,values)).concat(activeField);
-  const typeSettings=(isProd?PROD_PRODUCT_ONLY:PROD_ADDON_ONLY).map(f=>field(f,values));
+  const basic=PROD_BASE.map(f=>field(f,values)).concat(activeField);
+  // No product/add-on split: every product can offer others as add-ons, and any product can be one.
+  const addonSettings=PROD_PRODUCT_ONLY.map(f=>field(f,values));
   // Visitor-category ratio/pairing rules now live on the product's "Validation rules"
   // detail tab (persisted per product), so they are no longer duplicated on this form.
   const booking=[field(PROD_REST[0],values), field(PROD_REST[1],values)];
   // Tax rates are attached to the HSN / SAC code, not to the product — so the product
   // only names its invoice code and inherits the rates from it.
-  const finance=[field(PROD_REST[3],values)];
+  const finance=[field(PROD_REST[2],values)];
   const listing=LISTING_FIELDS.map(f=>field(f,values));
   return `<div class="product-create">
     <div class="card">
-      <div class="card-head"><span class="card-title">${editing?"Edit "+record.n:"New product or add-on"}</span></div>
+      <div class="card-head"><span class="card-title">${editing?"Edit "+record.n:"New product"}</span></div>
       <div class="form-body product-form">
         ${section("Basic information",basic)}
-        ${section(isProd?"Product settings":"Add-on settings",typeSettings,
-          isProd?"Choose which add-ons this product offers.":"Choose whether this add-on can also be bought on its own.")}
+        ${section("Product settings",addonSettings,"Choose which other products are offered as add-ons with this one.")}
         ${section("Booking rules",booking)}
         ${section("Tax / invoice code",finance)}
         ${section("Listing content",listing)}
@@ -5221,32 +5164,24 @@ function productForm(editing=false){
     </div>
   </div>`;
 }
-function typeField(){
-  return `<div class="fld wide">
-    <div class="lab"><span class="lab-n">Sold as</span>${tip("A product is the thing an add-on attaches to, and it chooses which add-ons it offers. An add-on attaches to products — and can still be sold on its own if the toggle below says so.")}<span class="lab-req">Required</span></div>
-    <div class="selwrap"><select class="inp" id="pType">
-      <option value="product"${pType==="product"?" selected":""}>Product</option>
-      <option value="add-on"${pType==="add-on"?" selected":""}>Add-on</option></select></div>
-  </div>`;
-}
 function createForm(schema,label,footNote,values={},editing=false){
   let headings=["Basic information","Schedule & booking","Capacity & pricing","Tax & classification","Listing content","Search & publishing","Availability"];
   let groups=[];
   if(label==="event"){
     headings=["Basic information","Schedule","Capacity & booking","Tax & classification","Listing content","Search & publishing","Availability"];
-    groups=[schema.slice(0,4),schema.slice(4,6),schema.slice(6,9),schema.slice(9,11),schema.slice(11,14),schema.slice(14,17),schema.slice(17,19)];
+    groups=[schema.slice(0,4),schema.slice(4,6),schema.slice(6,8),schema.slice(8,9),schema.slice(9,12),schema.slice(12,16),schema.slice(16,17)];
   } else if(label==="program"||label==="camp or workshop"){
     // group by field name so sections are stable regardless of schema order
     const byName=names=>names.map(n=>schema.find(f=>(f[0].split("|")[1]||f[0])===n)).filter(Boolean);
     const secs = label==="program" ? [
       ["Basic information",["code","title","category_id","min_age","is_active"]],
       ["Booking rules",["visitor_categories[]","cutoff_days / cutoff_hours"]],
-      ["Tax",["tax_rate_ids[]","hsn_sac_id"]],
+      ["Tax",["hsn_sac_id"]],
       ["Listing content",["location_text","seo_title","subtitle","description","media[]","seo_description","seo_keywords","url_handle","unaccompanied_allowed"]]
     ] : [
-      ["Basic information",["code","title","category_id","min_age","status"]],
+      ["Basic information",["code","title","category_id","min_age","is_active"]],
       ["Schedule & capacity",["location_text","capacity","cutoff_days / cutoff_hours"]],
-      ["Tax",["tax_rate_ids[]","hsn_sac_id"]],
+      ["Tax",["hsn_sac_id"]],
       ["Listing content",["subtitle","description","media[]","unaccompanied_allowed","seo_title","seo_description","seo_keywords","url_handle"]]
     ];
     headings=secs.map(s=>s[0]);
@@ -5720,7 +5655,7 @@ const LABEL_HINT = (()=>{
     const p=String(f[0]).split("|"), lab=p[0], name=p[1]||p[0];
     const note=f.length>3?f[3]:(String(f[2]||"").includes(" · ")?"":(f[2]||""));
     const k=norm(lab); if(!m[k]) m[k]={name,note}; });
-  [PROD_BASE,PROD_ADDON_ONLY,PROD_PRODUCT_ONLY,PROD_REST,LISTING_FIELDS,PROGRAM_SCHEMA,EVENT_SCHEMA,CAMP_SCHEMA].forEach(add);
+  [PROD_BASE,PROD_PRODUCT_ONLY,PROD_REST,LISTING_FIELDS,PROGRAM_SCHEMA,EVENT_SCHEMA,CAMP_SCHEMA].forEach(add);
   Object.values(typeof SCHEMAS!=="undefined"?SCHEMAS:{}).forEach(add);
   const alias={code:"shortcode",active:"status",where:"whereitruns",ages:"minimumage",
     bookingsclose:"bookingcutoff",photosandvideo:"media",webaddress:"urlslug",
@@ -5856,7 +5791,9 @@ function field(f,values={}){
   else if(type==="enum"){ ctl=`<div class="selwrap"><select class="inp"><option>Select&#8230;</option>${opts.map(o=>`<option${String(val||"").toLowerCase()===o.toLowerCase()?" selected":""}>${o}</option>`).join("")}</select></div>`; }
   else if(type==="fk[]"||type==="fk"){
     const t=(note.match(/\u2192\s*([^.]+)/)||[,"master"])[1].trim();
-    const list=OPTIONS[t];
+    let list=OPTIONS[t];
+    // a product can't be its own add-on — drop the product being edited from its own picker
+    if(t==="Add-ons"&&current==="products"&&tab==="edit"&&P[selP]) list=list.filter(n=>n!==P[selP].n);
     if(type==="fk"){
       ctl=`<div class="selwrap"><select class="inp">${
         !list?`<option>Select&#8230;</option>`
@@ -5936,7 +5873,7 @@ function scrub(h){
 function productDetail(){
   const a=P[selP];
   const tabs=`<div class="subs">${SUBS.map(([k,l])=>`<button class="sub-tab" data-sub="${k}" aria-selected="${sub===k}">${l}</button>`).join("")}</div>`;
-  return `<div class="detailhead"><span class="tag tag-${a.tag}">${a.type}</span><h2 class="detailname">${a.n}</h2><span class="code">${a.c}</span></div>${tabs}<div class="sub-body">${(SUB[sub]||SUB.details)(a)}</div>`;
+  return `<div class="detailhead"><h2 class="detailname">${a.n}</h2><span class="code">${a.c}</span></div>${tabs}<div class="sub-body">${(SUB[sub]||SUB.details)(a)}</div>`;
 }
 /* Which program record is in focus — events and camps share the same shape. */
 function curProgram(){
@@ -6169,7 +6106,7 @@ const offsetValues=s=>{const m=String(s||"").match(/(?:(\d+)\s*days?\s*)?(\d+)\s
 function eventEditValues(e){ return {
   code:e.c,title:e.n,category_id:e.cat,min_age:e.ages,date:e.date,start_time:e.t1,
   capacity:e.cap,"visitor_categories[]":Object.keys(e.price),
-  "cutoff_days / cutoff_hours":offsetValues(e.cutoff),"tax_rate_ids[]":TAXRATES.map(x=>x.name),
+  "cutoff_days / cutoff_hours":offsetValues(e.cutoff),
   hsn_sac_id:e.tax.code,unaccompanied_allowed:e.listing.unacc,description:e.listing.desc,media:e.listing.media,
   seo_title:e.listing.seoT,seo_description:e.listing.seoD,seo_keywords:e.listing.seoK,
   url_handle:e.listing.slug,status:e.listing.status
@@ -6177,7 +6114,7 @@ function eventEditValues(e){ return {
 function campEditValues(w){ return {
   code:w.c,title:w.n,category_id:w.cat,subtitle:w.sub,
   min_age:w.ages,location_text:w.loc,capacity:w.cap,
-  "cutoff_days / cutoff_hours":offsetValues(w.cutoff),"tax_rate_ids[]":TAXRATES.map(x=>x.name),
+  "cutoff_days / cutoff_hours":offsetValues(w.cutoff),
   hsn_sac_id:w.tax.code,unaccompanied_allowed:w.listing.unacc,description:w.listing.desc,media:w.listing.media,
   seo_title:w.listing.seoT,seo_description:w.listing.seoD,seo_keywords:w.listing.seoK,
   url_handle:w.listing.slug,status:w.listing.status
@@ -6198,7 +6135,6 @@ const PROG_COMMON = [
   ["Minimum age|min_age","string","Free text shown on the listing, e.g. “9 years and over”. Guidance for display only."],
   ["Where it runs|location_text","string","Printed on the confirmation."],
   ["Bookings close before it starts|cutoff_days / cutoff_hours","int","Days then hours, counted back from the start."],
-  ["Tax rates that can apply|tax_rate_ids[]","fk[]","→ Tax rates"],
   ["Invoice code|hsn_sac_id","fk","→ HSN / SAC codes"]
 ];
 const PROG_SINGLE = [
@@ -8117,21 +8053,19 @@ function addSubmit(){
     selB=w.batches.length-1;
   } else if(addOpen==="day"){
     const b=w.batches[selB]; if(b) b.days.push({ d:g("af_dd")||"New day", t1:g("af_dt1")||"—", t2:g("af_dt2")||"—", note:g("af_dnote") });
-  } else if(addOpen==="addon"){
-    const nm=g("af_an"); if(nm && P.some(x=>x.n===nm) && !a.addons.some(y=>y.n===nm)) a.addons.push({ n:nm });
   } else if(addOpen==="rate"){
     const code=g("af_rate"); if(code && TAXRATES.some(r=>r.code===code) && !a.tax.includes(code)) a.tax.push(code);
   } else if(addOpen==="block"){
     captureBlockFlyout();
-    const d=blockDraft||{from:"",to:"",reason:"",slots:[],qtys:{}};
+    const d=blockDraft||{from:"",to:"",reason:"",cal:false,slots:[],qtys:{}};
     const qtys={}; (d.slots||[]).forEach(sn=>{ const v=+d.qtys[sn]||0; if(v>0) qtys[sn]=v; });
     const slotStr=Object.keys(qtys).join(", ")||"—";
     a.blocks=a.blocks||[];
     if(editBlock>=0 && a.blocks[editBlock]){   // update the existing block, keeping its status
       const b=a.blocks[editBlock];
-      b.from=d.from||"—"; b.to=d.to||"—"; b.slot=slotStr; b.qtys=qtys; delete b.qty; b.reason=d.reason;
+      b.from=d.from||"—"; b.to=d.to||"—"; b.slot=slotStr; b.qtys=qtys; delete b.qty; b.reason=d.reason; b.cal=!!d.cal;
     } else {
-      a.blocks.push({ from:d.from||"—", to:d.to||"—", slot:slotStr, pool:a.pool, qtys, reason:d.reason, status:"Active" });
+      a.blocks.push({ from:d.from||"—", to:d.to||"—", slot:slotStr, qtys, reason:d.reason, cal:!!d.cal, status:"Active" });
     }
     editBlock=-1; blockDraft=null; blockMselOpen=false;
   }
@@ -8414,7 +8348,7 @@ document.addEventListener("click",e=>{
     return; }
   if(e.target.closest("[data-apply-book-discount]")){ bookingDiscountCode=(document.getElementById("bookingDiscountCode")?.value||"").trim(); bookingDiscountTried=!!bookingDiscountCode; render(); return; }
   const editp=e.target.closest("[data-editp]");
-  if(editp){ selP=+editp.dataset.editp; pType=P[selP].type==="Product"?"product":"add-on";
+  if(editp){ selP=+editp.dataset.editp;
     prodBuildingPool=P[selP].pool==="BUILDING";
     tab="edit"; addOpen=null; render(); $(".stage").scrollTop=0; return; }
   const edite=e.target.closest("[data-edite]");
@@ -8837,7 +8771,6 @@ document.addEventListener("change",e=>{
     render(); return; }
   const catsel=e.target.closest&&e.target.closest("[data-catselect]");
   if(catsel){ if(condDraft){ captureCondFlyout(); const v=e.target.value; condDraft.prods=v?[v]:[]; } render(); return; }
-  if(e.target.id==="pType"){ pType=e.target.value; render(); }
   if(e.target.id==="progCat"){ progCat=e.target.value; progKind=progFormat(progCat)==="multi"?"camp":"event"; render(); }
   if(e.target.id==="copyFrom"){ copyFrom=+e.target.value; copyTo=new Set(); render(); }
   if(e.target.id==="bookingProductSelect"){ bookingProduct=+e.target.value; bookingSlot=P[bookingProduct].slots[0].n; render(); }
