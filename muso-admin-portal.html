@@ -2436,37 +2436,38 @@ const DISC_PM  = ["any of","all of"];
 const DISC_KINDS = ["Items in the basket","Customer holds a membership","A code is entered",
                     "The booking date","Arrived via an affiliate link","Applied by staff"];
 
+let newVoucherPending = false;   // set by "+ New voucher"; discountForm starts the draft as a voucher
 const DISCOUNTS = [
-  {n:"Add-on bundling — combined total",combinable:true,vt:"Percentage",prods:[],dates:["01 Apr 2026","31 Mar 2027"],maxr:"",codes:null,
-   no:[],prec:10,status:"Approved",maker:"Hasmukh",checker:"Suryanarayan",apply:"auto",
+  {n:"Add-on bundling — combined total",vt:"Percentage",prods:[],dates:["01 Apr 2026","31 Mar 2027"],maxr:"",codes:null,
+   prec:10,status:"Approved",maker:"Hasmukh",checker:"Suryanarayan",apply:"auto",
    cond:[{k:"Items in the basket",prods:["MuSo Tour"],pm:"any of",cats:[],op:"at least",qty:"1"},
          {k:"Items in the basket",prods:["Mini Golf","Lost Code of Play","Vroom"],pm:"any of",cats:[],op:"at least",qty:"1"}],
    target:"Whole cart",value:"Percentage",v:"10%",
    src:"§1.6: “10% off the combined ticket + add-on total”"},
 
-  {n:"Add-on bundling — add-ons only",combinable:true,vt:"Percentage",prods:["Mini Golf","Lost Code of Play","Vroom"],
+  {n:"Add-on bundling — add-ons only",vt:"Percentage",prods:["Mini Golf","Lost Code of Play","Vroom"],
    dates:["01 Apr 2026","31 Mar 2027"],maxr:"",codes:null,
-   no:["Add-on bundling — combined total"],prec:20,status:"Approved",maker:"Hasmukh",checker:"Suryanarayan",apply:"auto",
+   prec:20,status:"Approved",maker:"Hasmukh",checker:"Suryanarayan",apply:"auto",
    cond:[{k:"Items in the basket",prods:["MuSo Tour"],pm:"any of",cats:[],op:"at least",qty:"1"},
          {k:"Items in the basket",prods:["Mini Golf","Lost Code of Play","Vroom"],pm:"any of",cats:[],op:"at least",qty:"1"}],
    target:"The add-on lines only",value:"Percentage",v:"10%",
    src:"§1.6: “10% off on add-ons when bundled with a ticket”"},
 
-  {n:"Membership",combinable:true,vt:"Percentage",prods:[],dates:["01 Apr 2026",""],maxr:"",codes:null,
-   no:[],prec:30,status:"Approved",maker:"Sushmita",checker:"Suryanarayan",apply:"auto",
+  {n:"Membership",vt:"Percentage",prods:[],dates:["01 Apr 2026",""],maxr:"",codes:null,
+   prec:30,status:"Approved",maker:"Sushmita",checker:"Suryanarayan",apply:"auto",
    cond:[{k:"Customer holds a membership"}],
    target:"Whole cart",value:"Percentage",v:"10%",
    src:"§1.10: automatic discounts triggered by membership",open:true},
 
   {n:"Quantity break — buy 3 of the same",vt:"Percentage",prods:[],dates:["01 Jun 2026","30 Sep 2026"],maxr:"",codes:null,
    tiers:[["2","10"],["4","20"]],
-   no:["Membership"],prec:40,status:"Approved",maker:"Hasmukh",checker:"Suryanarayan",apply:"auto",
+   prec:40,status:"Approved",maker:"Hasmukh",checker:"Suryanarayan",apply:"auto",
    cond:[{k:"Items in the basket",prods:[],pm:"any of",cats:[],op:"at least",qty:"2"}],
    target:"The matching lines",value:"Percentage",v:"10% then 20%",
    src:"§1.10: “Buy 3 of the same → Get 20% off”, extended to two tiers"},
 
   {n:"Prebook — 15 August visit",vt:"Percentage",prods:["MuSo Tour"],dates:["01 Aug 2026","10 Aug 2026"],visit:["15 Aug 2026","15 Aug 2026"],maxr:"",codes:{oncePerUser:true,gen:"1"},
-   no:["Membership","Quantity break — buy 3 of the same"],prec:50,status:"Pending approval",maker:"Hasmukh",checker:"—",apply:"auto",
+   prec:50,status:"Pending approval",maker:"Hasmukh",checker:"—",apply:"auto",
    cond:[{k:"Items in the basket",prods:["MuSo Tour"],pm:"any of",cats:[],op:"at least",qty:"1"}],
    target:"That product's lines",value:"Percentage",v:"10%",
    src:"prebooking: book 1–10 Aug for a 15 Aug visit"},
@@ -2475,28 +2476,40 @@ const DISCOUNTS = [
    dates:["01 Jul 2026","31 Aug 2026"],visit:["",""],maxr:"",
    codes:{oncePerUser:true,gen:"1"},
    utm:{source:"instagram",medium:"influencer",campaign:"mumbaikids-aug",term:"",content:""},
-   no:[],prec:60,status:"Approved",maker:"Hasmukh",checker:"Suryanarayan",
+   prec:60,status:"Approved",maker:"Hasmukh",checker:"Suryanarayan",
    cond:[],
    target:"The chosen items",value:"Flat amount",v:"150",
    src:"affiliate discount delivered via a shareable UTM link — ₹150 off any booking"},
 
   {n:"Limited quantity — first 50 tickets",vt:"Percentage",prods:[],dates:["15 Aug 2026","15 Aug 2026"],maxr:"50",
    codes:{oncePerUser:true,gen:"1"},
-   no:["Affiliate link"],prec:70,status:"Approved",maker:"Hasmukh",checker:"Suryanarayan",apply:"code",
+   prec:70,status:"Approved",maker:"Hasmukh",checker:"Suryanarayan",apply:"code",
    cond:[{k:"A code is entered",code:"IND50"}],
    target:"Whole cart",value:"Percentage",v:"10%",
    src:"§1.10: originally scoped at 20% off — reduced to 10% per current pricing"},
 
-  {n:"Members — 10% off programs",combinable:true,vt:"Percentage",auto:true,staffOnly:false,memberOnly:true,
+  {n:"Members — 10% off programs",vt:"Percentage",auto:true,staffOnly:false,memberOnly:true,
    dates:["01 Apr 2026","31 Mar 2027"],visit:["",""],maxr:"",
-   codes:{oncePerUser:true,gen:"1"},no:[],prec:90,status:"Approved",maker:"Sushmita",checker:"Suryanarayan",
+   codes:{oncePerUser:true,gen:"1"},prec:90,status:"Approved",maker:"Sushmita",checker:"Suryanarayan",
    cond:[{k:"Items in the basket",prods:["Program"],pm:"any of",cats:[],op:"at least",qty:"1",qtys:{Program:"1"},slots:{}}],
    target:"The chosen items",value:"Percentage",v:"10%",
    src:"category discount: 10% off any program (workshop, camp or event) for members, applied automatically"},
 
-  {n:"",combinable:true,codeType:"series",series:{prefix:"JSW",from:"1",to:"100"},vt:"Flat amount",auto:false,staffOnly:true,memberOnly:false,
+  {n:"",kind:"voucher",codeType:"series",series:{prefix:"FREETOUR",from:"1",to:"50"},auto:false,staffOnly:false,memberOnly:false,
+   covers:["MuSo Tour"],caps:{"Adult":"2","Child 3–11":"2"},
+   dates:["01 Sep 2026","31 Mar 2027"],visit:["",""],maxr:"50",
+   codes:{oncePerUser:true,gen:"1"},prec:80,status:"Approved",maker:"Hasmukh",checker:"Suryanarayan",cond:[],value:"Voucher",v:"",
+   src:"voucher: a free MuSo Tour visit for up to 2 adults and 2 children — 50 single-use codes"},
+
+  {n:"PRESSDAY",kind:"voucher",auto:false,staffOnly:true,memberOnly:false,
+   covers:["MuSo Tour","Mini Golf"],caps:{},
+   dates:["01 Oct 2026","31 Oct 2026"],visit:["",""],maxr:"",
+   codes:{oncePerUser:true,gen:"1"},prec:85,status:"Approved",maker:"Sushmita",checker:"Suryanarayan",cond:[],value:"Voucher",v:"",
+   src:"voucher: press day — MuSo Tour and Mini Golf free, no limit on tickets"},
+
+  {n:"",codeType:"series",series:{prefix:"JSW",from:"1",to:"100"},vt:"Flat amount",auto:false,staffOnly:true,memberOnly:false,
    dates:["01 Sep 2026","31 Dec 2026"],visit:["",""],maxr:"100",
-   codes:{oncePerUser:true,gen:"1"},no:[],prec:60,status:"Approved",maker:"Hasmukh",checker:"Suryanarayan",
+   codes:{oncePerUser:true,gen:"1"},prec:60,status:"Approved",maker:"Hasmukh",checker:"Suryanarayan",
    cond:[],
    value:"Flat amount",v:"₹500",
    utm:{source:"",medium:"",campaign:"",term:"",content:""},
@@ -2656,9 +2669,7 @@ const SCHEMAS = {
     ["Discount type|value_type","enum","Percentage · Flat amount","Percentage takes a % off; flat amount takes a fixed ₹ off."],
     ["How much|value","decimal","A single figure, where the discount does not vary by quantity."],
     ["Quantity tiers|tiers","rows","at least this many · discount","Use instead of a single figure where the discount grows with quantity — two units at 10%, four at 20%. The highest tier the order reaches is the one that applies, and only that one: four units get 20%, not 10% and then 20% on top."],
-    ["Cannot be combined with|cannot_combine_with[]","fk[]","→ Discounts & offers. Tick the ones this cannot be used alongside. <b>The reverse is written for you</b> — mark a new offer as not combinable with two existing ones and those two show it back, so adding a discount is one edit rather than one on every other row."],
-    ["Cannot be combined with|cannot_combine_with[]","The other discounts this cannot be used alongside. Everything not listed stacks, and stacking is allowed — §1.10\u2019s no-clubbing rule is superseded.","Mark a new summer offer as not combinable with membership and the quantity break, and both of those show it back without anyone editing them.","Where a set of offers are all meant to be mutually exclusive, every pair between them must be marked — four such offers is six pairs. Miss one and two offers quietly combine. The <i>stacks with</i> count on the resolution table is where that shows up."],
- ["Order it is checked in|precedence","int","Lower is checked first. Automatic discounts are evaluated in this order and <b>the first match wins — nothing below it is looked at</b>. So a rule covering all add-ons placed above the Mini Golf rule means the golf one never fires."],
+ ["Order it is checked in|precedence","int","Lower is checked first. <b>Only one discount applies per booking</b>: the one that saves the customer most. When two save the same, the lower number wins."],
     ["Offer runs between|valid_from / valid_to","date",""],
     ["Visit date|visit_from / visit_to","date","The date range the booked tickets must be for. Leave blank to apply to any visit date."],
     ["Total times it can be used across users|max_redemptions","int","How many times this discount can be redeemed in total, counting every customer together. Leave blank for no limit."],
@@ -2759,10 +2770,9 @@ discounts:[["Discounts & offers",[
  ["What the discount comes off|effect_target","Which lines the discount lands on.","Add-on lines only, versus the whole cart — §1.6 needs both.","The two differ in money. 10% of the add-ons is not 10% of the total, and precedence decides which the visitor gets."],
  ["Which items|effect_products[]","Named products, when the target is not the whole cart.","Mini Golf alone.","Add-ons appear in this list too, which is how a discount is written for an activity bought on its own."],
  ["Discount type|value_type","Either a percentage off or a flat amount off.","Percentage takes a % off; flat amount takes a fixed ₹ off.","A flat amount larger than the line takes it to zero, never below."],
- ["Quantity tiers|tiers","A table of minimum quantity against discount, for offers that grow with volume.","Two workshop places at 10%, four at 20%. A parent booking four gets 20% — not 10% compounded with 20%.","Without tiers this needs two separate discounts marked as not combinable with each other, which works but is three records to maintain instead of one, and six for three tiers."],
+ ["Quantity tiers|tiers","A table of minimum quantity against discount, for offers that grow with volume.","Two workshop places at 10%, four at 20%. A parent booking four gets 20% — not 10% compounded with 20%.","Without tiers this needs two separate discounts, and only one discount applies per booking, so the better one wins — two records to maintain instead of one."],
  ["How much|value","The number, where the discount does not vary by quantity.","10, or 3000.","Percentages compound against the running total, so 10% after another 10% saves less than the second 10% suggests. A flat amount larger than the line takes it to zero and no further — the floor is zero, never a negative."],
- ["Cannot be combined with|cannot_combine_with[]","The other discounts this cannot be used alongside. Everything not listed stacks, and stacking is allowed — §1.10\u2019s no-clubbing rule is superseded.","Mark a new summer offer as not combinable with membership and the quantity break, and both of those show it back without anyone editing them.","Where a set of offers are all meant to be mutually exclusive, every pair between them must be marked — four such offers is six pairs. Miss one and two offers quietly combine. The <i>stacks with</i> count on the resolution table is where that shows up."],
- ["Order it is checked in|precedence","The order automatic discounts are checked in.","Combined-total at 10 is checked before add-ons-only at 20.","<b>First match wins and the run stops.</b> Nothing below is looked at, so a rule covering all add-ons placed above a Mini Golf rule means the golf one never fires."],
+ ["Order it is checked in|precedence","The order automatic discounts are checked in.","Combined-total at 10 is checked before add-ons-only at 20.","Only one discount applies per booking — the biggest saving. This order breaks a tie between two that save the same."],
  ["Offer runs between|valid_from / valid_to","When the booking must be <i>made</i> — the purchase window.","1–10 August, for a prebooking offer.","This is about when the booking is placed, not when the visit happens. Pair it with Visit date to say “book now, visit later”."],
  ["Visit date|visit_from / visit_to","The date range the booked tickets must be <i>for</i> — when the visit happens.","15 August, while Offer runs between is 1–10 August: book 1–10 Aug for a 15 Aug visit.","This is the visit window, separate from the booking window above. Leave blank to apply to any visit date."],
  ["Total times it can be used across users|max_redemptions","How many times this discount can be redeemed in total, counting every customer together.","50, for a “first 50 tickets” promo — once 50 redemptions are used, it stops for everyone.","This is the whole-campaign cap across all customers combined — separate from “Can be used once per user”, which limits each customer individually. Blank means no limit."],
@@ -3084,8 +3094,9 @@ function applyInfo(d){
   return {auto:d.apply==="auto", staffOnly:d.apply==="manual", memberOnly:false};   // legacy fallback
 }
 function audienceText(a){ return a.staffOnly&&a.memberOnly?"staff & members only":a.staffOnly?"staff only":a.memberOnly?"members only":"everyone"; }
-function applyText(d){ const a=applyInfo(d); return (a.auto?"Auto-applied":"Applied with the code")+" · "+audienceText(a)+" · "+(d.combinable?"combines with other discounts":"applies alone"); }
+function applyText(d){ const a=applyInfo(d); return (a.auto?"Auto-applied":"Applied with the code")+" · "+audienceText(a); }
 function discountSummary(d){
+  if(isVoucher(d)) return "Voucher — when the code is entered, makes "+voucherPhrase(d)+".";
   const a=applyInfo(d);
   const aud=audienceText(a);
   const lead=(a.auto?"Applies automatically":"Applies when the code is entered")+(aud!=="everyone"?`, ${aud},`:"");
@@ -3102,7 +3113,7 @@ function applyBadge(d){
   const a=applyInfo(d);
   const aud={"staff & members only":"Staff & members","staff only":"Staff only","members only":"Members only","everyone":"Everyone"}[audienceText(a)];
   const whoCls=(a.staffOnly||a.memberOnly)?'<span class="pill pill-off">'+aud+'</span>':'<span class="mode">'+aud+'</span>';
-  return (a.auto?'<span class="pill pill-ok"><i class="dot"></i>Auto-applied</span>':'<span class="mode">Code entered</span>')+' '+whoCls;
+  return (isVoucher(d)?'<span class="pill pill-ok" style="background:#EEF3FF;color:var(--blue)"><i class="dot"></i>Voucher</span> ':'')+(a.auto?'<span class="pill pill-ok"><i class="dot"></i>Auto-applied</span>':'<span class="mode">Code entered</span>')+' '+whoCls;
 }
 function condSummaryText(c){
   const cc=Object.assign({k:"Items in the basket"},c||{});
@@ -3110,12 +3121,14 @@ function condSummaryText(c){
 }
 /* Short "what the customer gets" phrase — the discounted items are the basket items. */
 function valueOnlyPhrase(d){
+  if(isVoucher(d)) return "Visit free · "+capsText(d);
   if(!d.v) return "a discount";
   if(d.value==="Flat amount") return "₹"+String(d.v).replace(/[^0-9.]/g,"")+" off";
   return d.v+" off";   // percentage, e.g. "15% off"
 }
 /* One merged summary for the section: what triggers it + what the customer gets. */
 function discountRuleSummary(d){
+  if(isVoucher(d)) return `Enter the voucher and <b>${voucherPhrase(d)}</b>`;
   const bd=condDraftFromDiscount(d);
   const val=valueOnlyPhrase(d);
   if(bd.prods&&bd.prods.length){
@@ -3130,7 +3143,8 @@ function discSummaryPanel(d){
   const rows=[
     ["Method", a.auto?"Automatic discount":(isSeries(d)?("Series · "+codeLabel(d)):("Code · "+(d.n||"—")))],
     ["For", aud.charAt(0).toUpperCase()+aud.slice(1)],
-    ["Amount", d.v?(d.value?d.value+" · "+d.v:d.v):"—"],
+    isVoucher(d)?["Covers", (d.covers||[]).join(", ")||"—"]:["Amount", d.v?(d.value?d.value+" · "+d.v:d.v):"—"],
+    ...(isVoucher(d)?[["Tickets", capsText(d)]]:[]),
     ["Runs", d.dates&&d.dates[0]?(d.dates[0]+(d.dates[1]?" – "+d.dates[1]:" onward")):"Any time"],
     ...(d.visit&&d.visit[0]?[["Visit",d.visit[0]+(d.visit[1]&&d.visit[1]!==d.visit[0]?" – "+d.visit[1]:"")]]:[]),
     ...(isSeries(d)?[["Vouchers", seriesCount(d.series).toLocaleString()+" codes"]]:[]),
@@ -3202,10 +3216,11 @@ function syncDiscountForm(){
   const d=curDiscount(); if(!d) return;
   applyFormToDiscount(d,readForm(document.querySelector("#pane")));
   const as=document.querySelector("[data-apply-staff]"); if(as) d.staffOnly=!!as.checked;
-  const cb=document.querySelector("[data-combinable]"); if(cb) d.combinable=!!cb.checked;
   const am=document.querySelector("[data-apply-member]"); if(am) d.memberOnly=!!am.checked;
   const mt=document.querySelector("[data-member-tiers]"); if(mt) d.memberTiers=[...mt.querySelectorAll('.chip-opt[data-on="1"]')].map(b=>b.dataset.chipval);
   const co=document.querySelector("[data-code-once]"); if(co){ d.codes=d.codes||{gen:"1"}; d.codes.oncePerUser=co.dataset.on==="1"; }
+  const vc=document.querySelector("[data-voucher-covers]"); if(vc) d.covers=[...vc.querySelectorAll('.chip-opt[data-on="1"]')].map(b=>b.dataset.chipval);
+  document.querySelectorAll("[data-vcap]").forEach(el=>{ d.caps=d.caps||{}; const n=el.value.replace(/[^0-9]/g,""); if(n) d.caps[el.dataset.vcap]=n; else delete d.caps[el.dataset.vcap]; });
   document.querySelectorAll("[data-series]").forEach(el=>{ d.series=d.series||{prefix:"",from:"1",to:"100"}; d.series[el.dataset.series]=el.value; });
 }
 /* Live in-form summaries so the user sees what they are configuring. */
@@ -3230,6 +3245,18 @@ function seriesCode(s,n){ return (s.prefix||"")+String(n).padStart(seriesPad(s.t
 function seriesCodes(s,cap){ const out=[],a=Math.floor(+s.from||0),b=Math.floor(+s.to||0),lim=cap||SERIES_CAP; for(let n=a;n<=b&&out.length<lim;n++) out.push(seriesCode(s,n)); return out; }
 function seriesLabel(s){ const a=Math.floor(+s.from||0),b=Math.floor(+s.to||0); return seriesCode(s,a)+"–"+seriesCode(s,b); }   // e.g. JSW001–JSW100
 /* The code identity shown across listing / summary / detail. */
+/* The Approved code-based discount a typed code belongs to (by name, condition code, or series voucher), or null. */
+function findDiscountByCode(code){ const up=String(code||"").trim().toUpperCase(); if(!up) return null;
+  const seriesHit=d=>{ if(!isSeries(d)) return false; const s=d.series; if(!up.startsWith(String(s.prefix||"").toUpperCase())) return false; const n=parseInt(up.replace(/\D/g,""),10); return !isNaN(n)&&n>=+s.from&&n<=+s.to; };
+  return DISCOUNTS.find(d=>d.status==="Approved"&&!applyInfo(d).auto&&(String(d.n||"").toUpperCase()===up||(d.cond||[]).some(c=>String(c.code||"").toUpperCase()===up)||seriesHit(d)))||null; }
+/* A voucher is a discount whose reward is "the visit is free": 100% off the products it covers, for up to
+   caps[category] tickets of each category (no cap = no limit). Created on the Discounts page (owner, 2026-09-25). */
+function isVoucher(d){ return !!d&&d.kind==="voucher"; }
+function capsText(d){ const c=Object.entries(d.caps||{}).filter(([,n])=>+n>0); return c.length?"up to "+c.map(([k,n])=>n+" "+k).join(", "):"no limit on tickets"; }
+function voucherPhrase(d){ return (d.covers&&d.covers.length?d.covers.join(" + "):"nothing yet")+" free — "+capsText(d); }
+/* Only one discount per booking: a second code is refused, naming the one already on the order. "" when the code may go on. */
+function oneDiscountRefusal(code,existing){ if(!existing.length) return "";
+  return "Only one discount per booking. Remove "+existing[0].toUpperCase()+" first to use "+String(code).toUpperCase()+" instead."; }
 function isSeries(d){ return d.codeType==="series" && d.series && (d.series.prefix||d.series.to); }
 function codeLabel(d){ return isSeries(d) ? seriesLabel(d.series) : (d.n||"—"); }
 /* Validation message for the series inputs, or "" when valid. */
@@ -3279,9 +3306,16 @@ function shareFormCard(){
 }
 function discountForm(editing){
   if(!editing && !draftDiscount) draftDiscount={n:"",auto:false,staffOnly:false,memberOnly:false,cond:[],dates:["",""],value:"Percentage",v:"",prec:"",status:"Draft",maker:"",checker:"—",codes:{oncePerUser:true,gen:"1"},maxr:"",visit:["",""],utm:{source:"",medium:"",campaign:"",term:"",content:""},codeType:"single",series:{prefix:"",from:"1",to:"100"}};
+  if(!editing && newVoucherPending){ Object.assign(draftDiscount,{kind:"voucher",auto:false,value:"Voucher",v:"",covers:[],caps:{}}); newVoucherPending=false; }
   const d = editing ? DISCOUNTS[selD] : draftDiscount;
   const v = discountValues(d);
   const a = applyInfo(d);
+  const vch = isVoucher(d);
+  const kindToggle = `<div class="fld wide"><div class="lab"><span class="lab-n">What is it</span>${tip("A discount takes a percentage or amount off. A voucher makes the visit free: 100% off the products it covers, typed on the order screen's Voucher tab.")}</div>
+      <div class="seg2">
+        <button type="button" class="seg2-btn" data-dkind="discount" data-on="${vch?0:1}">Discount</button>
+        <button type="button" class="seg2-btn" data-dkind="voucher" data-on="${vch?1:0}">Voucher — free visit</button>
+      </div></div>`;
   const methodControl=`<div class="fld wide"><div class="lab"><span class="lab-n">Discount method</span>${tip("A discount code must be entered at checkout. An automatic discount applies on its own with nothing typed.")}<span class="lab-req">Required</span></div>
     <div class="selwrap"><select class="inp" data-method>
       <option value="code"${a.auto?"":" selected"}>Discount code</option>
@@ -3316,13 +3350,21 @@ function discountForm(editing){
         <div style="font-size:11px;color:var(--ink3);margin-top:4px">Customers will see this in their cart and at checkout.</div></div>`
     : codeTypeToggle + (isSer ? seriesControl : singleCodeControl);
   const audienceControl=`<div class="fld wide" style="gap:6px">
-      <label class="chk"><input type="checkbox" data-combinable${d.combinable?" checked":""}><span>Can be combined with other discounts</span>${tip("On: stacks with every other discount that is also on. Off: only ever applies alone — checkout gives the customer whichever saves more.")}</label>
       <label class="chk"><input type="checkbox" data-apply-staff${a.staffOnly?" checked":""}><span>Can be used by staff only</span></label>
       <label class="chk"><input type="checkbox" data-apply-member${a.memberOnly?" checked":""}><span>Can be applied for members only</span></label>
       ${a.memberOnly?`<div style="margin:2px 0 0 24px"><div style="font-size:11.5px;color:var(--ink3);margin-bottom:4px">Which plans — none ticked means every plan</div><div class="chips" data-member-tiers>${MEMBERSHIP_TIERS.map(t=>`<button type="button" class="chip-add chip-opt" data-on="${(d.memberTiers||[]).includes(t.name)?1:0}" data-chipval="${escAttr(t.name)}">${t.name}</button>`).join("")}</div></div>`:""}
     </div>`;
   const basics=`<section class="form-sec"><div class="form-sec-head"><span class="form-sec-title">Basics</span></div>
-    <div class="form-sec-body">${methodControl}${identityControl}${audienceControl}${dfld("is_active",v)}</div></section>`;
+    <div class="form-sec-body">${kindToggle}${vch?"":methodControl}${identityControl}${audienceControl}${dfld("is_active",v)}</div></section>`;
+  const coverOpts = P.map(x=>x.n);
+  const capCats = CATS.map(c=>c.name);
+  const voucherSection=`<section class="form-sec" style="grid-column:1/-1"><div class="form-sec-head"><span class="form-sec-title">What the voucher makes free</span>${tip("The products whose tickets become free. Anything else on the same order is paid as normal.")}</div>
+    <div class="form-sec-body">
+      <div class="fld wide" style="grid-column:1/-1"><div class="lab"><span class="lab-n">Free products</span><span class="lab-req">Required</span></div>
+        <div class="chips" data-voucher-covers>${coverOpts.map(n=>`<button type="button" class="chip-add chip-opt" data-on="${(d.covers||[]).includes(n)?1:0}" data-chipval="${escAttr(n)}">${n}</button>`).join("")}</div></div>
+      <div class="fld wide" style="grid-column:1/-1"><div class="lab"><span class="lab-n">Most free tickets per visitor type</span>${tip("Leave a box empty for no limit. Tickets beyond the limit are paid at the normal price.")}<span class="lab-req">Optional</span></div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap">${capCats.map(c=>`<label style="display:flex;flex-direction:column;gap:3px;min-width:110px"><span style="font-size:10.5px;color:var(--ink3)">${c}</span><input class="inp mono" data-vcap="${escAttr(c)}" value="${escAttr((d.caps||{})[c]||"")}" placeholder="No limit" inputmode="numeric"></label>`).join("")}</div></div>
+    </div></section>`;
   const condSection=`<section class="form-sec" style="grid-column:1/-1"><div class="form-sec-head"><span class="form-sec-title">Discount rule</span>${tip("The items and quantity an order must contain, and how much comes off those same items.")}</div>
     <div class="form-sec-body">
       <div class="fld wide" style="grid-column:1/-1"><div class="lab"><span class="lab-n">Items &amp; quantity</span>${tip("The items and quantity the order must contain. The discount comes off these same items.")}</div>
@@ -3336,14 +3378,14 @@ function discountForm(editing){
     <div class="form-sec-body">${dfld("valid_from / valid_to",v)}${dfld("visit_from / visit_to",v)}${onceControl}${dfld("max_redemptions",v)}${dfld("status",v)}</div></section>`;
   return `<div><div class="disc-layout">
       <div class="disc-main"><div class="card">
-        <div class="card-head"><span class="card-title">${editing?"Edit discount":"New discount"}</span></div>
+        <div class="card-head"><span class="card-title">${editing?(vch?"Edit voucher":"Edit discount"):(vch?"New voucher":"New discount")}</span></div>
         <div class="form-body product-form">
           ${basics}
-          ${condSection}
+          ${vch?voucherSection:condSection}
           ${whenSection}
         </div>
         <div class="form-foot"><button class="btn" data-tab="list">Cancel</button>
-          <button class="btn btn-primary" data-savediscount="1">${editing?"Save discount":"Create discount"}</button></div>
+          <button class="btn btn-primary" data-savediscount="1">${editing?(vch?"Save voucher":"Save discount"):(vch?"Create voucher":"Create discount")}</button></div>
       </div></div>
       <aside class="disc-summary-col"><div class="card">
         <div class="card-head"><span class="card-title">Summary</span></div>
@@ -3562,7 +3604,7 @@ let qryExpanded = new Set();
 let deptEditing = "", deptDeleting = "";
 let careerFDept = "", careerFType = "", careerFStatus = "all";
 let current = "dashboard", selP = 0, tab = "list", sub = "details",
-    selW = 0, selB = 0, selE = 0, esub = "details", eventCats = new Set(), selBooking = 0, bookingProduct = 0, bookingSlot = "", bookingDiscountCode = "", bookingDiscountCodes = [], csub = "details", copyFrom = 0, copyTo = new Set(), copyWhat = new Set(["price","seats"]), editD = -1,
+    selW = 0, selB = 0, selE = 0, esub = "details", eventCats = new Set(), selBooking = 0, bookingProduct = 0, bookingSlot = "", bookingDiscountCode = "", bookingDiscountCodes = [], bookingDiscountError = "", bookingCodeTab = "discount", csub = "details", copyFrom = 0, copyTo = new Set(), copyWhat = new Set(["price","seats"]), editD = -1,
     progKind = "event", progCat = "Event", prodBuildingPool = false,
     bookingProducts = new Map(), bookingAddons = new Map(), bookingPrograms = new Map(), bookingPay = "Cash", bookingTab = "products",
     bookingCustomer = {name:"",phone:"",email:"",member:null,location:"",pincode:"",gstin:""}, bookingCustomerLinked = -1, bookingStep = 1, bookingOpenItem = null, bookingCalMonth = null, bookingCancelConfirm = false, bookingDiscountTried = false, bookingStep1Tried = false, bookingRedeemVisit = false, bookingRedeemAdult = false,
@@ -4431,7 +4473,7 @@ const VIEWS = {
         ${addRowNew("Add blackout date")}</tbody></table></div></div>`;
   },
   discounts(){
-    const seg=`<div class="cond-summary" style="margin-bottom:16px">Discounts never combine. When more than one applies to an order, the single discount that gives the customer the <b>biggest saving</b> is applied automatically.</div>`;
+    const seg=`<div class="cond-summary" style="margin-bottom:16px">Discounts never combine. When more than one applies to an order, the single discount that gives the customer the <b>biggest saving</b> is applied automatically. A <b>voucher</b> is a discount that makes the visit free; it is typed on the order screen's Voucher tab and counts as the booking's one discount.</div>`;
     return seg+toolbar("Search discounts",DISCOUNTS.length+" discounts")+
     `<div class="card"><div class="matrix-wrap"><table class="reclist"><thead><tr>
       <th>Code / title</th><th>Method</th><th>Reward</th><th>Applies to</th><th>Status</th><th>Actions</th></tr></thead>
@@ -4442,7 +4484,7 @@ const VIEWS = {
       <td style="font-size:12px">${it.length?it.join(", "):'<span class="muted">Any item</span>'}</td>
       <td>${d.status==="Approved"?'<span class="pill pill-ok"><i class="dot"></i>Approved</span>':'<span class="pill pill-draft"><i class="dot"></i>'+d.status+'</span>'}</td>
       <td><button class="btn" data-editd="${i}" aria-label="Edit ${d.n}">Edit</button></td></tr>`;}).join("")}
-      <tr><td colspan="6"><button class="rep-add" data-tab="new" style="border-radius:4px">+ New discount</button></td></tr>
+      <tr><td colspan="6" style="display:flex;gap:8px"><button class="rep-add" data-tab="new" style="border-radius:4px">+ New discount</button><button class="rep-add" data-tab="new" data-newvoucher="1" style="border-radius:4px">+ New voucher</button></td></tr>
     </tbody></table></div></div>`;
   },
 
@@ -5326,9 +5368,7 @@ function bookingForm(editing=false){
   let maxCatQty=0; [...bookingProducts.values(),...bookingAddons.values()].forEach(cf=>{ Object.values(catQtys(cf)).forEach(n=>{ if(n>maxCatQty) maxCatQty=n; }); });
   const pctOf=(v,base)=>String(v).includes("%")?base*(parseFloat(v)||0)/100:Math.min(base,parseFloat(String(v).replace(/[^0-9.]/g,""))||0);
   // typed codes — several per order; each matches an Approved code-based discount by d.n, cond code, or series voucher
-  const findCodeDisc=code=>{ const up=String(code||"").trim().toUpperCase(); if(!up) return null;
-    const seriesHit=d=>{ if(!isSeries(d)) return false; const s=d.series; if(!up.startsWith(String(s.prefix||"").toUpperCase())) return false; const n=parseInt(up.replace(/\D/g,""),10); return !isNaN(n)&&n>=+s.from&&n<=+s.to; };
-    return DISCOUNTS.find(d=>d.status==="Approved"&&!applyInfo(d).auto&&(String(d.n||"").toUpperCase()===up||(d.cond||[]).some(c=>String(c.code||"").toUpperCase()===up)||seriesHit(d)))||null; };
+  const findCodeDisc=findDiscountByCode;
   const codeHits=bookingDiscountCodes.map(c=>({code:c,d:findCodeDisc(c)}));
   // auto-applied — evaluate each Approved automatic discount against the cart (simplified conditions)
   const autoDiscs=[]; let bundlingDone=false;
@@ -5339,22 +5379,31 @@ function bookingForm(editing=false){
     if(/Add-on bundling/i.test(d.n||"")){ if(!bundlingDone&&hasProduct&&hasAddon){ bundlingDone=true; autoDiscs.push({label:"Add-on bundling",v:d.v,amount:pctOf(d.v,addonRawTotal),d}); } return; }
     if(d.tiers&&d.tiers.length){ if(maxCatQty>=+d.tiers[0][0]){ const tier=[...d.tiers].reverse().find(t=>maxCatQty>=+t[0])||d.tiers[0]; autoDiscs.push({label:"Quantity break",v:tier[1]+"%",amount:subtotal*(parseFloat(tier[1])||0)/100,d}); } return; }
   });
-  // STACKING (owner, 2026-09-24): every discount says whether it "can be combined with other discounts".
-  // The customer gets the bigger of — ALL qualifying combinable discounts together, or the single best
-  // non-combinable one alone. Percentages first, then flat amounts, each on what is left; never below 0.
+  // ONE DISCOUNT PER BOOKING (owner, 2026-09-25 — stacking removed). Every qualifying discount — the
+  // typed code, automatic offers, the member add-on perk — is a candidate; only the one saving most applies.
+  // The rest are listed as not applied. A tie goes to the earlier candidate.
   const addonDiscountPct=member?(member.addonDiscountPct||0):0;
+  // A voucher frees every paid ticket of the products it covers, up to caps[category] tickets per
+  // category across the whole order (no cap = all of them). Membership-redeemed tickets are already free.
+  const voucherValue=d=>{ const left={...(d.caps||{})}; let v=0;
+    const take=(prod,cfg,paidOnly)=>{ if(!prod||!(d.covers||[]).includes(prod.n)) return;
+      combosOf(cfg).forEach(combo=>{ const s=slotFor(prod.slots,combo);
+        prod.cats.forEach(c=>{ let q=(combo.qty&&combo.qty[c])||0; if(!q) return;
+          if(left[c]!==undefined&&left[c]!==""){ const n=Math.min(q,+left[c]); left[c]=+left[c]-n; q=n; }
+          v+=q*priceIn(s,c); }); }); };
+    [...bookingProducts].forEach(([i,cfg])=>take(P[i],cfg));
+    [...bookingAddons].forEach(([code,cfg])=>take(P.find(x=>x.c===code),cfg));
+    return v; };
   const discCandidates=[
-    ...codeHits.filter(x=>x.d).map(x=>({label:codeLabel(x.d),v:x.d.v+" off",amount:pctOf(x.d.v,subtotal),kind:"code",comb:!!x.d.combinable,pct:String(x.d.v).includes("%")})),
-    ...autoDiscs.map(x=>({label:x.label,v:x.v,amount:x.amount,kind:"auto",comb:!!(x.d&&x.d.combinable),pct:String(x.v).includes("%")})),
-    ...(member&&addonDiscountPct&&addonRawTotal?[{label:"★ "+member.tier+" add-on perk",v:addonDiscountPct+"%",amount:addonRawTotal*addonDiscountPct/100,kind:"member",comb:true,pct:true}]:[])
+    ...codeHits.filter(x=>x.d).map(x=>isVoucher(x.d)
+      ?{label:"Voucher "+x.code.toUpperCase(),v:"visit free",amount:voucherValue(x.d),kind:"voucher"}
+      :{label:codeLabel(x.d),v:x.d.v+" off",amount:pctOf(x.d.v,subtotal),kind:"code"}),
+    ...autoDiscs.map(x=>({label:x.label,v:x.v,amount:x.amount,kind:"auto"})),
+    ...(member&&addonDiscountPct&&addonRawTotal?[{label:"★ "+member.tier+" add-on perk",v:addonDiscountPct+"%",amount:addonRawTotal*addonDiscountPct/100,kind:"member"}]:[])
   ];
-  const stackOf=list=>{ let left=subtotal; return [...list].sort((a,b)=>(b.pct-a.pct)).map(x=>{ const amt=Math.round(Math.min(left, x.pct?x.amount*left/(subtotal||1):x.amount)); left-=amt; return {...x,applied:amt}; }); };
-  const combSet=stackOf(discCandidates.filter(x=>x.comb));
-  const combTotal=combSet.reduce((t,x)=>t+x.applied,0);
-  const soloBest=discCandidates.filter(x=>!x.comb).reduce((b,x)=>(!b||x.amount>b.amount)?x:b,null);
-  const useSolo=soloBest&&Math.min(subtotal,soloBest.amount)>combTotal;
-  const appliedDiscs=useSolo?[{...soloBest,applied:Math.min(subtotal,soloBest.amount)}]:combSet;
-  const skippedDiscs=discCandidates.filter(x=>!appliedDiscs.some(a=>a.label===x.label&&a.kind===x.kind)).map(x=>({...x,why:x.comb?"a discount that can't be combined saves more":"can't be combined with other discounts"}));
+  const best=discCandidates.reduce((b,x)=>(!b||x.amount>b.amount)?x:b,null);
+  const appliedDiscs=best?[{...best,applied:Math.round(Math.min(subtotal,best.amount))}]:[];
+  const skippedDiscs=discCandidates.filter(x=>x!==best).map(x=>({...x,why:"only one discount per booking — "+best.label+" saves more"}));
   const discAmt=appliedDiscs.reduce((t,x)=>t+x.applied,0);
   const gst=Math.round(Math.max(0,subtotal-discAmt)*0.18);
   const grand=Math.max(0,subtotal-discAmt)+gst;
@@ -5567,13 +5616,22 @@ function bookingForm(editing=false){
     cartRows.push(cartGroup("Membership visit",`${member.tier} · ${redeemVisitCount} visit${redeemVisitCount>1?"s":""}`,mlines));
   }
   const summaryPay=hasItems?`<div class="summary-pay">
-    <div class="summary-pay-lbl">Payment method</div>
-    <div class="summary-pay-grid">${["Cash","Card","UPI","Voucher"].map(m=>`<button class="summary-pay-btn" data-book-pay="${escAttr(m)}" aria-pressed="${bookingPay===m}">${m}</button>`).join("")}</div>
-    ${editing?"":`<button class="btn btn-primary summary-pay-cta">Take payment · ${money(grand)}</button>`}
+    ${grand>0?`<div class="summary-pay-lbl">Payment method</div>
+    <div class="summary-pay-grid">${["Cash","Card","UPI"].map(m=>`<button class="summary-pay-btn" data-book-pay="${escAttr(m)}" aria-pressed="${bookingPay===m}">${m}</button>`).join("")}</div>`:`<div class="summary-pay-lbl">Nothing to pay — the voucher covers this booking</div>`}
+    ${editing?"":`<button class="btn btn-primary summary-pay-cta">${grand>0?"Take payment · "+money(grand):"Confirm free booking"}</button>`}
   </div>`:"";
   const summary=`<aside class="booking-summary"><div class="booking-summary-head">Order summary${cartRows.length?` <span class="booking-summary-count">${cartRows.length} item${cartRows.length===1?"":"s"}</span>`:""}</div><div class="booking-summary-body">
     ${cartRows.length?cartRows.join(""):`<div class="pos-empty">Nothing added yet.<br>Pick a product or program to begin.</div>`}
-    <div class="booking-discount"><input class="inp mono" id="bookingDiscountCode" placeholder="Discount code" value="${escAttr(bookingDiscountCode)}"><button class="btn" data-apply-book-discount="1">Apply</button></div>
+    <div class="seg2" style="margin:10px 0 6px" role="tablist" aria-label="Code type">
+      <button type="button" class="seg2-btn" role="tab" data-book-codetab="discount" data-on="${bookingCodeTab==="voucher"?0:1}" aria-selected="${bookingCodeTab!=="voucher"}">Discount code</button>
+      <button type="button" class="seg2-btn" role="tab" data-book-codetab="voucher" data-on="${bookingCodeTab==="voucher"?1:0}" aria-selected="${bookingCodeTab==="voucher"}">Voucher</button>
+    </div>
+    <div class="booking-discount"><input class="inp mono" id="bookingDiscountCode" placeholder="${bookingCodeTab==="voucher"?"Voucher code, e.g. FREETOUR01":"Discount code"}" value="${escAttr(bookingDiscountCode)}"><button class="btn" data-apply-book-discount="1">Apply</button></div>
+    ${bookingCodeTab==="voucher"?`<div style="font-size:11px;color:var(--ink3);margin:0 0 4px">A voucher makes the tickets it covers free. It counts as this booking's one discount.</div>
+    <div style="font-size:10.5px;color:var(--ink3);margin:6px 0 4px;font-family:var(--mono);letter-spacing:.06em;text-transform:uppercase">Vouchers to try — click to apply</div>
+    <div class="chips" style="margin:0 0 6px">${DISCOUNTS.filter(d=>isVoucher(d)&&d.status==="Approved").map(d=>{ const code=isSeries(d)?seriesCode(d.series,Math.floor(+d.series.from||1)):d.n;
+      return `<button type="button" class="chip-add" data-try-voucher="${escAttr(code)}" title="${escAttr(voucherPhrase(d))}"><b style="font-weight:600">${escHtml(isSeries(d)?codeLabel(d):code)}</b> · ${escHtml((d.covers||[]).join(" + "))} · ${escHtml(capsText(d))}</button>`; }).join("")}</div>`:""}
+    ${bookingDiscountError?`<div role="alert" style="color:var(--stop);font-size:12px;margin:4px 0 2px">${escHtml(bookingDiscountError)}</div>`:""}
     ${codeHits.length?`<div class="chips" style="margin:6px 0">${codeHits.map((x,i)=>`<span class="msel-tag" style="${x.d?"":"background:var(--stop-wash,#fdecec);color:var(--stop)"}">${escHtml(x.code)}${x.d?"":" · not recognised"}<button type="button" data-remove-book-code="${i}" aria-label="Remove ${escAttr(x.code)}">&times;</button></span>`).join("")}</div>`:""}
     <div class="booking-summary-row"><span>Subtotal</span><span>${money(subtotal)}</span></div>
     ${appliedDiscs.map(x=>`<div class="booking-summary-row" style="color:var(--ok)"><span>${x.label}${x.kind==="auto"?' <span class="q" style="margin-left:2px">auto</span>':""} · ${x.v}</span><span>− ${money(x.applied)}</span></div>`).join("")}
@@ -8103,7 +8161,7 @@ function addSubmit(){
   addOpen=null; render(); $(".stage").scrollTop=0;
 }
 
-function resetBooking(){ bookingProducts=new Map(); bookingAddons=new Map(); bookingPrograms=new Map(); bookingPay="Cash"; bookingDiscountCode=""; bookingDiscountCodes=[]; bookingDiscountTried=false; bookingStep1Tried=false; bookingTab="products"; bookingCustomer={name:"",phone:"",email:"",member:null,location:"",pincode:"",gstin:"",state:"Maharashtra"}; bookingCustomerLinked=-1; bookingStep=1; bookingOpenItem=null; bookingCalMonth=null; bookingCancelConfirm=false; bookingRedeemVisit=false; bookingRedeemAdult=false; }
+function resetBooking(){ bookingProducts=new Map(); bookingAddons=new Map(); bookingPrograms=new Map(); bookingPay="Cash"; bookingDiscountCode=""; bookingDiscountCodes=[]; bookingDiscountError=""; bookingCodeTab="discount"; bookingDiscountTried=false; bookingStep1Tried=false; bookingTab="products"; bookingCustomer={name:"",phone:"",email:"",member:null,location:"",pincode:"",gstin:"",state:"Maharashtra"}; bookingCustomerLinked=-1; bookingStep=1; bookingOpenItem=null; bookingCalMonth=null; bookingCancelConfirm=false; bookingRedeemVisit=false; bookingRedeemAdult=false; }
 
 /* Products a membership tier can grant access to — those that carry time slots. */
 function tierProductPool(){ return P.filter(p=>p.slots&&p.slots.length); }
@@ -8342,7 +8400,7 @@ document.addEventListener("click",e=>{
   const goto=e.target.closest("[data-goto]");
   if(goto){ current=goto.dataset.goto; mEdit=-1; selP=0; selW=0; selB=0; selE=0; selD=0; selBooking=0; tab="list"; sub="details"; csub="details"; dsub="summary"; addOpen=null; render(); $(".stage").scrollTop=0; return; }
   const t=e.target.closest("[data-tab]");
-  if(t){ tab=t.dataset.tab; if(tab==="new"&&current==="bookings") resetBooking(); if(tab==="new"&&current==="shopsales") resetShopSale(); if(tab==="new"&&current==="programs"){progKind=progFormat(progCat)==="multi"?"camp":"event";eventCats=new Set();} if(tab==="new"&&current==="events") eventCats=new Set(); if(tab==="new"&&current==="discounts") draftDiscount=null; if((tab==="new"||tab==="edit")&&current==="tiers") seedTierDraft(tab==="edit"); if(tab==="new"&&(current==="products"||current==="programs")) prodBuildingPool=false; if(tab==="new"&&current==="school") schoolDraft=blankSchool(schoolNewMode); if(tab==="new"&&current==="sponsored") spDraft=blankSp(spNewMode); if(tab==="list"){ schoolDraft=null; spDraft=null; } mEdit=-1; venueAvail=null; venueCheck=null; addOpen=null; render(); $(".stage").scrollTop=0; return; }
+  if(t){ tab=t.dataset.tab; if(tab==="new"&&current==="bookings") resetBooking(); if(tab==="new"&&current==="shopsales") resetShopSale(); if(tab==="new"&&current==="programs"){progKind=progFormat(progCat)==="multi"?"camp":"event";eventCats=new Set();} if(tab==="new"&&current==="events") eventCats=new Set(); if(tab==="new"&&current==="discounts"){ draftDiscount=null; newVoucherPending=!!t.dataset.newvoucher; } if((tab==="new"||tab==="edit")&&current==="tiers") seedTierDraft(tab==="edit"); if(tab==="new"&&(current==="products"||current==="programs")) prodBuildingPool=false; if(tab==="new"&&current==="school") schoolDraft=blankSchool(schoolNewMode); if(tab==="new"&&current==="sponsored") spDraft=blankSp(spNewMode); if(tab==="list"){ schoolDraft=null; spDraft=null; } mEdit=-1; venueAvail=null; venueCheck=null; addOpen=null; render(); $(".stage").scrollTop=0; return; }
   const medit=e.target.closest("[data-medit]");
   if(medit){ mEdit=+medit.dataset.medit; tab="edit"; render(); $(".stage").scrollTop=0; return; }
   if(e.target.closest("[data-medit-save]")){ mEdit=-1; tab="list"; render(); $(".stage").scrollTop=0; return; }
@@ -8361,6 +8419,9 @@ document.addEventListener("click",e=>{
   if(e.target.closest("[data-savediscount]")){ saveDiscount(); return; }
   const ctype=e.target.closest&&e.target.closest("[data-codetype]");
   if(ctype){ syncDiscountForm(); curDiscount().codeType=ctype.dataset.codetype; render(); return; }
+  const dkind=e.target.closest&&e.target.closest("[data-dkind]");
+  if(dkind){ syncDiscountForm(); const d=curDiscount(); d.kind=dkind.dataset.dkind==="voucher"?"voucher":undefined; if(d.kind){ d.auto=false; d.value="Voucher"; d.v=""; d.covers=d.covers||[]; d.caps=d.caps||{}; } else if(d.value==="Voucher"){ d.value="Percentage"; } render(); return; }
+
   const expSer=e.target.closest&&e.target.closest("[data-export-series]");
   if(expSer){ const dd=DISCOUNTS[+expSer.dataset.exportSeries]; if(dd&&isSeries(dd)){ const b=expSer.querySelector("span")||expSer, t=b.textContent; b.textContent=`Prepared ${seriesCount(dd.series).toLocaleString()} codes`; setTimeout(()=>{b.textContent=t;},1600); } return; }
   if(e.target.closest("[data-gencode]")){ const el=document.getElementById("discountCode"); if(el) el.value=genCode(); return; }
@@ -8377,9 +8438,19 @@ document.addEventListener("click",e=>{
     const orig=label.textContent, done=()=>{ label.textContent="Link copied!"; setTimeout(()=>{label.textContent=orig;},1500); };
     if(navigator.clipboard&&navigator.clipboard.writeText){ navigator.clipboard.writeText(link).then(done).catch(done); } else done();
     return; }
-  if(e.target.closest("[data-apply-book-discount]")){ const c=(document.getElementById("bookingDiscountCode")?.value||"").trim(); if(c&&!bookingDiscountCodes.some(x=>x.toUpperCase()===c.toUpperCase())) bookingDiscountCodes.push(c); bookingDiscountCode=""; bookingDiscountTried=!!c; render(); return; }
+  if(e.target.closest("[data-apply-book-discount]")){ const c=(document.getElementById("bookingDiscountCode")?.value||"").trim(); bookingDiscountError="";
+    if(c&&!bookingDiscountCodes.some(x=>x.toUpperCase()===c.toUpperCase())){ const hit=findDiscountByCode(c);
+      const wrongTab=hit&&(bookingCodeTab==="voucher")!==isVoucher(hit)?(c.toUpperCase()+(isVoucher(hit)?" is a voucher — use the Voucher tab.":" is a discount code — use the Discount code tab.")):"";
+      const why=wrongTab||oneDiscountRefusal(c,bookingDiscountCodes);
+      if(why){ bookingDiscountError=why; bookingDiscountCode=c; render(); return; }
+      bookingDiscountCodes.push(c); }
+    bookingDiscountCode=""; bookingDiscountTried=!!c; render(); return; }
+  const tryV=e.target.closest("[data-try-voucher]");
+  if(tryV){ const inp=document.getElementById("bookingDiscountCode"); if(inp) inp.value=tryV.dataset.tryVoucher; document.querySelector("[data-apply-book-discount]")?.click(); return; }
+  const codeTab=e.target.closest("[data-book-codetab]");
+  if(codeTab){ bookingCodeTab=codeTab.dataset.bookCodetab; bookingDiscountError=""; render(); return; }
   const rmCode=e.target.closest("[data-remove-book-code]");
-  if(rmCode){ bookingDiscountCodes.splice(+rmCode.dataset.removeBookCode,1); render(); return; }
+  if(rmCode){ bookingDiscountCodes.splice(+rmCode.dataset.removeBookCode,1); bookingDiscountError=""; render(); return; }
   const editp=e.target.closest("[data-editp]");
   if(editp){ selP=+editp.dataset.editp;
     prodBuildingPool=P[selP].pool==="BUILDING";
