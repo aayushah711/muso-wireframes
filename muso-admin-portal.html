@@ -1398,6 +1398,9 @@ const hsnHalfPct = code => { const cg=hsnTaxCodes(code).find(c=>/^CGST/.test(c))
 const hsnCompLabel = code => hsnComponents(code).map(c=>`${c.name} ${c.pct}%`).join(" + ");
 
 /* ================= Shop / Merchandise module (Scope §5) ================= */
+/* Indian states + UTs — the place-of-supply dropdown on the POS and website forms (owner, 2026-09-24).
+   Decides CGST+SGST (Maharashtra) vs IGST. A GSTIN, when given, overrides it by its first two digits. */
+const IN_STATES = ["Andaman and Nicobar Islands","Andhra Pradesh","Arunachal Pradesh","Assam","Bihar","Chandigarh","Chhattisgarh","Dadra and Nagar Haveli and Daman and Diu","Delhi","Goa","Gujarat","Haryana","Himachal Pradesh","Jammu and Kashmir","Jharkhand","Karnataka","Kerala","Ladakh","Lakshadweep","Madhya Pradesh","Maharashtra","Manipur","Meghalaya","Mizoram","Nagaland","Odisha","Puducherry","Punjab","Rajasthan","Sikkim","Tamil Nadu","Telangana","Tripura","Uttar Pradesh","Uttarakhand","West Bengal"];
 const MUSO_SELLER = {name:"MuSo Foundation", addr:["5A, Jindal Mansion, Dr G Deshmukh Marg","Mumbai, Maharashtra — 400026, India"], gstin:"27AAQCM9400K1ZZ", state:"Maharashtra", stateCode:"27", email:"finance.foundation@jsw.in", bank:{name:"Axis Bank", ac:"XXXXXXXX1234", ifsc:"UTIB0000XXX · Andheri West, Mumbai"}};
 /* Merchandise inventory. GST + HSN are references into the existing Tax-rate / HSN masters (a 0% item
    simply carries no rate codes). Prices are flat (not per visitor-category like a ticket). */
@@ -1425,87 +1428,87 @@ const CAREER_APPLICATIONS = [
   /* ROLE-014 — Visitor Experience Associate */
   {id:"APP-2071", role:"ROLE-014", name:"Ananya Deshpande", email:"ananya.deshpande@example.com",
    phone:"98200 41187", exp:1, qual:"B.A. Mass Media, Mumbai University", on:"12 Sep 2026", status:"Shortlisted", cv:{name:"Ananya-Deshpande-CV.pdf",size:186000},
-   note:"Two summers at the Nehru Science Centre front desk. Happy on weekends."},
+   msg:"Two summers at the Nehru Science Centre front desk. Happy on weekends.", hr:"Strong on languages — call for 2nd round."},
   {id:"APP-2068", role:"ROLE-014", name:"Rohan Kulkarni", email:"rohan.k@example.com",
-   phone:"99301 20554", exp:0, qual:"B.Com, Mumbai University", on:"11 Sep 2026", status:"New", cv:{name:"Rohan-Kulkarni-Resume.pdf",size:142000}, note:""},
+   phone:"99301 20554", exp:0, qual:"B.Com, Mumbai University", on:"11 Sep 2026", status:"New", cv:{name:"Rohan-Kulkarni-Resume.pdf",size:142000}, msg:""},
   {id:"APP-2064", role:"ROLE-014", name:"Fatima Shaikh", email:"fatima.shaikh@example.com",
    phone:"91670 33812", exp:2, qual:"B.A. English, SNDT", on:"09 Sep 2026", status:"Interviewed", cv:{name:"Fatima-Shaikh-CV.pdf",size:203000},
-   note:"Currently at a bookshop counter in Bandra. Can start immediately."},
+   msg:"Currently at a bookshop counter in Bandra. Can start immediately."},
   {id:"APP-2059", role:"ROLE-014", name:"Kabir Menon", email:"kabir.menon@example.com",
    phone:"98671 90042", exp:1, qual:"B.Sc. Hospitality, IHM Mumbai", on:"07 Sep 2026", status:"Rejected", cv:{name:"Kabir-Menon.pdf",size:97000},
-   note:"Looking for weekdays only."},
+   msg:"Looking for weekdays only."},
   {id:"APP-2055", role:"ROLE-014", name:"Sneha Iyer", email:"sneha.iyer@example.com",
-   phone:"90040 71265", exp:0, qual:"B.M.S., KC College", on:"05 Sep 2026", status:"New", cv:{name:"Sneha-Iyer-CV.pdf",size:221000}, note:""},
+   phone:"90040 71265", exp:0, qual:"B.M.S., KC College", on:"05 Sep 2026", status:"New", cv:{name:"Sneha-Iyer-CV.pdf",size:221000}, msg:""},
   {id:"APP-2052", role:"ROLE-014", name:"Aditya Rane", email:"aditya.rane@example.com",
    phone:"98195 55810", exp:3, qual:"Diploma in Travel & Tourism", on:"03 Sep 2026", status:"Shortlisted", cv:{name:"Aditya-Rane-CV.pdf",size:175000},
-   note:"Ran the ticket counter at a film festival for three years."},
+   msg:"Ran the ticket counter at a film festival for three years."},
 
   /* ROLE-015 — Workshop Facilitator, Robotics */
   {id:"APP-2066", role:"ROLE-015", name:"Meera Raghavan", email:"meera.raghavan@example.com",
    phone:"90290 18874", exp:3, qual:"B.E. Electronics, VJTI", portfolio:"github.com/meera-raghavan\nbehance.net/meera-r\nmeera-raghavan.dev", on:"10 Sep 2026", status:"Shortlisted", cv:{name:"Meera-Raghavan-CV.pdf",size:264000},
-   note:"Teaches an after-school robotics club. Arduino and micro:bit."},
+   msg:"Teaches an after-school robotics club. Arduino and micro:bit."},
   {id:"APP-2061", role:"ROLE-015", name:"Siddharth Nair", email:"sid.nair@example.com",
    phone:"98923 40117", exp:0, qual:"B.Tech Mechatronics (final year), SRM", portfolio:"sidnair.dev/projects, github.com/sidnair", on:"08 Sep 2026", status:"New", cv:{name:"Siddharth-Nair-Portfolio.pdf",size:412000},
-   note:"Mechatronics final year. Free on weekends."},
+   msg:"Mechatronics final year. Free on weekends."},
   {id:"APP-2057", role:"ROLE-015", name:"Tanvi Joshi", email:"tanvi.joshi@example.com",
-   phone:"93211 76004", exp:2, qual:"B.Sc. Physics, Ruia College", on:"06 Sep 2026", status:"Interviewed", cv:{name:"Tanvi-Joshi-CV.pdf",size:158000}, note:""},
+   phone:"93211 76004", exp:2, qual:"B.Sc. Physics, Ruia College", on:"06 Sep 2026", status:"Interviewed", cv:{name:"Tanvi-Joshi-CV.pdf",size:158000}, msg:""},
   {id:"APP-2050", role:"ROLE-015", name:"Imran Qureshi", email:"imran.q@example.com",
    phone:"98337 02291", exp:5, qual:"M.Tech Robotics, IIT Bombay", portfolio:"imranqureshi.github.io", on:"02 Sep 2026", status:"New", cv:{name:"Imran-Qureshi-CV.pdf",size:131000},
-   note:"Ex-FIRST Robotics mentor."},
+   msg:"Ex-FIRST Robotics mentor."},
 
   /* ROLE-016 — Retail Shop Supervisor */
   {id:"APP-2073", role:"ROLE-016", name:"Pooja Bhatt", email:"pooja.bhatt@example.com",
    phone:"98204 66319", exp:5, qual:"B.Com, Delhi University", on:"14 Sep 2026", status:"New", cv:{name:"Pooja-Bhatt-CV.pdf",size:198000},
-   note:"Five years at a museum shop in Delhi, three supervising."},
+   msg:"Five years at a museum shop in Delhi, three supervising."},
   {id:"APP-2070", role:"ROLE-016", name:"Vikram Salvi", email:"vikram.salvi@example.com",
-   phone:"99676 12048", exp:4, qual:"B.B.A. Retail Management, Pune University", on:"13 Sep 2026", status:"Shortlisted", cv:{name:"Vikram-Salvi-CV.pdf",size:172000}, note:""},
+   phone:"99676 12048", exp:4, qual:"B.B.A. Retail Management, Pune University", on:"13 Sep 2026", status:"Shortlisted", cv:{name:"Vikram-Salvi-CV.pdf",size:172000}, msg:""},
   {id:"APP-2065", role:"ROLE-016", name:"Nikhil Patil", email:"nikhil.patil@example.com",
    phone:"90823 44170", exp:1, qual:"H.S.C., Maharashtra Board", on:"10 Sep 2026", status:"Rejected", cv:{name:"Nikhil-Patil.pdf",size:88000},
-   note:"No supervisory experience yet."},
+   msg:"No supervisory experience yet."},
 
   /* ROLE-017 — Marketing Intern */
   {id:"APP-2075", role:"ROLE-017", name:"Priya Sharma", email:"priya.sharma@example.com",
    phone:"98200 11223", exp:0, qual:"B.A. Advertising (final year), Xavier's", portfolio:"priya.example.com/work", on:"15 Sep 2026", status:"Shortlisted", cv:{name:"Priya-Sharma-CV.pdf",size:214000},
-   note:"Available from October. Portfolio at priya.example.com."},
+   msg:"Available from October. Portfolio at priya.example.com."},
   {id:"APP-2074", role:"ROLE-017", name:"Arjun Verma", email:"arjun.verma@example.com",
-   phone:"98336 71902", exp:0, qual:"B.M.M., Jai Hind College", on:"15 Sep 2026", status:"New", cv:{name:"Arjun-Verma-CV.pdf",size:167000}, note:""},
+   phone:"98336 71902", exp:0, qual:"B.M.M., Jai Hind College", on:"15 Sep 2026", status:"New", cv:{name:"Arjun-Verma-CV.pdf",size:167000}, msg:""},
   {id:"APP-2072", role:"ROLE-017", name:"Ishita Bose", email:"ishita.bose@example.com",
    phone:"93242 05518", exp:0, qual:"B.A. Journalism, Sophia College", portfolio:"behance.net/ishitabose", on:"14 Sep 2026", status:"New", cv:{name:"Ishita-Bose-CV.pdf",size:189000},
-   note:"Ran the social handles for her college fest."},
+   msg:"Ran the social handles for her college fest."},
   {id:"APP-2069", role:"ROLE-017", name:"Dhruv Agarwal", email:"dhruv.agarwal@example.com",
-   phone:"98111 30276", exp:1, qual:"B.B.A. Marketing, NMIMS", portfolio:"dhruvagarwal.notion.site", on:"12 Sep 2026", status:"Interviewed", cv:{name:"Dhruv-Agarwal-CV.pdf",size:154000}, note:""},
+   phone:"98111 30276", exp:1, qual:"B.B.A. Marketing, NMIMS", portfolio:"dhruvagarwal.notion.site", on:"12 Sep 2026", status:"Interviewed", cv:{name:"Dhruv-Agarwal-CV.pdf",size:154000}, msg:""},
   {id:"APP-2067", role:"ROLE-017", name:"Sara DSouza", email:"sara.dsouza@example.com",
    phone:"98670 81143", exp:1, qual:"M.A. Museum Studies, Mumbai University", portfolio:"saradsouza.substack.com", on:"11 Sep 2026", status:"New", cv:{name:"Sara-DSouza-CV.pdf",size:206000},
-   note:"Writes a weekly newsletter on Mumbai's museums."},
+   msg:"Writes a weekly newsletter on Mumbai's museums."},
   {id:"APP-2063", role:"ROLE-017", name:"Yash Gandhi", email:"yash.gandhi@example.com",
    phone:"99204 55031", exp:0, qual:"B.Com (final year), Narsee Monjee", on:"10 Sep 2026", status:"Rejected", cv:{name:"Yash-Gandhi.pdf",size:112000},
-   note:"Wants remote."},
+   msg:"Wants remote."},
   {id:"APP-2060", role:"ROLE-017", name:"Aisha Khan", email:"aisha.khan@example.com",
-   phone:"90048 27760", exp:0, qual:"B.A. Psychology, St. Andrew's", portfolio:"aishakhan.myportfolio.com", on:"09 Sep 2026", status:"New", cv:{name:"Aisha-Khan-CV.pdf",size:178000}, note:""},
+   phone:"90048 27760", exp:0, qual:"B.A. Psychology, St. Andrew's", portfolio:"aishakhan.myportfolio.com", on:"09 Sep 2026", status:"New", cv:{name:"Aisha-Khan-CV.pdf",size:178000}, msg:""},
 
   /* ROLE-018 — Weekend Gallery Volunteer */
   {id:"APP-2076", role:"ROLE-018", name:"Rhea Kapoor", email:"rhea.kapoor@example.com",
    phone:"98195 63308", exp:0, qual:"Class 12 (appearing), Cathedral School", on:"15 Sep 2026", status:"New", cv:{name:"Rhea-Kapoor-Intro.pdf",size:74000},
-   note:"Class 12. One Sunday a month works for me."},
+   msg:"Class 12. One Sunday a month works for me."},
   {id:"APP-2071B", role:"ROLE-018", name:"Manav Thakur", email:"manav.thakur@example.com",
-   phone:"93726 10094", exp:0, qual:"B.Sc. Zoology, Ruparel College", on:"13 Sep 2026", status:"Shortlisted", cv:{name:"Manav-Thakur.pdf",size:69000}, note:""},
+   phone:"93726 10094", exp:0, qual:"B.Sc. Zoology, Ruparel College", on:"13 Sep 2026", status:"Shortlisted", cv:{name:"Manav-Thakur.pdf",size:69000}, msg:""},
   {id:"APP-2062", role:"ROLE-018", name:"Zoya Merchant", email:"zoya.merchant@example.com",
    phone:"98209 74425", exp:2, qual:"B.A. Fine Arts, Sir J.J. School of Art", on:"09 Sep 2026", status:"New", cv:{name:"Zoya-Merchant-CV.pdf",size:121000},
-   note:"Volunteered at the Kala Ghoda festival last two years."},
+   msg:"Volunteered at the Kala Ghoda festival last two years."},
   {id:"APP-2058", role:"ROLE-018", name:"Harsh Vora", email:"harsh.vora@example.com",
-   phone:"99878 33162", exp:0, qual:"B.Com, Mithibai College", on:"07 Sep 2026", status:"New", cv:{name:"Harsh-Vora.pdf",size:83000}, note:""},
+   phone:"99878 33162", exp:0, qual:"B.Com, Mithibai College", on:"07 Sep 2026", status:"New", cv:{name:"Harsh-Vora.pdf",size:83000}, msg:""},
   {id:"APP-2054", role:"ROLE-018", name:"Leena Pillai", email:"leena.pillai@example.com",
    phone:"90045 60219", exp:28, qual:"B.Ed., Mumbai University", on:"06 Sep 2026", status:"Interviewed", cv:{name:"Leena-Pillai-CV.pdf",size:144000},
-   note:"Retired schoolteacher, free Saturdays."},
+   msg:"Retired schoolteacher, free Saturdays."},
 
   /* ROLE-012 — Membership Executive (closed) */
   {id:"APP-2011", role:"ROLE-012", name:"Nandini Rao", email:"nandini.rao@example.com",
-   phone:"98860 41207", exp:2, qual:"B.B.A., Christ University", on:"12 Aug 2026", status:"Rejected", cv:{name:"Nandini-Rao-CV.pdf",size:191000}, note:""},
+   phone:"98860 41207", exp:2, qual:"B.B.A., Christ University", on:"12 Aug 2026", status:"Rejected", cv:{name:"Nandini-Rao-CV.pdf",size:191000}, msg:""},
   {id:"APP-2007", role:"ROLE-012", name:"Farhan Ali", email:"farhan.ali@example.com",
    phone:"98334 90015", exp:4, qual:"M.B.A. Marketing, Symbiosis", on:"09 Aug 2026", status:"Interviewed", cv:{name:"Farhan-Ali-CV.pdf",size:163000},
-   note:"Four years in CRM at a gym chain."},
+   msg:"Four years in CRM at a gym chain."},
   {id:"APP-2003", role:"ROLE-012", name:"Gauri Shinde", email:"gauri.shinde@example.com",
-   phone:"90287 15544", exp:1, qual:"B.A. Sociology, Fergusson College", on:"05 Aug 2026", status:"Rejected", cv:{name:"Gauri-Shinde.pdf",size:105000}, note:""}
+   phone:"90287 15544", exp:1, qual:"B.A. Sociology, Fergusson College", on:"05 Aug 2026", status:"Rejected", cv:{name:"Gauri-Shinde.pdf",size:105000}, msg:""}
 ];
 const CAREER_OPENINGS = [
   {id:"ROLE-014", jd:{name:"Visitor-Experience-Associate-JD.pdf",size:148000}, title:"Visitor Experience Associate", dept:"Operations",
@@ -1925,10 +1928,10 @@ const SPONSORED_BOOKINGS = [
     orgType:"Funded (NGO)", sponsor:"", district:"Mumbai Suburban",
     transport:{need:"Maybe", vendor:""},
     interested:["Museum Tour","Introduction to AI session"], interestedOther:"", prefDate:"22 Oct 2026",
-    expChildren:80, expTeachers:8, note:"Underprivileged children; would value the AI session if it fits the budget.",
+    expChildren:80, expTeachers:8, note:"Sponsored children; would value the AI session if it fits the budget.",
     proofDoc:"Aseema-12A-registration.pdf",
     visits:[], entryStudent:"", entryAdult:"",
-    ngoGstin:"", ngoPan:"AAATA1234N", authNumber:"", speciallyAbled:0, underprivileged:[],
+    ngoGstin:"", ngoPan:"AAATA1234N", authNumber:"", speciallyAbled:0, sponsoredGroups:[],
     postVisit:{remark:"", images:[]}, students:{uploaded:false,total:0,girls:0,boys:0}, feedback:{sent:false},
     comments:"", invoice:{raised:false, on:""},
     timeline:[{on:"18 Sep 2026", who:"Website", what:"Enquiry received from the school-trips form — acknowledgement email sent to the POC."}] },
@@ -1945,7 +1948,7 @@ const SPONSORED_BOOKINGS = [
     visits:[{date:"28 Oct 2026", slotId:"Afternoon 14:00–18:00", students:120, adults:10, escorts:4, teachersComp:0,
              food:{students:0,adults:0,comp:0,optionIds:[]}, optionals:[]}],
     entryStudent:350, entryAdult:500,
-    ngoGstin:"", ngoPan:"AAATN5678K", authNumber:"", speciallyAbled:0, underprivileged:[],
+    ngoGstin:"", ngoPan:"AAATN5678K", authNumber:"", speciallyAbled:0, sponsoredGroups:[],
     postVisit:{remark:"", images:[]}, students:{uploaded:false,total:0,girls:0,boys:0}, feedback:{sent:false},
     comments:"Awaiting sponsor confirmation and final numbers.", invoice:{raised:false, on:""},
     timeline:[{on:"10 Sep 2026", who:"Website", what:"Enquiry received — acknowledgement email sent to the POC."},
@@ -1964,7 +1967,7 @@ const SPONSORED_BOOKINGS = [
              food:{students:150,adults:12,comp:5,optionIds:["Snack box"]},
              optionals:[{kind:"Orientation", venue:"Auditorium", date:"14 Oct 2026", time:"14:15–14:45"}]}],
     entryStudent:350, entryAdult:500,
-    ngoGstin:"", ngoPan:"AAATT9012Q", authNumber:"JSW/CSR/2026/0417", speciallyAbled:6, underprivileged:[{title:"First-generation learners",count:"120"},{title:"Below poverty line",count:"45"}],
+    ngoGstin:"", ngoPan:"AAATT9012Q", authNumber:"JSW/CSR/2026/0417", speciallyAbled:6, sponsoredGroups:[{title:"First-generation learners",count:"120"},{title:"Below poverty line",count:"45"}],
     postVisit:{remark:"", images:[]}, students:{uploaded:false,total:0,girls:0,boys:0}, feedback:{sent:false},
     comments:"Function Process circulated to staff; e-invoice to JSW on completion.", invoice:{raised:false, on:""},
     timeline:[{on:"30 Aug 2026", who:"Neha (CSR)", what:"Backend booking created; confirmation emailed to the NGO and Function Process circulated to staff."},
@@ -1982,7 +1985,7 @@ const SPONSORED_BOOKINGS = [
     visits:[{date:"06 Aug 2026", slotId:"Afternoon 14:00–18:00", students:90, adults:8, escorts:2, teachersComp:0,
              food:{students:90,adults:8,comp:2,optionIds:["Standard lunch"]}, optionals:[]}],
     entryStudent:350, entryAdult:500,
-    ngoGstin:"", ngoPan:"AAATP3456R", authNumber:"TT/CSR/2026/1180", speciallyAbled:4, underprivileged:[{title:"First-generation learners",count:"80"}],
+    ngoGstin:"", ngoPan:"AAATP3456R", authNumber:"TT/CSR/2026/1180", speciallyAbled:4, sponsoredGroups:[{title:"First-generation learners",count:"80"}],
     postVisit:{remark:"Wonderful, curious group — the light gallery was a hit. Two buses arrived 20 min late; noted for next time.",
                images:["group-atrium.jpg","light-gallery.jpg","lunch-courtyard.jpg"]},
     students:{uploaded:true,total:90,girls:48,boys:42}, feedback:{sent:true},
@@ -2570,9 +2573,9 @@ const CUSTOMERS = (()=>{ const seen=new Map(); BOOKINGS.forEach(b=>{ if(b.phone 
 /* Plans have configurable names, visit counts (a number, or "Unlimited"), validity, price and
    per-plan discounts. A visit = 1 adult + 1 child. Platinum is unlimited; Gold/Silver are limited. */
 const MEMBERSHIP_TIERS = [
-  {id:"silver",  name:"Silver",  price:2999, visits:6,           validity:"3 months", discounts:{birthday:5, events:5, workshops:10}, priority:false, status:"Active"},
-  {id:"gold",    name:"Gold",    price:5999, visits:12,          validity:"6 months", discounts:{birthday:10,events:10,workshops:15}, priority:true,  status:"Active"},
-  {id:"platinum",name:"Platinum",price:9999, visits:"Unlimited", validity:"Yearly",   discounts:{birthday:10,events:10,workshops:15}, priority:true,  status:"Active"}
+  {id:"silver",  name:"Silver",  price:2999, visits:6,           validity:"3 months", hsn:"999692", priority:false, status:"Active"},
+  {id:"gold",    name:"Gold",    price:5999, visits:12,          validity:"6 months", hsn:"999692", priority:true,  status:"Active"},
+  {id:"platinum",name:"Platinum",price:9999, visits:"Unlimited", validity:"Yearly",   hsn:"999692", priority:true,  status:"Active"}
 ];
 const MEMBER_TODAY = "24 Aug 2026";   // reference "now" for expiry maths
 /* Each member registers ONE adult-child pair at purchase; only that pair may redeem.
@@ -2626,14 +2629,14 @@ const DISC_KINDS = ["Items in the basket","Customer holds a membership","A code 
                     "The booking date","Arrived via an affiliate link","Applied by staff"];
 
 const DISCOUNTS = [
-  {n:"Add-on bundling — combined total",vt:"Percentage",prods:[],dates:["01 Apr 2026","31 Mar 2027"],maxr:"",codes:null,
+  {n:"Add-on bundling — combined total",combinable:true,vt:"Percentage",prods:[],dates:["01 Apr 2026","31 Mar 2027"],maxr:"",codes:null,
    no:[],prec:10,status:"Approved",maker:"Hasmukh",checker:"Suryanarayan",apply:"auto",
    cond:[{k:"Items in the basket",prods:["MuSo Tour"],pm:"any of",cats:[],op:"at least",qty:"1"},
          {k:"Items in the basket",prods:["Mini Golf","Lost Code of Play","Vroom"],pm:"any of",cats:[],op:"at least",qty:"1"}],
    target:"Whole cart",value:"Percentage",v:"10%",
    src:"§1.6: “10% off the combined ticket + add-on total”"},
 
-  {n:"Add-on bundling — add-ons only",vt:"Percentage",prods:["Mini Golf","Lost Code of Play","Vroom"],
+  {n:"Add-on bundling — add-ons only",combinable:true,vt:"Percentage",prods:["Mini Golf","Lost Code of Play","Vroom"],
    dates:["01 Apr 2026","31 Mar 2027"],maxr:"",codes:null,
    no:["Add-on bundling — combined total"],prec:20,status:"Approved",maker:"Hasmukh",checker:"Suryanarayan",apply:"auto",
    cond:[{k:"Items in the basket",prods:["MuSo Tour"],pm:"any of",cats:[],op:"at least",qty:"1"},
@@ -2641,7 +2644,7 @@ const DISCOUNTS = [
    target:"The add-on lines only",value:"Percentage",v:"10%",
    src:"§1.6: “10% off on add-ons when bundled with a ticket”"},
 
-  {n:"Membership",vt:"Percentage",prods:[],dates:["01 Apr 2026",""],maxr:"",codes:null,
+  {n:"Membership",combinable:true,vt:"Percentage",prods:[],dates:["01 Apr 2026",""],maxr:"",codes:null,
    no:[],prec:30,status:"Approved",maker:"Sushmita",checker:"Suryanarayan",apply:"auto",
    cond:[{k:"Customer holds a membership"}],
    target:"Whole cart",value:"Percentage",v:"10%",
@@ -2676,14 +2679,14 @@ const DISCOUNTS = [
    target:"Whole cart",value:"Percentage",v:"10%",
    src:"§1.10: originally scoped at 20% off — reduced to 10% per current pricing"},
 
-  {n:"Members — 10% off programs",vt:"Percentage",auto:true,staffOnly:false,memberOnly:true,
+  {n:"Members — 10% off programs",combinable:true,vt:"Percentage",auto:true,staffOnly:false,memberOnly:true,
    dates:["01 Apr 2026","31 Mar 2027"],visit:["",""],maxr:"",
    codes:{oncePerUser:true,gen:"1"},no:[],prec:90,status:"Approved",maker:"Sushmita",checker:"Suryanarayan",
    cond:[{k:"Items in the basket",prods:["Program"],pm:"any of",cats:[],op:"at least",qty:"1",qtys:{Program:"1"},slots:{}}],
    target:"The chosen items",value:"Percentage",v:"10%",
    src:"category discount: 10% off any program (workshop, camp or event) for members, applied automatically"},
 
-  {n:"",codeType:"series",series:{prefix:"JSW",from:"1",to:"100"},vt:"Flat amount",auto:false,staffOnly:true,memberOnly:false,
+  {n:"",combinable:true,codeType:"series",series:{prefix:"JSW",from:"1",to:"100"},vt:"Flat amount",auto:false,staffOnly:true,memberOnly:false,
    dates:["01 Sep 2026","31 Dec 2026"],visit:["",""],maxr:"100",
    codes:{oncePerUser:true,gen:"1"},no:[],prec:60,status:"Approved",maker:"Hasmukh",checker:"Suryanarayan",
    cond:[],
@@ -3260,12 +3263,18 @@ function effectPhrase(d){
   return `${amt} off ${tgt}`;
 }
 /* How a discount is applied — a code is always created; two independent attributes. */
+/* Member perks live in Discounts & offers, never on the plan (owner, 2026-09-24): a discount whose condition is
+   "Customer holds a membership" (optionally limited to some plans via cond.tiers), or one marked members-only. */
+function tierPerks(t){ return DISCOUNTS.filter(d=>{ const mc=(d.cond||[]).find(c=>c.k==="Customer holds a membership");
+  const forPlan=list=>!list||!list.length||list.includes(t.name);
+  return (mc&&forPlan(mc.tiers))||(applyInfo(d).memberOnly&&forPlan(d.memberTiers)); }); }
+const perkLabel = d => d.n || (d.series ? d.series.prefix+" series" : "Discount");
 function applyInfo(d){
   if(d.auto!==undefined||d.staffOnly!==undefined||d.memberOnly!==undefined) return {auto:!!d.auto, staffOnly:!!d.staffOnly, memberOnly:!!d.memberOnly};
   return {auto:d.apply==="auto", staffOnly:d.apply==="manual", memberOnly:false};   // legacy fallback
 }
 function audienceText(a){ return a.staffOnly&&a.memberOnly?"staff & members only":a.staffOnly?"staff only":a.memberOnly?"members only":"everyone"; }
-function applyText(d){ const a=applyInfo(d); return (a.auto?"Auto-applied":"Applied with the code")+" · "+audienceText(a); }
+function applyText(d){ const a=applyInfo(d); return (a.auto?"Auto-applied":"Applied with the code")+" · "+audienceText(a)+" · "+(d.combinable?"combines with other discounts":"applies alone"); }
 function discountSummary(d){
   const a=applyInfo(d);
   const aud=audienceText(a);
@@ -3383,7 +3392,9 @@ function syncDiscountForm(){
   const d=curDiscount(); if(!d) return;
   applyFormToDiscount(d,readForm(document.querySelector("#pane")));
   const as=document.querySelector("[data-apply-staff]"); if(as) d.staffOnly=!!as.checked;
+  const cb=document.querySelector("[data-combinable]"); if(cb) d.combinable=!!cb.checked;
   const am=document.querySelector("[data-apply-member]"); if(am) d.memberOnly=!!am.checked;
+  const mt=document.querySelector("[data-member-tiers]"); if(mt) d.memberTiers=[...mt.querySelectorAll('.chip-opt[data-on="1"]')].map(b=>b.dataset.chipval);
   const co=document.querySelector("[data-code-once]"); if(co){ d.codes=d.codes||{gen:"1"}; d.codes.oncePerUser=co.dataset.on==="1"; }
   document.querySelectorAll("[data-series]").forEach(el=>{ d.series=d.series||{prefix:"",from:"1",to:"100"}; d.series[el.dataset.series]=el.value; });
 }
@@ -3495,8 +3506,10 @@ function discountForm(editing){
         <div style="font-size:11px;color:var(--ink3);margin-top:4px">Customers will see this in their cart and at checkout.</div></div>`
     : codeTypeToggle + (isSer ? seriesControl : singleCodeControl);
   const audienceControl=`<div class="fld wide" style="gap:6px">
+      <label class="chk"><input type="checkbox" data-combinable${d.combinable?" checked":""}><span>Can be combined with other discounts</span>${tip("On: stacks with every other discount that is also on. Off: only ever applies alone — checkout gives the customer whichever saves more.")}</label>
       <label class="chk"><input type="checkbox" data-apply-staff${a.staffOnly?" checked":""}><span>Can be used by staff only</span></label>
       <label class="chk"><input type="checkbox" data-apply-member${a.memberOnly?" checked":""}><span>Can be applied for members only</span></label>
+      ${a.memberOnly?`<div style="margin:2px 0 0 24px"><div style="font-size:11.5px;color:var(--ink3);margin-bottom:4px">Which plans — none ticked means every plan</div><div class="chips" data-member-tiers>${MEMBERSHIP_TIERS.map(t=>`<button type="button" class="chip-add chip-opt" data-on="${(d.memberTiers||[]).includes(t.name)?1:0}" data-chipval="${escAttr(t.name)}">${t.name}</button>`).join("")}</div></div>`:""}
     </div>`;
   const basics=`<section class="form-sec"><div class="form-sec-head"><span class="form-sec-title">Basics</span></div>
     <div class="form-sec-body">${methodControl}${identityControl}${audienceControl}${dfld("is_active",v)}</div></section>`;
@@ -3739,7 +3752,7 @@ let qryExpanded = new Set();
 let deptEditing = "", deptDeleting = "";
 let careerFDept = "", careerFType = "", careerFStatus = "all";
 let current = "dashboard", selP = 0, tab = "list", sub = "details",
-    selW = 0, selB = 0, selE = 0, esub = "details", eventCats = new Set(), selBooking = 0, bookingProduct = 0, bookingSlot = "", bookingDiscountCode = "", csub = "details", copyFrom = 0, copyTo = new Set(), copyWhat = new Set(["price","seats"]), editD = -1,
+    selW = 0, selB = 0, selE = 0, esub = "details", eventCats = new Set(), selBooking = 0, bookingProduct = 0, bookingSlot = "", bookingDiscountCode = "", bookingDiscountCodes = [], csub = "details", copyFrom = 0, copyTo = new Set(), copyWhat = new Set(["price","seats"]), editD = -1,
     progKind = "event", progCat = "Event", prodBuildingPool = false,
     bookingProducts = new Map(), bookingAddons = new Map(), bookingPrograms = new Map(), bookingPay = "Cash", bookingTab = "products",
     bookingCustomer = {name:"",phone:"",email:"",member:null,location:"",pincode:"",gstin:""}, bookingCustomerLinked = -1, bookingStep = 1, bookingOpenItem = null, bookingCalMonth = null, bookingCancelConfirm = false, bookingDiscountTried = false, bookingStep1Tried = false, bookingRedeemVisit = false, bookingRedeemAdult = false,
@@ -4520,13 +4533,13 @@ const VIEWS = {
   tiers(){
     return `${toolbar("Search membership tiers",MEMBERSHIP_TIERS.length+" plans")}
     <div class="card"><div class="matrix-wrap"><table class="reclist"><thead><tr>
-      <th>Plan</th><th>Price</th><th>Visits</th><th>Validity</th><th>Discounts (Birthday / Events / Workshops)</th><th>Status</th></tr></thead>
+      <th>Plan</th><th>Price</th><th>Visits</th><th>Validity</th><th>Member discounts</th><th>Status</th></tr></thead>
     <tbody>${MEMBERSHIP_TIERS.map((t,i)=>`<tr data-open="tier:${i}">
       <td>${tierPill(t.name)}</td>
       <td class="code">${money(t.price)}</td>
       <td class="code">${t.visits==="Unlimited"?'<b style="font-weight:600">Unlimited</b>':t.visits}</td>
       <td>${t.validity}</td>
-      <td class="code">${t.discounts.birthday}% / ${t.discounts.events}% / ${t.discounts.workshops}%</td>
+      <td>${(()=>{const k=tierPerks(t);return k.length?k.map(d=>`${perkLabel(d)} <span class="code">${d.v}</span>`).join("<br>"):'<span class="muted">None</span>';})()}</td>
       <td>${t.status==="Active"?'<span class="pill pill-ok"><i class="dot"></i>Active</span>':'<span class="pill pill-draft"><i class="dot"></i>'+t.status+'</span>'}</td></tr>`).join("")}
       <tr><td colspan="6"><button class="rep-add" data-tab="new" style="border-radius:4px">+ New tier</button></td></tr>
     </tbody></table></div></div>`;
@@ -5544,26 +5557,39 @@ function bookingForm(editing=false){
   const hasProgram=[...bookingPrograms.values()].some(anyQty);
   let maxCatQty=0; [...bookingProducts.values(),...bookingAddons.values()].forEach(cf=>{ Object.values(catQtys(cf)).forEach(n=>{ if(n>maxCatQty) maxCatQty=n; }); });
   const pctOf=(v,base)=>String(v).includes("%")?base*(parseFloat(v)||0)/100:Math.min(base,parseFloat(String(v).replace(/[^0-9.]/g,""))||0);
-  // typed code — match any Approved code-based discount by d.n, cond code, or series voucher
-  const codeUP=String(bookingDiscountCode||"").trim().toUpperCase();
-  const seriesHit=d=>{ if(!isSeries(d)) return false; const s=d.series; if(!codeUP.startsWith(String(s.prefix||"").toUpperCase())) return false; const n=parseInt(codeUP.replace(/\D/g,""),10); return !isNaN(n)&&n>=+s.from&&n<=+s.to; };
-  const discount=codeUP?DISCOUNTS.find(d=>d.status==="Approved"&&!applyInfo(d).auto&&(String(d.n||"").toUpperCase()===codeUP||(d.cond||[]).some(c=>String(c.code||"").toUpperCase()===codeUP)||seriesHit(d))):null;
-  const codeDiscAmt=discount?pctOf(discount.v,subtotal):0;
+  // typed codes — several per order; each matches an Approved code-based discount by d.n, cond code, or series voucher
+  const findCodeDisc=code=>{ const up=String(code||"").trim().toUpperCase(); if(!up) return null;
+    const seriesHit=d=>{ if(!isSeries(d)) return false; const s=d.series; if(!up.startsWith(String(s.prefix||"").toUpperCase())) return false; const n=parseInt(up.replace(/\D/g,""),10); return !isNaN(n)&&n>=+s.from&&n<=+s.to; };
+    return DISCOUNTS.find(d=>d.status==="Approved"&&!applyInfo(d).auto&&(String(d.n||"").toUpperCase()===up||(d.cond||[]).some(c=>String(c.code||"").toUpperCase()===up)||seriesHit(d)))||null; };
+  const codeHits=bookingDiscountCodes.map(c=>({code:c,d:findCodeDisc(c)}));
   // auto-applied — evaluate each Approved automatic discount against the cart (simplified conditions)
   const autoDiscs=[]; let bundlingDone=false;
   DISCOUNTS.filter(d=>d.status==="Approved"&&applyInfo(d).auto).forEach(d=>{
     const kinds=(d.cond||[]).map(c=>c.k);
-    if(kinds.includes("Customer holds a membership")){ if(member) autoDiscs.push({label:"Membership",v:d.v,amount:pctOf(d.v,subtotal)}); return; }
-    if(applyInfo(d).memberOnly){ if(member&&hasProgram) autoDiscs.push({label:d.n,v:d.v,amount:pctOf(d.v,progTotal)}); return; }
-    if(/Add-on bundling/i.test(d.n||"")){ if(!bundlingDone&&hasProduct&&hasAddon){ bundlingDone=true; autoDiscs.push({label:"Add-on bundling",v:d.v,amount:pctOf(d.v,addonRawTotal)}); } return; }
-    if(d.tiers&&d.tiers.length){ if(maxCatQty>=+d.tiers[0][0]){ const tier=[...d.tiers].reverse().find(t=>maxCatQty>=+t[0])||d.tiers[0]; autoDiscs.push({label:"Quantity break",v:tier[1]+"%",amount:subtotal*(parseFloat(tier[1])||0)/100}); } return; }
+    if(kinds.includes("Customer holds a membership")){ if(member) autoDiscs.push({label:"Membership",v:d.v,amount:pctOf(d.v,subtotal),d}); return; }
+    if(applyInfo(d).memberOnly){ if(member&&hasProgram&&(!(d.memberTiers||[]).length||d.memberTiers.includes(member.tier))) autoDiscs.push({label:d.n,v:d.v,amount:pctOf(d.v,progTotal),d}); return; }
+    if(/Add-on bundling/i.test(d.n||"")){ if(!bundlingDone&&hasProduct&&hasAddon){ bundlingDone=true; autoDiscs.push({label:"Add-on bundling",v:d.v,amount:pctOf(d.v,addonRawTotal),d}); } return; }
+    if(d.tiers&&d.tiers.length){ if(maxCatQty>=+d.tiers[0][0]){ const tier=[...d.tiers].reverse().find(t=>maxCatQty>=+t[0])||d.tiers[0]; autoDiscs.push({label:"Quantity break",v:tier[1]+"%",amount:subtotal*(parseFloat(tier[1])||0)/100,d}); } return; }
   });
-  const autoDiscAmt=autoDiscs.reduce((t,x)=>t+x.amount,0);
-  const discAmt=Math.min(subtotal,codeDiscAmt+autoDiscAmt);
+  // STACKING (owner, 2026-09-24): every discount says whether it "can be combined with other discounts".
+  // The customer gets the bigger of — ALL qualifying combinable discounts together, or the single best
+  // non-combinable one alone. Percentages first, then flat amounts, each on what is left; never below 0.
   const addonDiscountPct=member?(member.addonDiscountPct||0):0;
-  const addonDiscountAmt=addonRawTotal*addonDiscountPct/100;
-  const gst=Math.round(Math.max(0,subtotal-discAmt-addonDiscountAmt)*0.18);
-  const grand=Math.max(0,subtotal-discAmt-addonDiscountAmt)+gst;
+  const discCandidates=[
+    ...codeHits.filter(x=>x.d).map(x=>({label:codeLabel(x.d),v:x.d.v+" off",amount:pctOf(x.d.v,subtotal),kind:"code",comb:!!x.d.combinable,pct:String(x.d.v).includes("%")})),
+    ...autoDiscs.map(x=>({label:x.label,v:x.v,amount:x.amount,kind:"auto",comb:!!(x.d&&x.d.combinable),pct:String(x.v).includes("%")})),
+    ...(member&&addonDiscountPct&&addonRawTotal?[{label:"★ "+member.tier+" add-on perk",v:addonDiscountPct+"%",amount:addonRawTotal*addonDiscountPct/100,kind:"member",comb:true,pct:true}]:[])
+  ];
+  const stackOf=list=>{ let left=subtotal; return [...list].sort((a,b)=>(b.pct-a.pct)).map(x=>{ const amt=Math.round(Math.min(left, x.pct?x.amount*left/(subtotal||1):x.amount)); left-=amt; return {...x,applied:amt}; }); };
+  const combSet=stackOf(discCandidates.filter(x=>x.comb));
+  const combTotal=combSet.reduce((t,x)=>t+x.applied,0);
+  const soloBest=discCandidates.filter(x=>!x.comb).reduce((b,x)=>(!b||x.amount>b.amount)?x:b,null);
+  const useSolo=soloBest&&Math.min(subtotal,soloBest.amount)>combTotal;
+  const appliedDiscs=useSolo?[{...soloBest,applied:Math.min(subtotal,soloBest.amount)}]:combSet;
+  const skippedDiscs=discCandidates.filter(x=>!appliedDiscs.some(a=>a.label===x.label&&a.kind===x.kind)).map(x=>({...x,why:x.comb?"a discount that can't be combined saves more":"can't be combined with other discounts"}));
+  const discAmt=appliedDiscs.reduce((t,x)=>t+x.applied,0);
+  const gst=Math.round(Math.max(0,subtotal-discAmt)*0.18);
+  const grand=Math.max(0,subtotal-discAmt)+gst;
   const section=(title,body)=>`<section class="form-sec"><div class="form-sec-head"><span class="form-sec-title">${title}</span></div><div class="form-sec-body">${body}</div></section>`;
   const adultInCfg=cf=>combosOf(cf).reduce((a,combo)=>a+((combo.qty&&combo.qty["Adult"])||0),0);
   const adultQty=[...bookingProducts].reduce((t,[,cf])=>t+adultInCfg(cf),0)+[...bookingAddons].reduce((t,[,cf])=>t+adultInCfg(cf),0)+redeemAdultCount;
@@ -5710,19 +5736,14 @@ function bookingForm(editing=false){
   // Products/add-ons are keyed by slot, so each selected slot gets its own labeled attendee rows —
   // that's what lets staff put the same visitors on every slot, or different visitors per slot.
   const heads=[];
-  const collectCombos=(items,recFor,slotsFor)=>items.forEach(([id,cfg])=>{
-    const rec=recFor(id); if(!rec) return; const slist=slotsFor(id);
-    combosOf(cfg).forEach(combo=>{
-      const s=slotFor(slist,combo), slotLbl=`${combo.date||""}${s.t1?" "+s.t1+"–"+s.t2:(combo.slot?" "+combo.slot:"")}`.trim();
-      rec.cats.forEach(c=>{const total=((combo.qty&&combo.qty[c])||0)+((combo.redeem&&combo.redeem[c])||0);for(let n=0;n<total;n++)heads.push({label:`${rec.n} — ${slotLbl} · ${c} ${n+1}`, cat:c});});
-    });
-  });
-  collectCombos([...bookingProducts],i=>P[i],i=>P[i].slots);
-  collectCombos([...bookingAddons],code=>P.find(x=>x.c===code),code=>(P.find(x=>x.c===code)||{slots:[]}).slots);
+  // Names are asked ONLY for programs (camps / workshops / events) — the instructor's register needs them.
+  // Tours, add-ons and membership visits are counts only, no per-person rows (owner, 2026-09-23 / 2026-09-24).
   [...bookingPrograms].forEach(([key,cfg])=>{const nm=progRec(key).n;combosOf(cfg).forEach(combo=>{const b=batchFor(key,combo);PCATS.forEach(c=>{const total=(combo.qty&&combo.qty[c])||0;for(let n=0;n<total;n++)heads.push({label:nm+(b.n?" · "+b.n:"")+" · "+c+" "+(n+1), cat:c});});});});
-  // the free heads covered by a redeemed membership visit — 1 Child always, +1 Adult if joining (age band set here)
-  visitCombos.filter(x=>x.combo.redeemVisit).forEach(x=>{ const lbl="Membership visit"+(x.combo.date?" · "+x.combo.date:""); heads.push({label:lbl+" · Child", cat:"Child"}); if(x.combo.redeemAdult) heads.push({label:lbl+" · Adult", cat:"Adult"}); });
-  const attendeesTab = heads.length ? `<div class="pos-lbl">Attendee details <small>one per ticket</small></div><div class="attendee-list">${heads.map((h,idx)=>{const child=/child/i.test(h.cat||"");const req=child?'<span class="lab-req">Required</span>':'';const rq=child?" required aria-required=\"true\"":"";return `<div class="attendee-row"><div class="attendee-kind">${h.label}</div><div class="fld"><div class="lab"><span class="lab-n">Name</span>${req}</div><input class="inp"${rq} placeholder="Full name"></div><div class="fld"><div class="lab"><span class="lab-n">Date of birth</span></div><input class="inp mono" data-dob="${idx}" placeholder="DD/MM/YYYY"></div><div class="fld"><div class="lab"><span class="lab-n">Age</span>${req}</div><input class="inp mono" id="age_${idx}"${rq} placeholder="Years" aria-live="polite"></div></div>`;}).join("")}</div>` : `<div class="pos-empty">Add tickets first — attendees appear here.</div>`;
+  const attendeesTab = heads.length ? `<div class="pos-lbl">Attendee details <small>one per seat · programs only</small></div>
+    <div class="fld" style="max-width:320px;margin-bottom:12px"><div class="lab"><span class="lab-n">Parent's WhatsApp number</span>${tip("Goes on the instructor's register and gets the day-before reminders.")}</div><input class="inp mono" id="bookWhatsapp" inputmode="tel" placeholder="Same as phone if blank"></div>
+    <div class="attendee-list">${heads.map((h,idx)=>`<div class="attendee-row"><div class="attendee-kind">${h.label}</div><div class="fld"><div class="lab"><span class="lab-n">Name</span><span class="lab-req">Required</span></div><input class="inp" required aria-required="true" placeholder="Full name"></div><div class="fld"><div class="lab"><span class="lab-n">Date of birth</span><span class="lab-req">Optional</span></div><input class="inp mono" data-dob="${idx}" placeholder="DD/MM/YYYY"></div><div class="fld"><div class="lab"><span class="lab-n">Age</span><span class="lab-req">Optional</span></div><input class="inp mono" id="age_${idx}" placeholder="Years" aria-live="polite"></div></div>`).join("")}</div>`
+    : hasItems ? `<div class="pos-empty">No names needed for this order.<br>Tours, add-ons and membership visits are sold by count — names are only asked for camps, workshops and events.</div>`
+    : `<div class="pos-empty">Add tickets first — program attendees appear here.</div>`;
 
   // ---- step 2 sub-tabs, each labelled with how many tickets are already in it ----
   const prodCount=[...bookingProducts.values()].reduce((s,c)=>s+qtySum(c),0);
@@ -5785,12 +5806,11 @@ function bookingForm(editing=false){
   const summary=`<aside class="booking-summary"><div class="booking-summary-head">Order summary${cartRows.length?` <span class="booking-summary-count">${cartRows.length} item${cartRows.length===1?"":"s"}</span>`:""}</div><div class="booking-summary-body">
     ${cartRows.length?cartRows.join(""):`<div class="pos-empty">Nothing added yet.<br>Pick a product or program to begin.</div>`}
     <div class="booking-discount"><input class="inp mono" id="bookingDiscountCode" placeholder="Discount code" value="${escAttr(bookingDiscountCode)}"><button class="btn" data-apply-book-discount="1">Apply</button></div>
-    ${bookingDiscountTried?`<div class="booking-discount-msg${discount?" ok":" bad"}">${discount?`✓ ${codeLabel(discount)} applied — ${discount.v} off`:"Code not recognised or expired."}</div>`:""}
+    ${codeHits.length?`<div class="chips" style="margin:6px 0">${codeHits.map((x,i)=>`<span class="msel-tag" style="${x.d?"":"background:var(--stop-wash,#fdecec);color:var(--stop)"}">${escHtml(x.code)}${x.d?"":" · not recognised"}<button type="button" data-remove-book-code="${i}" aria-label="Remove ${escAttr(x.code)}">&times;</button></span>`).join("")}</div>`:""}
     <div class="booking-summary-row"><span>Subtotal</span><span>${money(subtotal)}</span></div>
-    ${autoDiscs.map(x=>`<div class="booking-summary-row" style="color:var(--ok)"><span>${x.label} <span class="q" style="margin-left:2px">auto</span> · ${x.v}</span><span>− ${money(x.amount)}</span></div>`).join("")}
-    ${discount?`<div class="booking-summary-row" style="color:var(--ok)"><span>${codeLabel(discount)} · ${discount.v} off</span><span>− ${money(codeDiscAmt)}</span></div>`:""}
-    ${addonDiscountAmt?`<div class="booking-summary-row" style="color:var(--amber)"><span>★ ${member.tier} Add-on Discount (${addonDiscountPct}%)</span><span>− ${money(addonDiscountAmt)}</span></div>`:""}
-    ${(discAmt||addonDiscountAmt)?`<div class="booking-summary-row" style="font-weight:600"><span>Net amount</span><span>${money(Math.max(0,subtotal-discAmt-addonDiscountAmt))}</span></div>`:""}
+    ${appliedDiscs.map(x=>`<div class="booking-summary-row" style="color:var(--ok)"><span>${x.label}${x.kind==="auto"?' <span class="q" style="margin-left:2px">auto</span>':""} · ${x.v}</span><span>− ${money(x.applied)}</span></div>`).join("")}
+    ${skippedDiscs.map(x=>`<div class="booking-summary-row" style="color:var(--ink3);font-size:11.5px"><span>${x.label} · ${x.v} — not applied, ${x.why}</span><span style="text-decoration:line-through">− ${money(x.amount)}</span></div>`).join("")}
+    ${discAmt?`<div class="booking-summary-row" style="font-weight:600"><span>Net amount</span><span>${money(Math.max(0,subtotal-discAmt))}</span></div>`:""}
     <div class="booking-summary-row"><span>GST 18%</span><span>${money(gst)}</span></div>
     <div class="booking-summary-total"><span>Total due</span><span>${money(grand)}</span></div>
   </div>${summaryPay}</aside>`;
@@ -5810,6 +5830,7 @@ function bookingForm(editing=false){
     <div class="fld"><div class="lab"><span class="lab-n">GSTIN</span><span class="lab-req">Optional</span></div><input class="inp mono" id="bookCustGstin" placeholder="For a business / e-invoice" value="${escAttr(bookingCustomer.gstin||"")}"></div>
     <div class="fld${missLoc?" fld-miss":""}"><div class="lab"><span class="lab-n">Location</span>${reqLoc}</div><input class="inp" id="bookCustLocation" placeholder="Customer's city or area" value="${escAttr(bookingCustomer.location||"")}"></div>
     <div class="fld${missLoc?" fld-miss":""}"><div class="lab"><span class="lab-n">PIN code</span>${reqLoc}</div><input class="inp mono" id="bookCustPincode" inputmode="numeric" placeholder="e.g. 400058" value="${escAttr(bookingCustomer.pincode||"")}"></div>
+    <div class="fld"><div class="lab"><span class="lab-n">State</span>${tip("Place of supply. Maharashtra charges CGST + SGST; any other state charges IGST. A GSTIN's first two digits override this.")}</div><select class="inp" id="bookCustState">${IN_STATES.map(st=>`<option${(bookingCustomer.state||"Maharashtra")===st?" selected":""}>${st}</option>`).join("")}</select></div>
     ${bookingStep1Tried&&(miss("phone")||miss("name")||missLoc)?`<div class="fld" style="grid-column:1/-1;color:var(--stop);font-size:12px">Fill the required fields to continue — PIN code or Location is required.</div>`:""}
   `);
 
@@ -6144,20 +6165,19 @@ function tierDetail(){
           ${row("Visits included",t.visits==="Unlimited"?'<b style="font-weight:600">Unlimited</b> (1 visit = 1 adult + 1 child)':t.visits+" (1 visit = 1 adult + 1 child)")}
           ${row("Validity",t.validity+" from purchase")}
           ${row("Priority access",t.priority?"Yes":"No")}
+          ${row("HSN / SAC",'<span class="code">'+(t.hsn||"—")+"</span>")}
           ${row("Status",t.status)}
         </tbody></table></div></div>
-        <div class="card"><div class="card-head"><span class="card-title">Member discounts</span><span class="card-note">configurable per plan</span></div>
-          <div class="matrix-wrap"><table><thead><tr><th>Applies to</th><th class="ctr">Discount</th></tr></thead><tbody>
-            <tr><td>Birthday parties at MuSo</td><td class="ctr code">${t.discounts.birthday}%</td></tr>
-            <tr><td>Events hosted at MuSo</td><td class="ctr code">${t.discounts.events}%</td></tr>
-            <tr><td>Workshops &amp; camps</td><td class="ctr code">${t.discounts.workshops}%</td></tr>
+        <div class="card"><div class="card-head"><span class="card-title">Member discounts</span><span class="card-note">set up in Discounts &amp; offers</span></div>
+          <div class="matrix-wrap"><table><thead><tr><th>Discount</th><th class="ctr">Value</th><th>Status</th></tr></thead><tbody>
+            ${tierPerks(t).map(d=>`<tr><td>${perkLabel(d)}</td><td class="ctr code">${d.v}</td><td>${d.status}</td></tr>`).join("")||`<tr><td colspan="3" class="muted">No discount applies to this plan yet.</td></tr>`}
           </tbody></table></div></div>
       </div>
       <div class="card"><div class="card-head"><span class="card-title">Terms</span></div>
         <ul class="card-body" style="font-size:12.5px;line-height:1.6;color:var(--ink2);margin:0;padding:14px 16px 14px 30px">
           <li>A museum-visitation membership only.</li>
           <li>Each visit admits the <b style="color:var(--ink)">registered adult + child pair</b> — no other adult or child may use it.</li>
-          <li>Members do <b style="color:var(--ink)">not</b> get free admission to special workshops, events, activities, camps, birthdays or special exhibits — those carry the discounts above.</li>
+          <li>Members do <b style="color:var(--ink)">not</b> get free admission to special workshops, events, activities, camps, birthdays or special exhibits — those carry the member discounts above.</li>
           <li>Blackout dates apply — check the calendar.</li>
           <li>Non-refundable and non-transferable.</li>
           <li>Valid ID proof required at entry.</li>
@@ -6166,8 +6186,7 @@ function tierDetail(){
 }
 /* ---- membership tier create / edit form ---- */
 function tierForm(editing){
-  const t=editing?MEMBERSHIP_TIERS[selTier]:{name:"",price:"",visits:"",validity:"6 months",priority:false,discounts:{},status:"Active"};
-  const d=t.discounts||{};
+  const t=editing?MEMBERSHIP_TIERS[selTier]:{name:"",price:"",visits:"",validity:"6 months",priority:false,hsn:"999692",status:"Active"};
   if(!tierDraft) seedTierDraft(editing);   // safety net if the form is reached without going through the entry handler
   const td=tierDraft;
   const tierInvalid=tierSaveTried&&!tierProdsOk(td);
@@ -6181,6 +6200,7 @@ function tierForm(editing){
         fld("Plan name",`<input class="inp" value="${escAttr(t.name||"")}" placeholder="e.g. Silver, Gold, Platinum">`,"The plan name shown to customers.",true,true)
         +fld("Price",`<div class="inp-suffix"><input class="inp mono" type="number" min="0" value="${escAttr(t.price||"")}" placeholder="0"><span>₹</span></div>`,"One-time price of the plan.",true)
         +fld("Striked price",`<div class="inp-suffix"><input class="inp mono" type="number" min="0" value="${escAttr(t.strikedPrice||"")}" placeholder="0"><span>₹</span></div>`,"Optional original price shown struck-through next to the plan price to signal a discount.",false)
+        +fld("HSN / SAC code",`<div class="selwrap"><select class="inp">${HSNCODES.map(h=>`<option value="${h.code}"${(t.hsn||"999692")===h.code?" selected":""}>${h.code} · ${h.desc} · ${h.gst}% GST</option>`).join("")}</select></div>`,"GST on the plan price is taken from this code.",true)
         +fld("Active",`<button type="button" class="sw" data-on="${t.status==="Draft"?0:1}"><i></i><span>${t.status==="Draft"?"Off":"On"}</span></button>`,"Turn it off to keep the plan a draft — draft plans are not on sale yet.",false))}
       ${sec("Visits & validity",
         fld("Visits included",`<div class="inp-suffix"><input class="inp mono" type="number" min="0" step="1" value="${escAttr(numvis)}" placeholder="Leave blank for Unlimited"><span>visits</span></div>`,"Number of visits included. Leave blank to mean Unlimited. One visit admits 1 adult + 1 child.",false)
@@ -6193,11 +6213,10 @@ function tierForm(editing){
             : `<div class="muted" style="font-size:12.5px;margin-bottom:10px">No products selected yet — this membership isn't tied to specific products or time slots.</div>`}
           <button type="button" class="rep-add" data-tier-editprods style="border-radius:6px;border:1px dashed var(--rule2)">${td.products.length?"Edit products &amp; time slots":"Add products &amp; time slots"}</button>
           ${tierInvalid?`<div style="grid-column:1/-1;color:var(--stop);font-size:12px;margin-top:8px">${!td.products.length?"Add at least one product and pick its time slots to continue.":"Pick at least one time slot for every selected product."}</div>`:""}</div>`)}
-      ${sec("Member discounts",
-        fld("Birthday parties %",`<div class="inp-suffix"><input class="inp mono" type="number" min="0" max="100" value="${escAttr(d.birthday??"")}" placeholder="0"><span>%</span></div>`,"Discount on birthday parties at MuSo.",false)
-        +fld("Events %",`<div class="inp-suffix"><input class="inp mono" type="number" min="0" max="100" value="${escAttr(d.events??"")}" placeholder="0"><span>%</span></div>`,"Discount on events hosted at MuSo.",false)
-        +fld("Workshops & camps %",`<div class="inp-suffix"><input class="inp mono" type="number" min="0" max="100" value="${escAttr(d.workshops??"")}" placeholder="0"><span>%</span></div>`,"Discount on workshops & camps.",false),
-        "configurable per plan")}
+      ${sec("Member discounts",`<div class="fld wide"><div class="lab"><span class="lab-n">Discounts this plan gets</span>${tip("Member perks are ordinary discounts: in Discounts & offers, add one with the condition 'Customer holds a membership' and pick this plan. One discount per order — the biggest saving wins.")}</div>
+        ${editing&&tierPerks(t).length?`<div class="matrix-wrap"><table class="reclist"><thead><tr><th>Discount</th><th>Value</th><th>Status</th></tr></thead><tbody>${tierPerks(t).map(d=>`<tr><td>${perkLabel(d)}</td><td class="code">${d.v}</td><td>${d.status}</td></tr>`).join("")}</tbody></table></div>`:`<div class="muted" style="font-size:12.5px">${editing?"No discount applies to this plan yet.":"Save the plan first, then add its discounts in Discounts &amp; offers."}</div>`}
+        <button type="button" class="rep-add" data-goto="discounts" style="border-radius:6px;border:1px dashed var(--rule2);margin-top:8px">Manage in Discounts &amp; offers →</button></div>`,
+        "read-only here")}
     </div>
     <div class="form-foot"><button class="btn" data-tab="list">Cancel</button><button class="btn btn-primary" data-tier-save="1">${editing?"Save changes":"Create tier"}</button></div>
   </div>${addOpen==="tierprods"?tierProdsFormCard():""}</div>`;
@@ -6261,7 +6280,7 @@ function memberForm(editing){
 }
 /* ---- member detail (Summary / Purchases / Redemptions) + actions ---- */
 function memberDetail(){
-  const m=MEMBERS[selMember]; const st=memberStatus(m); const t=tierOf(m.tier)||{discounts:{}};
+  const m=MEMBERS[selMember]; const st=memberStatus(m); const t=tierOf(m.tier)||{name:m.tier};
   const tabs=`<div class="subs">${MEMBER_SUBS.map(([k,l])=>`<button class="sub-tab" data-msub="${k}" aria-selected="${msub===k}">${l}</button>`).join("")}</div>`;
   let body;
   if(msub==="purchases"){
@@ -6293,9 +6312,7 @@ function memberDetail(){
           ${row("Email",m.email)}
           ${row("Joined",m.joined)}
           ${row("Expires",m.expires)}
-          ${row("Birthday-party discount",t.discounts.birthday+"%")}
-          ${row("Events discount",t.discounts.events+"%")}
-          ${row("Workshops & camps discount",t.discounts.workshops+"%")}
+          ${row("Member discounts",tierPerks(t).map(d=>perkLabel(d)+" · "+d.v).join("<br>")||"None")}
         </tbody></table></div></div>
       </div>
       <div class="card"><div class="card-head"><span class="card-title">Actions</span></div>
@@ -7170,7 +7187,7 @@ function blankSp(mode){
     orgType:"Funded (NGO)", sponsor:"", district:"", transport:{need:"No",vendor:""},
     interested:[],interestedOther:"",prefDate:"",expChildren:"",expTeachers:"",note:"",proofDoc:"",
     visits:[], entryStudent:"", entryAdult:"",
-    ngoGstin:"", ngoPan:"", authNumber:"", speciallyAbled:0, underprivileged:[],
+    ngoGstin:"", ngoPan:"", authNumber:"", speciallyAbled:0, sponsoredGroups:[],
     postVisit:{remark:"",images:[]}, students:{uploaded:false,total:0,girls:0,boys:0}, feedback:{sent:false},
     comments:"",assignee:"", invoice:{raised:false,on:""}, timeline:[], _mode:mode};
 }
@@ -7289,7 +7306,7 @@ function spForm(editing){
     `<div class="fld" style="grid-column:1/-1;gap:14px">${(d.visits||[]).map(visitCard).join("")}
       <button type="button" class="rep-add" data-sp-add-visit="1" style="border-radius:4px;align-self:flex-start">+ Add visit</button></div>`);
 
-  const uprows = Array.isArray(d.underprivileged) ? d.underprivileged : [];
+  const uprows = Array.isArray(d.sponsoredGroups) ? d.sponsoredGroups : [];
   const upList = `<div style="display:flex;flex-direction:column;gap:8px" data-sp-uprows>${
     uprows.length ? uprows.map((r,ri)=>`<div style="display:grid;grid-template-columns:1fr 150px auto;gap:10px;align-items:center" data-sp-uprow="${ri}">
         <input class="inp" data-spf-up="title" value="${esc(r.title)}" placeholder="e.g. First-generation learners">
@@ -7300,7 +7317,7 @@ function spForm(editing){
     <button type="button" class="rep-add" data-sp-add-uprow="1" style="border-radius:4px;align-self:flex-start;margin-top:8px">+ Add category</button>`;
   const secImpact=section("Impact &amp; remarks",
     fld("Specially-abled children",num("speciallyAbled",d.speciallyAbled))+
-    fld("Underprivileged children remarks",upList,"A title and a count per category, e.g. First-generation learners · 120.","",true));
+    fld("Sponsored children remarks",upList,"A title and a count per category, e.g. First-generation learners · 120.","",true));
 
   const secBill=section("Billing (for invoicing)",
     fld("Billing name",t("billName",d.billName))+
@@ -7340,7 +7357,7 @@ function spCaptureForm(){
   ["school","location","orgType","district","boardsOther","grade","prefDate","poc","designation","designationOther","email","phone","interestedOther","note","sponsor","authNumber","ngoGstin","ngoPan","proofDoc","entryPreset","entryStudent","entryAdult","billName","billAddress","gstin","pan","speciallyAbled","status","comments","assignee","expChildren","expTeachers"].forEach(k=>{const v=g(k);if(v!==undefined)d[k]=v;});
   if(d.designation!=="Other") d.designationOther="";
   const upEl=document.querySelector("[data-sp-uprows]");
-  if(upEl) d.underprivileged=[...upEl.querySelectorAll("[data-sp-uprow]")].map(r=>({title:(r.querySelector('[data-spf-up="title"]')||{}).value||"",count:(r.querySelector('[data-spf-up="count"]')||{}).value||""})).filter(x=>x.title||x.count);
+  if(upEl) d.sponsoredGroups=[...upEl.querySelectorAll("[data-sp-uprow]")].map(r=>({title:(r.querySelector('[data-spf-up="title"]')||{}).value||"",count:(r.querySelector('[data-spf-up="count"]')||{}).value||""})).filter(x=>x.title||x.count);
   const tn=g("transport_need"), tv=g("transport_vendor"); d.transport=d.transport||{}; if(tn!==undefined)d.transport.need=tn; if(tv!==undefined)d.transport.vendor=tv;
   const chipVals=key=>[...document.querySelectorAll(`[data-spfchips="${key}"] .chip-opt[data-on="1"]`)].map(c=>c.dataset.chipval);
   if(document.querySelector('[data-spfchips="boards"]')) d.boards=chipVals("boards");
@@ -7475,7 +7492,7 @@ function spDetail(){
       ${row("Sub total",money(c.subtotal))}${row("GST (18%)",money(c.gst))}${row("Grand total",`<b>${money(c.grand)}</b>`)}
     </tbody></table></div></div>
     <div class="card"><div class="card-head"><span class="card-title">Impact &amp; comments</span></div><div class="matrix-wrap"><table class="reclist"><tbody>
-      ${row("Specially-abled children",rec.speciallyAbled?`<b>${rec.speciallyAbled}</b>`:"")}${row("Underprivileged children",(Array.isArray(rec.underprivileged)?rec.underprivileged:[]).filter(r=>r.title||r.count).map(r=>escHtml(r.title||"—")+(r.count?": "+escHtml(r.count):"")).join(" · "))}${row("Comments",escHtml(rec.comments))}
+      ${row("Specially-abled children",rec.speciallyAbled?`<b>${rec.speciallyAbled}</b>`:"")}${row("Sponsored children",(Array.isArray(rec.sponsoredGroups)?rec.sponsoredGroups:[]).filter(r=>r.title||r.count).map(r=>escHtml(r.title||"—")+(r.count?": "+escHtml(r.count):"")).join(" · "))}${row("Comments",escHtml(rec.comments))}
     </tbody></table></div></div>`;
 
   /* After visit */
@@ -7722,7 +7739,7 @@ const APP_SORT = {
   /* Links first, then the ones a role asked for and did not get, then the rest. */
   portfolio:{get:a=>{ const r=roleById(a.role); const t=appPortText(a);
     return t ? "1 "+t : (r&&r.portfolio) ? "2" : "3"; }},
-  on:{get:a=>a.on, type:"date"}, cv:{get:a=>(a.cv&&a.cv.name)||""}, note:{get:a=>a.note},
+  on:{get:a=>a.on, type:"date"}, cv:{get:a=>(a.cv&&a.cv.name)||""}, msg:{get:a=>a.msg}, hr:{get:a=>a.hr},
   status:{get:a=>a.status, type:"rank", rank:["New","Shortlisted","Interviewed","Rejected"]}
 };
 const QRY_SORT = {
@@ -7991,14 +8008,14 @@ function appPortfolio(a, role){
   return `<span class="muted" title="This role does not ask for a portfolio">NA</span>`;
 }
 function appTable(list, id, open=false, showRole=true, showPort=true){
-  const cols = (showRole?8:7) + (showPort?1:0) + 1;
+  const cols = (showRole?8:7) + (showPort?1:0) + 2;
   return `<div class="matrix-wrap"><table${open?' class="reclist"':""} id="${id}" data-sorttable="app"><thead><tr>
     ${sortTh("Application","id",appSort)}${sortTh("Applicant","name",appSort)}
     ${sortTh("Phone","phone",appSort)}${showRole?sortTh("Applied for","role",appSort):""}
     ${sortTh("Experience","exp",appSort)}${sortTh("Qualification","qual",appSort)}
     ${showPort?sortTh("Portfolio","portfolio",appSort):""}
     ${sortTh("Received","on",appSort)}${sortTh("CV","cv",appSort)}
-    ${sortTh("Notes","note",appSort)}</tr></thead>
+    ${sortTh("Candidate's message","msg",appSort)}${sortTh("HR notes","hr",appSort)}</tr></thead>
   <tbody>${list.length?list.map(a=>{
     const role=roleById(a.role);
     const hay=`${a.id} ${a.name} ${a.email} ${a.phone} ${role?role.title:""} ${a.qual||""} ${appExp(a)} ${appPortText(a)}`.toLowerCase();
@@ -8015,7 +8032,8 @@ function appTable(list, id, open=false, showRole=true, showPort=true){
     <td class="code" style="white-space:nowrap">${a.on}</td>
     <td>${a.cv?`<button class="app-file" data-app-cv="${a.id}" title="Open ${escAttr(a.cv.name)}">${escHtml(a.cv.name)}</button>
       <div class="career-left">${humanSize(a.cv.size)}</div>`:'<span class="muted">—</span>'}</td>
-    <td class="app-note">${a.note?escHtml(a.note):'<span class="muted">—</span>'}</td></tr>`;}).join("")
+    <td class="app-note">${a.msg?escHtml(a.msg):'<span class="muted">—</span>'}</td>
+    <td class="app-note" title="Visible to HR only — never shown to the candidate">${a.hr?escHtml(a.hr):'<span class="muted">—</span>'}</td></tr>`;}).join("")
     :`<tr><td colspan="${cols}" class="muted" style="padding:26px 14px;text-align:center;font-size:12.5px">
         No application matches those filters.</td></tr>`}
     <tr data-app-empty style="display:none"><td colspan="${cols}" class="muted"
@@ -8320,7 +8338,7 @@ function addSubmit(){
   addOpen=null; render(); $(".stage").scrollTop=0;
 }
 
-function resetBooking(){ bookingProducts=new Map(); bookingAddons=new Map(); bookingPrograms=new Map(); bookingPay="Cash"; bookingDiscountCode=""; bookingDiscountTried=false; bookingStep1Tried=false; bookingTab="products"; bookingCustomer={name:"",phone:"",email:"",member:null,location:"",pincode:"",gstin:""}; bookingCustomerLinked=-1; bookingStep=1; bookingOpenItem=null; bookingCalMonth=null; bookingCancelConfirm=false; bookingRedeemVisit=false; bookingRedeemAdult=false; }
+function resetBooking(){ bookingProducts=new Map(); bookingAddons=new Map(); bookingPrograms=new Map(); bookingPay="Cash"; bookingDiscountCode=""; bookingDiscountCodes=[]; bookingDiscountTried=false; bookingStep1Tried=false; bookingTab="products"; bookingCustomer={name:"",phone:"",email:"",member:null,location:"",pincode:"",gstin:"",state:"Maharashtra"}; bookingCustomerLinked=-1; bookingStep=1; bookingOpenItem=null; bookingCalMonth=null; bookingCancelConfirm=false; bookingRedeemVisit=false; bookingRedeemAdult=false; }
 
 /* Products a membership tier can grant access to — those that carry time slots. */
 function tierProductPool(){ return P.filter(p=>p.slots&&p.slots.length); }
@@ -8594,7 +8612,9 @@ document.addEventListener("click",e=>{
     const orig=label.textContent, done=()=>{ label.textContent="Link copied!"; setTimeout(()=>{label.textContent=orig;},1500); };
     if(navigator.clipboard&&navigator.clipboard.writeText){ navigator.clipboard.writeText(link).then(done).catch(done); } else done();
     return; }
-  if(e.target.closest("[data-apply-book-discount]")){ bookingDiscountCode=(document.getElementById("bookingDiscountCode")?.value||"").trim(); bookingDiscountTried=!!bookingDiscountCode; render(); return; }
+  if(e.target.closest("[data-apply-book-discount]")){ const c=(document.getElementById("bookingDiscountCode")?.value||"").trim(); if(c&&!bookingDiscountCodes.some(x=>x.toUpperCase()===c.toUpperCase())) bookingDiscountCodes.push(c); bookingDiscountCode=""; bookingDiscountTried=!!c; render(); return; }
+  const rmCode=e.target.closest("[data-remove-book-code]");
+  if(rmCode){ bookingDiscountCodes.splice(+rmCode.dataset.removeBookCode,1); render(); return; }
   const editp=e.target.closest("[data-editp]");
   if(editp){ selP=+editp.dataset.editp;
     prodBuildingPool=P[selP].pool==="BUILDING";
@@ -8617,7 +8637,7 @@ document.addEventListener("click",e=>{
   const editbooking=e.target.closest("[data-editbooking]");
   if(editbooking){ selBooking=+editbooking.dataset.editbooking; const b=BOOKINGS[selBooking];
     resetBooking();
-    bookingCustomer={name:b.customer||"",phone:b.phone||"",email:b.email||"",member:b.member||null,location:b.location||""};
+    bookingCustomer={name:b.customer||"",phone:b.phone||"",email:b.email||"",member:b.member||null,location:b.location||"",state:b.state||"Maharashtra"};
     bookingCustomerLinked=CUSTOMERS.findIndex(c=>c.phone===b.phone);
     const pi=P.findIndex(p=>p.n===b.product);
     if(pi>=0){ const qty={}; (b.ticketRows||[]).forEach(r=>{ qty[r[0]]=+r[1]||0; }); const sn=b.slot||P[pi].slots[0].n; bookingProducts.set(pi,{combos:[{date:b.date||defaultDateFor(P[pi].slots),slot:sn,qty,redeem:{}}]}); }
@@ -8813,9 +8833,9 @@ document.addEventListener("click",e=>{
   if(spAddO){ spCaptureForm(); const d=spDraft; const vi=+spAddO.dataset.spAddOptional; const v=d&&(d.visits||[])[vi]; if(v){ (v.optionals=v.optionals||[]).push({kind:"Workshop",venue:"",date:"",time:""}); } render(); return; }
   const spDelO=e.target.closest("[data-sp-del-optional]");
   if(spDelO){ spCaptureForm(); const d=spDraft; const [vi,oi]=spDelO.dataset.spDelOptional.split("|").map(Number); const v=d&&(d.visits||[])[vi]; if(v&&v.optionals) v.optionals.splice(oi,1); render(); return; }
-  if(e.target.closest("[data-sp-add-uprow]")){ spCaptureForm(); const d=spDraft; if(d){ if(!Array.isArray(d.underprivileged)) d.underprivileged=[]; d.underprivileged.push({title:"",count:""}); } render(); return; }
+  if(e.target.closest("[data-sp-add-uprow]")){ spCaptureForm(); const d=spDraft; if(d){ if(!Array.isArray(d.sponsoredGroups)) d.sponsoredGroups=[]; d.sponsoredGroups.push({title:"",count:""}); } render(); return; }
   const spDelUp=e.target.closest("[data-sp-del-uprow]");
-  if(spDelUp){ spCaptureForm(); const d=spDraft; if(d&&Array.isArray(d.underprivileged)) d.underprivileged.splice(+spDelUp.dataset.spDelUprow,1); render(); return; }
+  if(spDelUp){ spCaptureForm(); const d=spDraft; if(d&&Array.isArray(d.sponsoredGroups)) d.sponsoredGroups.splice(+spDelUp.dataset.spDelUprow,1); render(); return; }
   const spTabBtn=e.target.closest("[data-sptab]");
   if(spTabBtn){ sptab=spTabBtn.dataset.sptab; spBulk=null; render(); $(".stage").scrollTop=0; return; }
   const spDsub=e.target.closest("[data-spsub]");
@@ -9009,6 +9029,7 @@ document.addEventListener("click",e=>{
     sw.querySelector("span").textContent=on?"Off":"On"; }
 });
 document.addEventListener("change",e=>{
+  if(e.target.matches&&e.target.matches("[data-apply-member]")){ syncDiscountForm(); render(); return; }   // show / hide the plan picker
   const oRowC=e.target.closest&&e.target.closest("[data-vorow],[data-spvorow]"); if(oRowC) syncOptCheckBtn(oRowC);
   // Designation "Other" → reveal/hide the "Other designation" field on select change.
   if(schoolDraft && e.target.closest && e.target.closest('[data-sf="designation"]')){ schoolCaptureForm(); render(); return; }
@@ -9179,6 +9200,7 @@ document.addEventListener("input",e=>{
   if(e.target.id==="bookCustLocation"){ bookingCustomer.location=e.target.value; return; }
   if(e.target.id==="bookCustPincode"){ bookingCustomer.pincode=e.target.value; return; }
   if(e.target.id==="bookCustGstin"){ bookingCustomer.gstin=e.target.value; return; }
+  if(e.target.id==="bookCustState"){ bookingCustomer.state=e.target.value; return; }
   if(e.target.id==="bookCustEmail"){ bookingCustomer.email=e.target.value; return; }
   if(e.target.id==="bookCustPhone"){
     bookingCustomer.phone=e.target.value; bookingCustomerLinked=-1; bookingCustomer.member=null;
