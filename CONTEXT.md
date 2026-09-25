@@ -282,7 +282,9 @@ All verified with `node --check` + DOM-stub render sweep (0 failures) + live chr
 
 ### 19. DB-decision follow-ups (2026-09-24)
 Owner answers from the fastapi-boilerplate schema Q&A, applied to the mockups:
-- **One discount per order (Q14=B).** POS summary picks the single biggest saving among the typed code, every automatic discount and the member add-on perk; the rest are listed struck through as "not applied". Replaces the old "stack all".
+- ~~**One discount per order (Q14=B).** POS summary picks the single biggest saving among the typed code, every automatic discount and the member add-on perk; the rest are listed struck through as "not applied". Replaces the old "stack all".~~ — reversed same day, see stacking below.
+- **Discount stacking (owner, 2026-09-24).** Every discount has "Can be combined with other discounts" (`d.combinable`, form checkbox `data-combinable`). POS takes several codes (`bookingDiscountCodes`, chips with ×). Summary applies the bigger of: all combinable discounts stacked (% first, then flat, each on what is left) vs the best non-combinable one alone; the rest show struck through with the reason. Seeds: bundling, Membership, Members-programs, JSW series combinable.
+- **"Underprivileged" → "Sponsored" (2026-09-25).** Sponsored booking field `underprivileged` renamed `sponsoredGroups`; labels "Sponsored children remarks" / "Sponsored children".
 - **State dropdown (Q15=B).** `IN_STATES` / `STATES`; POS customer step (`bookCustState`, default Maharashtra) and website "Your details". Place of supply — Maharashtra = CGST+SGST, else IGST; GSTIN prefix overrides.
 - **Names only for programs (Q18=A).** POS step 3 and website details page ask names only for events/camps/workshops, plus the parent's WhatsApp number. Tours, add-ons and membership visits are counts only.
 - **Member perks live in Discounts (Q4=A).** Plan seeds lost `discounts:{birthday,events,workshops}`; plan list/detail/form and member detail show `tierPerks(t)` — discounts with the membership condition or members-only flag. Members-only discounts get a "Which plans" chip picker (`d.memberTiers`, none = every plan).

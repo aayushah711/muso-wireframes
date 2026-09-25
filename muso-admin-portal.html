@@ -1928,10 +1928,10 @@ const SPONSORED_BOOKINGS = [
     orgType:"Funded (NGO)", sponsor:"", district:"Mumbai Suburban",
     transport:{need:"Maybe", vendor:""},
     interested:["Museum Tour","Introduction to AI session"], interestedOther:"", prefDate:"22 Oct 2026",
-    expChildren:80, expTeachers:8, note:"Underprivileged children; would value the AI session if it fits the budget.",
+    expChildren:80, expTeachers:8, note:"Sponsored children; would value the AI session if it fits the budget.",
     proofDoc:"Aseema-12A-registration.pdf",
     visits:[], entryStudent:"", entryAdult:"",
-    ngoGstin:"", ngoPan:"AAATA1234N", authNumber:"", speciallyAbled:0, underprivileged:[],
+    ngoGstin:"", ngoPan:"AAATA1234N", authNumber:"", speciallyAbled:0, sponsoredGroups:[],
     postVisit:{remark:"", images:[]}, students:{uploaded:false,total:0,girls:0,boys:0}, feedback:{sent:false},
     comments:"", invoice:{raised:false, on:""},
     timeline:[{on:"18 Sep 2026", who:"Website", what:"Enquiry received from the school-trips form — acknowledgement email sent to the POC."}] },
@@ -1948,7 +1948,7 @@ const SPONSORED_BOOKINGS = [
     visits:[{date:"28 Oct 2026", slotId:"Afternoon 14:00–18:00", students:120, adults:10, escorts:4, teachersComp:0,
              food:{students:0,adults:0,comp:0,optionIds:[]}, optionals:[]}],
     entryStudent:350, entryAdult:500,
-    ngoGstin:"", ngoPan:"AAATN5678K", authNumber:"", speciallyAbled:0, underprivileged:[],
+    ngoGstin:"", ngoPan:"AAATN5678K", authNumber:"", speciallyAbled:0, sponsoredGroups:[],
     postVisit:{remark:"", images:[]}, students:{uploaded:false,total:0,girls:0,boys:0}, feedback:{sent:false},
     comments:"Awaiting sponsor confirmation and final numbers.", invoice:{raised:false, on:""},
     timeline:[{on:"10 Sep 2026", who:"Website", what:"Enquiry received — acknowledgement email sent to the POC."},
@@ -1967,7 +1967,7 @@ const SPONSORED_BOOKINGS = [
              food:{students:150,adults:12,comp:5,optionIds:["Snack box"]},
              optionals:[{kind:"Orientation", venue:"Auditorium", date:"14 Oct 2026", time:"14:15–14:45"}]}],
     entryStudent:350, entryAdult:500,
-    ngoGstin:"", ngoPan:"AAATT9012Q", authNumber:"JSW/CSR/2026/0417", speciallyAbled:6, underprivileged:[{title:"First-generation learners",count:"120"},{title:"Below poverty line",count:"45"}],
+    ngoGstin:"", ngoPan:"AAATT9012Q", authNumber:"JSW/CSR/2026/0417", speciallyAbled:6, sponsoredGroups:[{title:"First-generation learners",count:"120"},{title:"Below poverty line",count:"45"}],
     postVisit:{remark:"", images:[]}, students:{uploaded:false,total:0,girls:0,boys:0}, feedback:{sent:false},
     comments:"Function Process circulated to staff; e-invoice to JSW on completion.", invoice:{raised:false, on:""},
     timeline:[{on:"30 Aug 2026", who:"Neha (CSR)", what:"Backend booking created; confirmation emailed to the NGO and Function Process circulated to staff."},
@@ -1985,7 +1985,7 @@ const SPONSORED_BOOKINGS = [
     visits:[{date:"06 Aug 2026", slotId:"Afternoon 14:00–18:00", students:90, adults:8, escorts:2, teachersComp:0,
              food:{students:90,adults:8,comp:2,optionIds:["Standard lunch"]}, optionals:[]}],
     entryStudent:350, entryAdult:500,
-    ngoGstin:"", ngoPan:"AAATP3456R", authNumber:"TT/CSR/2026/1180", speciallyAbled:4, underprivileged:[{title:"First-generation learners",count:"80"}],
+    ngoGstin:"", ngoPan:"AAATP3456R", authNumber:"TT/CSR/2026/1180", speciallyAbled:4, sponsoredGroups:[{title:"First-generation learners",count:"80"}],
     postVisit:{remark:"Wonderful, curious group — the light gallery was a hit. Two buses arrived 20 min late; noted for next time.",
                images:["group-atrium.jpg","light-gallery.jpg","lunch-courtyard.jpg"]},
     students:{uploaded:true,total:90,girls:48,boys:42}, feedback:{sent:true},
@@ -2439,14 +2439,14 @@ const DISC_KINDS = ["Items in the basket","Customer holds a membership","A code 
                     "The booking date","Arrived via an affiliate link","Applied by staff"];
 
 const DISCOUNTS = [
-  {n:"Add-on bundling — combined total",vt:"Percentage",prods:[],dates:["01 Apr 2026","31 Mar 2027"],maxr:"",codes:null,
+  {n:"Add-on bundling — combined total",combinable:true,vt:"Percentage",prods:[],dates:["01 Apr 2026","31 Mar 2027"],maxr:"",codes:null,
    no:[],prec:10,status:"Approved",maker:"Hasmukh",checker:"Suryanarayan",apply:"auto",
    cond:[{k:"Items in the basket",prods:["MuSo Tour"],pm:"any of",cats:[],op:"at least",qty:"1"},
          {k:"Items in the basket",prods:["Mini Golf","Lost Code of Play","Vroom"],pm:"any of",cats:[],op:"at least",qty:"1"}],
    target:"Whole cart",value:"Percentage",v:"10%",
    src:"§1.6: “10% off the combined ticket + add-on total”"},
 
-  {n:"Add-on bundling — add-ons only",vt:"Percentage",prods:["Mini Golf","Lost Code of Play","Vroom"],
+  {n:"Add-on bundling — add-ons only",combinable:true,vt:"Percentage",prods:["Mini Golf","Lost Code of Play","Vroom"],
    dates:["01 Apr 2026","31 Mar 2027"],maxr:"",codes:null,
    no:["Add-on bundling — combined total"],prec:20,status:"Approved",maker:"Hasmukh",checker:"Suryanarayan",apply:"auto",
    cond:[{k:"Items in the basket",prods:["MuSo Tour"],pm:"any of",cats:[],op:"at least",qty:"1"},
@@ -2454,7 +2454,7 @@ const DISCOUNTS = [
    target:"The add-on lines only",value:"Percentage",v:"10%",
    src:"§1.6: “10% off on add-ons when bundled with a ticket”"},
 
-  {n:"Membership",vt:"Percentage",prods:[],dates:["01 Apr 2026",""],maxr:"",codes:null,
+  {n:"Membership",combinable:true,vt:"Percentage",prods:[],dates:["01 Apr 2026",""],maxr:"",codes:null,
    no:[],prec:30,status:"Approved",maker:"Sushmita",checker:"Suryanarayan",apply:"auto",
    cond:[{k:"Customer holds a membership"}],
    target:"Whole cart",value:"Percentage",v:"10%",
@@ -2489,14 +2489,14 @@ const DISCOUNTS = [
    target:"Whole cart",value:"Percentage",v:"10%",
    src:"§1.10: originally scoped at 20% off — reduced to 10% per current pricing"},
 
-  {n:"Members — 10% off programs",vt:"Percentage",auto:true,staffOnly:false,memberOnly:true,
+  {n:"Members — 10% off programs",combinable:true,vt:"Percentage",auto:true,staffOnly:false,memberOnly:true,
    dates:["01 Apr 2026","31 Mar 2027"],visit:["",""],maxr:"",
    codes:{oncePerUser:true,gen:"1"},no:[],prec:90,status:"Approved",maker:"Sushmita",checker:"Suryanarayan",
    cond:[{k:"Items in the basket",prods:["Program"],pm:"any of",cats:[],op:"at least",qty:"1",qtys:{Program:"1"},slots:{}}],
    target:"The chosen items",value:"Percentage",v:"10%",
    src:"category discount: 10% off any program (workshop, camp or event) for members, applied automatically"},
 
-  {n:"",codeType:"series",series:{prefix:"JSW",from:"1",to:"100"},vt:"Flat amount",auto:false,staffOnly:true,memberOnly:false,
+  {n:"",combinable:true,codeType:"series",series:{prefix:"JSW",from:"1",to:"100"},vt:"Flat amount",auto:false,staffOnly:true,memberOnly:false,
    dates:["01 Sep 2026","31 Dec 2026"],visit:["",""],maxr:"100",
    codes:{oncePerUser:true,gen:"1"},no:[],prec:60,status:"Approved",maker:"Hasmukh",checker:"Suryanarayan",
    cond:[],
@@ -3084,7 +3084,7 @@ function applyInfo(d){
   return {auto:d.apply==="auto", staffOnly:d.apply==="manual", memberOnly:false};   // legacy fallback
 }
 function audienceText(a){ return a.staffOnly&&a.memberOnly?"staff & members only":a.staffOnly?"staff only":a.memberOnly?"members only":"everyone"; }
-function applyText(d){ const a=applyInfo(d); return (a.auto?"Auto-applied":"Applied with the code")+" · "+audienceText(a); }
+function applyText(d){ const a=applyInfo(d); return (a.auto?"Auto-applied":"Applied with the code")+" · "+audienceText(a)+" · "+(d.combinable?"combines with other discounts":"applies alone"); }
 function discountSummary(d){
   const a=applyInfo(d);
   const aud=audienceText(a);
@@ -3202,6 +3202,7 @@ function syncDiscountForm(){
   const d=curDiscount(); if(!d) return;
   applyFormToDiscount(d,readForm(document.querySelector("#pane")));
   const as=document.querySelector("[data-apply-staff]"); if(as) d.staffOnly=!!as.checked;
+  const cb=document.querySelector("[data-combinable]"); if(cb) d.combinable=!!cb.checked;
   const am=document.querySelector("[data-apply-member]"); if(am) d.memberOnly=!!am.checked;
   const mt=document.querySelector("[data-member-tiers]"); if(mt) d.memberTiers=[...mt.querySelectorAll('.chip-opt[data-on="1"]')].map(b=>b.dataset.chipval);
   const co=document.querySelector("[data-code-once]"); if(co){ d.codes=d.codes||{gen:"1"}; d.codes.oncePerUser=co.dataset.on==="1"; }
@@ -3315,6 +3316,7 @@ function discountForm(editing){
         <div style="font-size:11px;color:var(--ink3);margin-top:4px">Customers will see this in their cart and at checkout.</div></div>`
     : codeTypeToggle + (isSer ? seriesControl : singleCodeControl);
   const audienceControl=`<div class="fld wide" style="gap:6px">
+      <label class="chk"><input type="checkbox" data-combinable${d.combinable?" checked":""}><span>Can be combined with other discounts</span>${tip("On: stacks with every other discount that is also on. Off: only ever applies alone — checkout gives the customer whichever saves more.")}</label>
       <label class="chk"><input type="checkbox" data-apply-staff${a.staffOnly?" checked":""}><span>Can be used by staff only</span></label>
       <label class="chk"><input type="checkbox" data-apply-member${a.memberOnly?" checked":""}><span>Can be applied for members only</span></label>
       ${a.memberOnly?`<div style="margin:2px 0 0 24px"><div style="font-size:11.5px;color:var(--ink3);margin-bottom:4px">Which plans — none ticked means every plan</div><div class="chips" data-member-tiers>${MEMBERSHIP_TIERS.map(t=>`<button type="button" class="chip-add chip-opt" data-on="${(d.memberTiers||[]).includes(t.name)?1:0}" data-chipval="${escAttr(t.name)}">${t.name}</button>`).join("")}</div></div>`:""}
@@ -3560,7 +3562,7 @@ let qryExpanded = new Set();
 let deptEditing = "", deptDeleting = "";
 let careerFDept = "", careerFType = "", careerFStatus = "all";
 let current = "dashboard", selP = 0, tab = "list", sub = "details",
-    selW = 0, selB = 0, selE = 0, esub = "details", eventCats = new Set(), selBooking = 0, bookingProduct = 0, bookingSlot = "", bookingDiscountCode = "", csub = "details", copyFrom = 0, copyTo = new Set(), copyWhat = new Set(["price","seats"]), editD = -1,
+    selW = 0, selB = 0, selE = 0, esub = "details", eventCats = new Set(), selBooking = 0, bookingProduct = 0, bookingSlot = "", bookingDiscountCode = "", bookingDiscountCodes = [], csub = "details", copyFrom = 0, copyTo = new Set(), copyWhat = new Set(["price","seats"]), editD = -1,
     progKind = "event", progCat = "Event", prodBuildingPool = false,
     bookingProducts = new Map(), bookingAddons = new Map(), bookingPrograms = new Map(), bookingPay = "Cash", bookingTab = "products",
     bookingCustomer = {name:"",phone:"",email:"",member:null,location:"",pincode:"",gstin:""}, bookingCustomerLinked = -1, bookingStep = 1, bookingOpenItem = null, bookingCalMonth = null, bookingCancelConfirm = false, bookingDiscountTried = false, bookingStep1Tried = false, bookingRedeemVisit = false, bookingRedeemAdult = false,
@@ -5314,30 +5316,37 @@ function bookingForm(editing=false){
   const hasProgram=[...bookingPrograms.values()].some(anyQty);
   let maxCatQty=0; [...bookingProducts.values(),...bookingAddons.values()].forEach(cf=>{ Object.values(catQtys(cf)).forEach(n=>{ if(n>maxCatQty) maxCatQty=n; }); });
   const pctOf=(v,base)=>String(v).includes("%")?base*(parseFloat(v)||0)/100:Math.min(base,parseFloat(String(v).replace(/[^0-9.]/g,""))||0);
-  // typed code — match any Approved code-based discount by d.n, cond code, or series voucher
-  const codeUP=String(bookingDiscountCode||"").trim().toUpperCase();
-  const seriesHit=d=>{ if(!isSeries(d)) return false; const s=d.series; if(!codeUP.startsWith(String(s.prefix||"").toUpperCase())) return false; const n=parseInt(codeUP.replace(/\D/g,""),10); return !isNaN(n)&&n>=+s.from&&n<=+s.to; };
-  const discount=codeUP?DISCOUNTS.find(d=>d.status==="Approved"&&!applyInfo(d).auto&&(String(d.n||"").toUpperCase()===codeUP||(d.cond||[]).some(c=>String(c.code||"").toUpperCase()===codeUP)||seriesHit(d))):null;
-  const codeDiscAmt=discount?pctOf(discount.v,subtotal):0;
+  // typed codes — several per order; each matches an Approved code-based discount by d.n, cond code, or series voucher
+  const findCodeDisc=code=>{ const up=String(code||"").trim().toUpperCase(); if(!up) return null;
+    const seriesHit=d=>{ if(!isSeries(d)) return false; const s=d.series; if(!up.startsWith(String(s.prefix||"").toUpperCase())) return false; const n=parseInt(up.replace(/\D/g,""),10); return !isNaN(n)&&n>=+s.from&&n<=+s.to; };
+    return DISCOUNTS.find(d=>d.status==="Approved"&&!applyInfo(d).auto&&(String(d.n||"").toUpperCase()===up||(d.cond||[]).some(c=>String(c.code||"").toUpperCase()===up)||seriesHit(d)))||null; };
+  const codeHits=bookingDiscountCodes.map(c=>({code:c,d:findCodeDisc(c)}));
   // auto-applied — evaluate each Approved automatic discount against the cart (simplified conditions)
   const autoDiscs=[]; let bundlingDone=false;
   DISCOUNTS.filter(d=>d.status==="Approved"&&applyInfo(d).auto).forEach(d=>{
     const kinds=(d.cond||[]).map(c=>c.k);
-    if(kinds.includes("Customer holds a membership")){ if(member) autoDiscs.push({label:"Membership",v:d.v,amount:pctOf(d.v,subtotal)}); return; }
-    if(applyInfo(d).memberOnly){ if(member&&hasProgram&&(!(d.memberTiers||[]).length||d.memberTiers.includes(member.tier))) autoDiscs.push({label:d.n,v:d.v,amount:pctOf(d.v,progTotal)}); return; }
-    if(/Add-on bundling/i.test(d.n||"")){ if(!bundlingDone&&hasProduct&&hasAddon){ bundlingDone=true; autoDiscs.push({label:"Add-on bundling",v:d.v,amount:pctOf(d.v,addonRawTotal)}); } return; }
-    if(d.tiers&&d.tiers.length){ if(maxCatQty>=+d.tiers[0][0]){ const tier=[...d.tiers].reverse().find(t=>maxCatQty>=+t[0])||d.tiers[0]; autoDiscs.push({label:"Quantity break",v:tier[1]+"%",amount:subtotal*(parseFloat(tier[1])||0)/100}); } return; }
+    if(kinds.includes("Customer holds a membership")){ if(member) autoDiscs.push({label:"Membership",v:d.v,amount:pctOf(d.v,subtotal),d}); return; }
+    if(applyInfo(d).memberOnly){ if(member&&hasProgram&&(!(d.memberTiers||[]).length||d.memberTiers.includes(member.tier))) autoDiscs.push({label:d.n,v:d.v,amount:pctOf(d.v,progTotal),d}); return; }
+    if(/Add-on bundling/i.test(d.n||"")){ if(!bundlingDone&&hasProduct&&hasAddon){ bundlingDone=true; autoDiscs.push({label:"Add-on bundling",v:d.v,amount:pctOf(d.v,addonRawTotal),d}); } return; }
+    if(d.tiers&&d.tiers.length){ if(maxCatQty>=+d.tiers[0][0]){ const tier=[...d.tiers].reverse().find(t=>maxCatQty>=+t[0])||d.tiers[0]; autoDiscs.push({label:"Quantity break",v:tier[1]+"%",amount:subtotal*(parseFloat(tier[1])||0)/100,d}); } return; }
   });
-  // ONE discount per order (owner, 2026-09-24): the typed code, every automatic discount and the member
-  // add-on perk compete — the biggest saving wins, the rest are listed as "not applied". Nothing stacks.
+  // STACKING (owner, 2026-09-24): every discount says whether it "can be combined with other discounts".
+  // The customer gets the bigger of — ALL qualifying combinable discounts together, or the single best
+  // non-combinable one alone. Percentages first, then flat amounts, each on what is left; never below 0.
   const addonDiscountPct=member?(member.addonDiscountPct||0):0;
   const discCandidates=[
-    ...(discount?[{label:codeLabel(discount),v:discount.v+" off",amount:codeDiscAmt,kind:"code"}]:[]),
-    ...autoDiscs.map(x=>({label:x.label,v:x.v,amount:x.amount,kind:"auto"})),
-    ...(member&&addonDiscountPct&&addonRawTotal?[{label:"★ "+member.tier+" add-on perk",v:addonDiscountPct+"%",amount:addonRawTotal*addonDiscountPct/100,kind:"member"}]:[])
+    ...codeHits.filter(x=>x.d).map(x=>({label:codeLabel(x.d),v:x.d.v+" off",amount:pctOf(x.d.v,subtotal),kind:"code",comb:!!x.d.combinable,pct:String(x.d.v).includes("%")})),
+    ...autoDiscs.map(x=>({label:x.label,v:x.v,amount:x.amount,kind:"auto",comb:!!(x.d&&x.d.combinable),pct:String(x.v).includes("%")})),
+    ...(member&&addonDiscountPct&&addonRawTotal?[{label:"★ "+member.tier+" add-on perk",v:addonDiscountPct+"%",amount:addonRawTotal*addonDiscountPct/100,kind:"member",comb:true,pct:true}]:[])
   ];
-  const bestDisc=discCandidates.reduce((b,x)=>(!b||x.amount>b.amount)?x:b,null);
-  const discAmt=bestDisc?Math.min(subtotal,bestDisc.amount):0;
+  const stackOf=list=>{ let left=subtotal; return [...list].sort((a,b)=>(b.pct-a.pct)).map(x=>{ const amt=Math.round(Math.min(left, x.pct?x.amount*left/(subtotal||1):x.amount)); left-=amt; return {...x,applied:amt}; }); };
+  const combSet=stackOf(discCandidates.filter(x=>x.comb));
+  const combTotal=combSet.reduce((t,x)=>t+x.applied,0);
+  const soloBest=discCandidates.filter(x=>!x.comb).reduce((b,x)=>(!b||x.amount>b.amount)?x:b,null);
+  const useSolo=soloBest&&Math.min(subtotal,soloBest.amount)>combTotal;
+  const appliedDiscs=useSolo?[{...soloBest,applied:Math.min(subtotal,soloBest.amount)}]:combSet;
+  const skippedDiscs=discCandidates.filter(x=>!appliedDiscs.some(a=>a.label===x.label&&a.kind===x.kind)).map(x=>({...x,why:x.comb?"a discount that can't be combined saves more":"can't be combined with other discounts"}));
+  const discAmt=appliedDiscs.reduce((t,x)=>t+x.applied,0);
   const gst=Math.round(Math.max(0,subtotal-discAmt)*0.18);
   const grand=Math.max(0,subtotal-discAmt)+gst;
   const section=(title,body)=>`<section class="form-sec"><div class="form-sec-head"><span class="form-sec-title">${title}</span></div><div class="form-sec-body">${body}</div></section>`;
@@ -5556,10 +5565,10 @@ function bookingForm(editing=false){
   const summary=`<aside class="booking-summary"><div class="booking-summary-head">Order summary${cartRows.length?` <span class="booking-summary-count">${cartRows.length} item${cartRows.length===1?"":"s"}</span>`:""}</div><div class="booking-summary-body">
     ${cartRows.length?cartRows.join(""):`<div class="pos-empty">Nothing added yet.<br>Pick a product or program to begin.</div>`}
     <div class="booking-discount"><input class="inp mono" id="bookingDiscountCode" placeholder="Discount code" value="${escAttr(bookingDiscountCode)}"><button class="btn" data-apply-book-discount="1">Apply</button></div>
-    ${bookingDiscountTried?`<div class="booking-discount-msg${discount?" ok":" bad"}">${discount?`✓ ${codeLabel(discount)} applied — ${discount.v} off`:"Code not recognised or expired."}</div>`:""}
+    ${codeHits.length?`<div class="chips" style="margin:6px 0">${codeHits.map((x,i)=>`<span class="msel-tag" style="${x.d?"":"background:var(--stop-wash,#fdecec);color:var(--stop)"}">${escHtml(x.code)}${x.d?"":" · not recognised"}<button type="button" data-remove-book-code="${i}" aria-label="Remove ${escAttr(x.code)}">&times;</button></span>`).join("")}</div>`:""}
     <div class="booking-summary-row"><span>Subtotal</span><span>${money(subtotal)}</span></div>
-    ${bestDisc?`<div class="booking-summary-row" style="color:var(--ok)"><span>${bestDisc.label}${bestDisc.kind==="auto"?' <span class="q" style="margin-left:2px">auto</span>':""} · ${bestDisc.v}</span><span>− ${money(discAmt)}</span></div>`:""}
-    ${discCandidates.filter(x=>x!==bestDisc).map(x=>`<div class="booking-summary-row" style="color:var(--ink3);font-size:11.5px"><span>${x.label} · ${x.v} — not applied, one discount per order</span><span style="text-decoration:line-through">− ${money(x.amount)}</span></div>`).join("")}
+    ${appliedDiscs.map(x=>`<div class="booking-summary-row" style="color:var(--ok)"><span>${x.label}${x.kind==="auto"?' <span class="q" style="margin-left:2px">auto</span>':""} · ${x.v}</span><span>− ${money(x.applied)}</span></div>`).join("")}
+    ${skippedDiscs.map(x=>`<div class="booking-summary-row" style="color:var(--ink3);font-size:11.5px"><span>${x.label} · ${x.v} — not applied, ${x.why}</span><span style="text-decoration:line-through">− ${money(x.amount)}</span></div>`).join("")}
     ${discAmt?`<div class="booking-summary-row" style="font-weight:600"><span>Net amount</span><span>${money(Math.max(0,subtotal-discAmt))}</span></div>`:""}
     <div class="booking-summary-row"><span>GST 18%</span><span>${money(gst)}</span></div>
     <div class="booking-summary-total"><span>Total due</span><span>${money(grand)}</span></div>
@@ -6933,7 +6942,7 @@ function blankSp(mode){
     orgType:"Funded (NGO)", sponsor:"", district:"", transport:{need:"No",vendor:""},
     interested:[],interestedOther:"",prefDate:"",expChildren:"",expTeachers:"",note:"",proofDoc:"",
     visits:[], entryStudent:"", entryAdult:"",
-    ngoGstin:"", ngoPan:"", authNumber:"", speciallyAbled:0, underprivileged:[],
+    ngoGstin:"", ngoPan:"", authNumber:"", speciallyAbled:0, sponsoredGroups:[],
     postVisit:{remark:"",images:[]}, students:{uploaded:false,total:0,girls:0,boys:0}, feedback:{sent:false},
     comments:"", invoice:{raised:false,on:""}, timeline:[], _mode:mode};
 }
@@ -7051,7 +7060,7 @@ function spForm(editing){
     `<div class="fld" style="grid-column:1/-1;gap:14px">${(d.visits||[]).map(visitCard).join("")}
       <button type="button" class="rep-add" data-sp-add-visit="1" style="border-radius:4px;align-self:flex-start">+ Add visit</button></div>`);
 
-  const uprows = Array.isArray(d.underprivileged) ? d.underprivileged : [];
+  const uprows = Array.isArray(d.sponsoredGroups) ? d.sponsoredGroups : [];
   const upList = `<div style="display:flex;flex-direction:column;gap:8px" data-sp-uprows>${
     uprows.length ? uprows.map((r,ri)=>`<div style="display:grid;grid-template-columns:1fr 150px auto;gap:10px;align-items:center" data-sp-uprow="${ri}">
         <input class="inp" data-spf-up="title" value="${esc(r.title)}" placeholder="e.g. First-generation learners">
@@ -7062,7 +7071,7 @@ function spForm(editing){
     <button type="button" class="rep-add" data-sp-add-uprow="1" style="border-radius:4px;align-self:flex-start;margin-top:8px">+ Add category</button>`;
   const secImpact=section("Impact &amp; remarks",
     fld("Specially-abled children",num("speciallyAbled",d.speciallyAbled))+
-    fld("Underprivileged children remarks",upList,"A title and a count per category, e.g. First-generation learners · 120.","",true));
+    fld("Sponsored children remarks",upList,"A title and a count per category, e.g. First-generation learners · 120.","",true));
 
   const secBill=section("Billing (for invoicing)",
     fld("Billing name",t("billName",d.billName))+
@@ -7100,7 +7109,7 @@ function spCaptureForm(){
   const g=k=>{const el=document.querySelector(`[data-spf="${k}"]`);return el?el.value:undefined;};
   ["school","location","orgType","district","boardsOther","grade","prefDate","poc","designation","email","phone","interestedOther","note","sponsor","authNumber","ngoGstin","ngoPan","proofDoc","entryStudent","entryAdult","billName","billAddress","gstin","pan","speciallyAbled","status","comments","expChildren","expTeachers"].forEach(k=>{const v=g(k);if(v!==undefined)d[k]=v;});
   const upEl=document.querySelector("[data-sp-uprows]");
-  if(upEl) d.underprivileged=[...upEl.querySelectorAll("[data-sp-uprow]")].map(r=>({title:(r.querySelector('[data-spf-up="title"]')||{}).value||"",count:(r.querySelector('[data-spf-up="count"]')||{}).value||""})).filter(x=>x.title||x.count);
+  if(upEl) d.sponsoredGroups=[...upEl.querySelectorAll("[data-sp-uprow]")].map(r=>({title:(r.querySelector('[data-spf-up="title"]')||{}).value||"",count:(r.querySelector('[data-spf-up="count"]')||{}).value||""})).filter(x=>x.title||x.count);
   const tn=g("transport_need"), tv=g("transport_vendor"); d.transport=d.transport||{}; if(tn!==undefined)d.transport.need=tn; if(tv!==undefined)d.transport.vendor=tv;
   const chipVals=key=>[...document.querySelectorAll(`[data-spfchips="${key}"] .chip-opt[data-on="1"]`)].map(c=>c.dataset.chipval);
   if(document.querySelector('[data-spfchips="boards"]')) d.boards=chipVals("boards");
@@ -7235,7 +7244,7 @@ function spDetail(){
       ${row("Sub total",money(c.subtotal))}${row("GST (18%)",money(c.gst))}${row("Grand total",`<b>${money(c.grand)}</b>`)}
     </tbody></table></div></div>
     <div class="card"><div class="card-head"><span class="card-title">Impact &amp; comments</span></div><div class="matrix-wrap"><table class="reclist"><tbody>
-      ${row("Specially-abled children",rec.speciallyAbled?`<b>${rec.speciallyAbled}</b>`:"")}${row("Underprivileged children",(Array.isArray(rec.underprivileged)?rec.underprivileged:[]).filter(r=>r.title||r.count).map(r=>escHtml(r.title||"—")+(r.count?": "+escHtml(r.count):"")).join(" · "))}${row("Comments",escHtml(rec.comments))}
+      ${row("Specially-abled children",rec.speciallyAbled?`<b>${rec.speciallyAbled}</b>`:"")}${row("Sponsored children",(Array.isArray(rec.sponsoredGroups)?rec.sponsoredGroups:[]).filter(r=>r.title||r.count).map(r=>escHtml(r.title||"—")+(r.count?": "+escHtml(r.count):"")).join(" · "))}${row("Comments",escHtml(rec.comments))}
     </tbody></table></div></div>`;
 
   /* After visit */
@@ -8081,7 +8090,7 @@ function addSubmit(){
   addOpen=null; render(); $(".stage").scrollTop=0;
 }
 
-function resetBooking(){ bookingProducts=new Map(); bookingAddons=new Map(); bookingPrograms=new Map(); bookingPay="Cash"; bookingDiscountCode=""; bookingDiscountTried=false; bookingStep1Tried=false; bookingTab="products"; bookingCustomer={name:"",phone:"",email:"",member:null,location:"",pincode:"",gstin:"",state:"Maharashtra"}; bookingCustomerLinked=-1; bookingStep=1; bookingOpenItem=null; bookingCalMonth=null; bookingCancelConfirm=false; bookingRedeemVisit=false; bookingRedeemAdult=false; }
+function resetBooking(){ bookingProducts=new Map(); bookingAddons=new Map(); bookingPrograms=new Map(); bookingPay="Cash"; bookingDiscountCode=""; bookingDiscountCodes=[]; bookingDiscountTried=false; bookingStep1Tried=false; bookingTab="products"; bookingCustomer={name:"",phone:"",email:"",member:null,location:"",pincode:"",gstin:"",state:"Maharashtra"}; bookingCustomerLinked=-1; bookingStep=1; bookingOpenItem=null; bookingCalMonth=null; bookingCancelConfirm=false; bookingRedeemVisit=false; bookingRedeemAdult=false; }
 
 /* Products a membership tier can grant access to — those that carry time slots. */
 function tierProductPool(){ return P.filter(p=>p.slots&&p.slots.length); }
@@ -8355,7 +8364,9 @@ document.addEventListener("click",e=>{
     const orig=label.textContent, done=()=>{ label.textContent="Link copied!"; setTimeout(()=>{label.textContent=orig;},1500); };
     if(navigator.clipboard&&navigator.clipboard.writeText){ navigator.clipboard.writeText(link).then(done).catch(done); } else done();
     return; }
-  if(e.target.closest("[data-apply-book-discount]")){ bookingDiscountCode=(document.getElementById("bookingDiscountCode")?.value||"").trim(); bookingDiscountTried=!!bookingDiscountCode; render(); return; }
+  if(e.target.closest("[data-apply-book-discount]")){ const c=(document.getElementById("bookingDiscountCode")?.value||"").trim(); if(c&&!bookingDiscountCodes.some(x=>x.toUpperCase()===c.toUpperCase())) bookingDiscountCodes.push(c); bookingDiscountCode=""; bookingDiscountTried=!!c; render(); return; }
+  const rmCode=e.target.closest("[data-remove-book-code]");
+  if(rmCode){ bookingDiscountCodes.splice(+rmCode.dataset.removeBookCode,1); render(); return; }
   const editp=e.target.closest("[data-editp]");
   if(editp){ selP=+editp.dataset.editp;
     prodBuildingPool=P[selP].pool==="BUILDING";
@@ -8548,9 +8559,9 @@ document.addEventListener("click",e=>{
   if(spAddO){ spCaptureForm(); const d=spDraft; const vi=+spAddO.dataset.spAddOptional; const v=d&&(d.visits||[])[vi]; if(v){ (v.optionals=v.optionals||[]).push({kind:"Workshop",venue:"",date:"",time:""}); } render(); return; }
   const spDelO=e.target.closest("[data-sp-del-optional]");
   if(spDelO){ spCaptureForm(); const d=spDraft; const [vi,oi]=spDelO.dataset.spDelOptional.split("|").map(Number); const v=d&&(d.visits||[])[vi]; if(v&&v.optionals) v.optionals.splice(oi,1); render(); return; }
-  if(e.target.closest("[data-sp-add-uprow]")){ spCaptureForm(); const d=spDraft; if(d){ if(!Array.isArray(d.underprivileged)) d.underprivileged=[]; d.underprivileged.push({title:"",count:""}); } render(); return; }
+  if(e.target.closest("[data-sp-add-uprow]")){ spCaptureForm(); const d=spDraft; if(d){ if(!Array.isArray(d.sponsoredGroups)) d.sponsoredGroups=[]; d.sponsoredGroups.push({title:"",count:""}); } render(); return; }
   const spDelUp=e.target.closest("[data-sp-del-uprow]");
-  if(spDelUp){ spCaptureForm(); const d=spDraft; if(d&&Array.isArray(d.underprivileged)) d.underprivileged.splice(+spDelUp.dataset.spDelUprow,1); render(); return; }
+  if(spDelUp){ spCaptureForm(); const d=spDraft; if(d&&Array.isArray(d.sponsoredGroups)) d.sponsoredGroups.splice(+spDelUp.dataset.spDelUprow,1); render(); return; }
   const spTabBtn=e.target.closest("[data-sptab]");
   if(spTabBtn){ sptab=spTabBtn.dataset.sptab; render(); $(".stage").scrollTop=0; return; }
   const spDsub=e.target.closest("[data-spsub]");
