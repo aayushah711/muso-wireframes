@@ -1588,7 +1588,7 @@ const SCHOOL_STATUSES = ["Open","In Discussion","Confirmed","Live","Ended","Lost
 /* Statuses a person may set by hand. Confirmed / Live / Ended are set automatically
    from payment receipt and the visit date, so they are not offered in the form. */
 const SCHOOL_MANUAL_STATUSES = ["Open","In Discussion","Lost","Rejected"];
-const SCHOOL_DESIGN   = ["Agent","Admin","Teacher","Coordinator"];
+const SCHOOL_DESIGN   = ["Agent","Admin","Teacher","Coordinator","Other"];   // "Other" → the "Other designation" text field
 
 /* One record carries both the enquiry fields and the backend booking fields;
    the backend ones stay empty until the visit is worked up. Status drives it. */
@@ -2237,6 +2237,196 @@ function downloadCSV(name,rows){
   }catch(e){}
 }
 const EXPORT_NAMES={shopitems:"shop-products.csv",shopsales:"shop-sales.csv",shopcoupons:"shop-coupons.csv","shopreports-pay":"shop-revenue-by-payment.csv","shopreports-hsn":"shop-hsn-gst.csv"};
+
+/* ============================================================================
+   BULK CSV IMPORT — School & Sponsored School past-data upload.
+   One CSV row = one past booking (single visit). Flow: choose file → parse →
+   validate required fields → preview → append records to the in-memory arrays.
+   ========================================================================== */
+/* RFC-4180-ish parser: quoted fields, escaped "" quotes, CRLF, and commas /
+   newlines inside quotes. Returns an array of string arrays; blank rows dropped. */
+function parseCSV(text){
+  text=String(text||"").replace(/^﻿/,"");
+  const rows=[]; let row=[], field="", i=0, q=false;
+  while(i<text.length){
+    const ch=text[i];
+    if(q){
+      if(ch==='"'){ if(text[i+1]==='"'){ field+='"'; i+=2; continue; } q=false; i++; continue; }
+      field+=ch; i++; continue;
+    }
+    if(ch==='"'){ q=true; i++; continue; }
+    if(ch===','){ row.push(field); field=""; i++; continue; }
+    if(ch==='\r'){ i++; continue; }
+    if(ch==='\n'){ row.push(field); rows.push(row); row=[]; field=""; i++; continue; }
+    field+=ch; i++;
+  }
+  if(field.length||row.length){ row.push(field); rows.push(row); }
+  return rows.filter(r=>r.some(c=>String(c).trim()!==""));
+}
+const bulkSplit = v => String(v==null?"":v).split(/[;|]/).map(s=>s.trim()).filter(Boolean);
+const bulkNum   = v => { const n=parseInt(String(v==null?"":v).replace(/[^0-9-]/g,""),10); return isNaN(n)?0:n; };
+const bulkUnderpriv = v => String(v==null?"":v).split(/;/).map(s=>s.trim()).filter(Boolean)
+  .map(pair=>{ const c=pair.split(":"); return {title:(c[0]||"").trim(), count:(c[1]||"").trim()}; }).filter(x=>x.title);
+
+const SCHOOL_BULK_COLS=["School","Location","Boards","Grade","POC","Designation","Email","Phone","VisitDate","Slot","Students","Adults","Escorts","TeachersComp","FoodStudents","FoodAdults","FoodComp","FBOption","EntryStudent","EntryAdult","BillName","BillAddress","GSTIN","PAN","Status","AmountPaid","Assignee","Interested","Note","Comments"];
+const SP_BULK_COLS=["School","Location","OrgType","District","Boards","Grade","POC","Designation","Email","Phone","VisitDate","Slot","Students","Adults","Escorts","FoodStudents","FoodAdults","FoodComp","FBOption","EntryStudent","EntryAdult","Sponsor","AuthNumber","NgoGstin","NgoPan","ProofDoc","TransportNeed","TransportVendor","SpeciallyAbled","Underprivileged","BillName","BillAddress","GSTIN","PAN","Status","Assignee","Interested","Note","Comments"];
+
+/* Required-field check, shared by both forms; returns an array of human-readable errors. */
+function bulkValidateRow(o){
+  const need=[["School","School"],["Location","Location"],["Boards","Board(s)"],["Grade","Grade"],["POC","POC name"],["Email","Email"],["Phone","Phone"],["VisitDate","Visit date"],["Interested","Interested in"]];
+  const missing=need.filter(([k])=>!String(o[k]||"").trim()).map(([,l])=>l);
+  const errs=[];
+  if(missing.length) errs.push("missing "+missing.join(", "));
+  const email=String(o.Email||"").trim();
+  if(email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) errs.push("invalid email");
+  return errs;
+}
+const BULK_STATUSES=["Open","In Discussion","Confirmed","Live","Ended","Lost","Rejected"];
+const bulkStatus = s => { const t=String(s||"").trim(); return BULK_STATUSES.find(x=>x.toLowerCase()===t.toLowerCase())||"Ended"; };
+const bulkSlot   = s => { const t=String(s||"").trim(); return (SCHOOL_SLOTS.find(x=>x.name.toLowerCase()===t.toLowerCase())||{}).name || t || (SCHOOL_SLOTS[0]||{}).name; };
+
+/* Parse raw CSV text into { records:[{line,obj,errs,ok}], okCount, errCount }.
+   A header row (any known column name, case-insensitive) maps columns by name;
+   without one, columns are read positionally in template order. */
+function parseBulk(text, kind){
+  const cols = kind==="sponsored"?SP_BULK_COLS:SCHOOL_BULK_COLS;
+  const rows = parseCSV(text);
+  if(!rows.length) return {empty:true, cols, records:[], okCount:0, errCount:0};
+  const header = rows[0].map(h=>String(h).trim().toLowerCase());
+  const idx={}; cols.forEach(c=>{ const j=header.indexOf(c.toLowerCase()); if(j>=0) idx[c]=j; });
+  const hasHeader = cols.some(c=>idx[c]!==undefined);
+  const dataRows = hasHeader ? rows.slice(1) : rows;
+  const records = dataRows.map((r,ri)=>{
+    const obj={};
+    cols.forEach((c,ci)=>{ obj[c] = hasHeader ? (idx[c]!==undefined ? (r[idx[c]]||"") : "") : (r[ci]||""); });
+    const errs=bulkValidateRow(obj);
+    return {line: ri+1+(hasHeader?1:0), obj, errs, ok:errs.length===0};
+  });
+  return {cols, hasHeader, records, okCount:records.filter(x=>x.ok).length, errCount:records.filter(x=>!x.ok).length};
+}
+
+/* Row object → a booking record matching the seed shape (one visit). */
+function schoolRowToRecord(o,id){
+  const students=bulkNum(o.Students), adults=bulkNum(o.Adults), paid=bulkNum(o.AmountPaid), now=fmtDMY(new Date());
+  const date=String(o.VisitDate||"").trim();
+  return {
+    id, status:bulkStatus(o.Status), origin:"import", created:now,
+    school:String(o.School).trim(), location:String(o.Location).trim(), boards:bulkSplit(o.Boards), boardsOther:"",
+    grade:String(o.Grade).trim(), poc:String(o.POC).trim(), designation:String(o.Designation||"").trim(), designationOther:"",
+    email:String(o.Email).trim(), phone:String(o.Phone).trim(),
+    interested:bulkSplit(o.Interested), interestedOther:"", prefDate:date,
+    expChildren:students||"", expTeachers:adults||"", note:String(o.Note||"").trim(),
+    visits:[{date, slotId:bulkSlot(o.Slot), students, adults, escorts:bulkNum(o.Escorts), teachersComp:bulkNum(o.TeachersComp),
+             food:{students:bulkNum(o.FoodStudents),adults:bulkNum(o.FoodAdults),comp:bulkNum(o.FoodComp),optionIds:String(o.FBOption||"").trim()?[String(o.FBOption).trim()]:[]}, optionals:[]}],
+    entryStudent:bulkNum(o.EntryStudent)||"", entryAdult:bulkNum(o.EntryAdult)||"",
+    billName:String(o.BillName||"").trim()||String(o.School).trim(), billAddress:String(o.BillAddress||"").trim(),
+    gstin:String(o.GSTIN||"").trim(), pan:String(o.PAN||"").trim(),
+    comments:String(o.Comments||"").trim(), assignee:String(o.Assignee||"").trim(),
+    payments: paid>0?[{on:date||now, mode:"Imported", amount:paid, ref:"IMPORT"}]:[], proformaUpload:null,
+    timeline:[{on:now, who:"Import", what:"Historical booking imported from CSV."}] };
+}
+function spRowToRecord(o,id){
+  const students=bulkNum(o.Students), adults=bulkNum(o.Adults), now=fmtDMY(new Date());
+  const date=String(o.VisitDate||"").trim();
+  const orgType=SP_ORG_TYPES.find(x=>x.toLowerCase()===String(o.OrgType||"").trim().toLowerCase())||"Funded (NGO)";
+  const tneed=SP_TRANSPORT.find(x=>x.toLowerCase()===String(o.TransportNeed||"").trim().toLowerCase())||"No";
+  return {
+    id, status:bulkStatus(o.Status), origin:"import", created:now,
+    school:String(o.School).trim(), location:String(o.Location).trim(), boards:bulkSplit(o.Boards), boardsOther:"",
+    grade:String(o.Grade).trim(), poc:String(o.POC).trim(), designation:String(o.Designation||"").trim(), designationOther:"",
+    email:String(o.Email).trim(), phone:String(o.Phone).trim(),
+    orgType, sponsor:String(o.Sponsor||"").trim(), district:String(o.District||"").trim(),
+    transport:{need:tneed, vendor:String(o.TransportVendor||"").trim()},
+    interested:bulkSplit(o.Interested), interestedOther:"", prefDate:date,
+    expChildren:students||"", expTeachers:adults||"", note:String(o.Note||"").trim(), proofDoc:String(o.ProofDoc||"").trim(),
+    visits:[{date, slotId:bulkSlot(o.Slot), students, adults, escorts:bulkNum(o.Escorts), teachersComp:0,
+             food:{students:bulkNum(o.FoodStudents),adults:bulkNum(o.FoodAdults),comp:bulkNum(o.FoodComp),optionIds:String(o.FBOption||"").trim()?[String(o.FBOption).trim()]:[]}, optionals:[]}],
+    entryStudent:bulkNum(o.EntryStudent)||"", entryAdult:bulkNum(o.EntryAdult)||"",
+    ngoGstin:String(o.NgoGstin||"").trim(), ngoPan:String(o.NgoPan||"").trim(), authNumber:String(o.AuthNumber||"").trim(),
+    speciallyAbled:bulkNum(o.SpeciallyAbled), underprivileged:bulkUnderpriv(o.Underprivileged),
+    postVisit:{remark:"",images:[]}, students:{uploaded:false,total:0,girls:0,boys:0}, feedback:{sent:false},
+    billName:String(o.BillName||"").trim()||String(o.School).trim(), billAddress:String(o.BillAddress||"").trim(),
+    gstin:String(o.GSTIN||"").trim(), pan:String(o.PAN||"").trim(),
+    comments:String(o.Comments||"").trim(), assignee:String(o.Assignee||"").trim(), invoice:{raised:false,on:""},
+    timeline:[{on:now, who:"Import", what:"Historical sponsored booking imported from CSV."}] };
+}
+
+/* Downloadable template: header + two worked sample rows. */
+const BULK_SCHOOL_SAMPLES=[
+  {School:"St. Anne's High School",Location:"Bandra, Mumbai",Boards:"ICSE",Grade:"Grade 5 & 6",POC:"Rohan Fernandes",Designation:"Coordinator",Email:"rohan@stannes.edu.in",Phone:"+91 98200 12345",VisitDate:"12 Mar 2025",Slot:"Morning visit 9:00–14:00",Students:90,Adults:7,Escorts:2,TeachersComp:2,FoodStudents:90,FoodAdults:7,FoodComp:2,FBOption:"Standard lunch",EntryStudent:350,EntryAdult:500,BillName:"St. Anne's High School",BillAddress:"Hill Road, Bandra West, Mumbai 400050",GSTIN:"27AAACS1234A1Z5",PAN:"AAACS1234A",Status:"Ended",AmountPaid:38500,Assignee:"Aditi",Interested:"Museum Tour;Workshop",Note:"Annual educational trip.",Comments:"Visit completed; e-invoice raised."},
+  {School:"DAV Public School",Location:"Airoli, Navi Mumbai",Boards:"CBSE",Grade:"Grade 8",POC:"Sneha Kulkarni",Designation:"Teacher",Email:"sneha.k@dav.sch.in",Phone:"+91 90040 55667",VisitDate:"03 Apr 2025",Slot:"Late morning 10:00–13:00",Students:120,Adults:9,Escorts:3,TeachersComp:2,FoodStudents:0,FoodAdults:0,FoodComp:0,FBOption:"",EntryStudent:350,EntryAdult:500,BillName:"DAV Public School",BillAddress:"Sector 6, Airoli, Navi Mumbai 400708",GSTIN:"",PAN:"AAACD5566P",Status:"Ended",AmountPaid:46500,Assignee:"Aditi",Interested:"Museum Tour",Note:"",Comments:"Paid in full on the day."}
+];
+const BULK_SP_SAMPLES=[
+  {School:"Muktangan — Worli",Location:"Worli, Mumbai",OrgType:"Funded (NGO)",District:"Mumbai Suburban",Boards:"State board",Grade:"Grade 5",POC:"Anjali Rane",Designation:"Coordinator",Email:"visits@muktangan.org",Phone:"+91 98201 33445",VisitDate:"18 Feb 2025",Slot:"Morning visit 9:00–14:00",Students:80,Adults:8,Escorts:3,FoodStudents:80,FoodAdults:8,FoodComp:3,FBOption:"Snack box",EntryStudent:350,EntryAdult:500,Sponsor:"JSW Foundation",AuthNumber:"JSW/CSR/2025/0112",NgoGstin:"",NgoPan:"AAATM1234N",ProofDoc:"Muktangan-12A.pdf",TransportNeed:"Yes",TransportVendor:"Worli Roadways",SpeciallyAbled:4,Underprivileged:"First-generation learners:60; Below poverty line:20",BillName:"Muktangan",BillAddress:"Worli, Mumbai 400018",GSTIN:"",PAN:"AAATM1234N",Status:"Ended",Assignee:"Neha",Interested:"Museum Tour;Introduction to AI session",Note:"Sponsored by JSW Foundation.",Comments:"Visit completed; e-invoice to JSW."},
+  {School:"Akanksha Foundation — Sewri",Location:"Sewri, Mumbai",OrgType:"Funded (NGO)",District:"Mumbai Suburban",Boards:"State board",Grade:"Grade 6 & 7",POC:"Imtiaz Shaikh",Designation:"Admin",Email:"programs@akanksha.org",Phone:"+91 90045 66778",VisitDate:"09 Mar 2025",Slot:"Afternoon 14:00–18:00",Students:110,Adults:10,Escorts:4,FoodStudents:110,FoodAdults:10,FoodComp:4,FBOption:"Standard lunch",EntryStudent:350,EntryAdult:500,Sponsor:"Tata Trusts",AuthNumber:"TT/GRANT/2025/0339",NgoGstin:"",NgoPan:"AAATA5678K",ProofDoc:"Akanksha-80G.pdf",TransportNeed:"Yes",TransportVendor:"Sewri Transport Co.",SpeciallyAbled:2,Underprivileged:"First-generation learners:90",BillName:"Akanksha Foundation",BillAddress:"Sewri, Mumbai 400015",GSTIN:"",PAN:"AAATA5678K",Status:"Ended",Assignee:"Neha",Interested:"Museum Tour;Workshop",Note:"",Comments:"Completed."}
+];
+function bulkTemplateRows(kind){
+  const cols = kind==="sponsored"?SP_BULK_COLS:SCHOOL_BULK_COLS;
+  const samples = kind==="sponsored"?BULK_SP_SAMPLES:BULK_SCHOOL_SAMPLES;
+  return [cols].concat(samples.map(s=>cols.map(c=>s[c]==null?"":s[c])));
+}
+
+/* The upload panel, shared by School (kind "school") and Sponsored ("sponsored"). */
+function bulkPanel(kind){
+  const st = kind==="sponsored"?spBulk:schoolBulk;
+  if(!st) return "";
+  const nice = kind==="sponsored"?"sponsored school":"school";
+  // ---- Results view (after Import) : which rows landed, which were rejected ----
+  if(st.done){
+    const d=st.done;
+    const impRows=d.imported.map(r=>`<tr><td style="width:30px;text-align:center"><span style="color:#2e7d32;font-weight:700">&#10003;</span></td>
+        <td class="code" style="width:92px">${escHtml(r.id)}</td><td style="font-size:12.5px">${escHtml(r.school||"—")} <span class="muted">·</span> ${escHtml(r.date||"—")} <span class="muted">·</span> ${escHtml(r.status)}</td></tr>`).join("");
+    const skipRows=d.skipped.map(r=>`<tr><td style="width:30px;text-align:center"><span style="color:#c62828;font-weight:700">&#9888;</span></td>
+        <td class="code" style="width:92px">Row ${r.line}</td><td style="font-size:12.5px;color:#c62828">${escHtml(r.school||"—")} <span class="muted">·</span> ${escHtml(r.errs.join("; "))}</td></tr>`).join("");
+    const impBlock=d.imported.length?`<div style="margin-top:6px"><div style="font-size:12px;font-weight:600;color:#2e7d32;margin-bottom:6px">Imported (${d.imported.length}) — added to the ${nice} records</div>
+        <div class="matrix-wrap" style="max-height:240px;overflow:auto;border:1px solid var(--rule2);border-radius:8px"><table class="reclist"><tbody>${impRows}</tbody></table></div></div>`:"";
+    const skipBlock=d.skipped.length?`<div style="margin-top:16px"><div style="display:flex;align-items:center;gap:10px;margin-bottom:6px">
+        <span style="font-size:12px;font-weight:600;color:#c62828">Skipped (${d.skipped.length}) — not imported</span>
+        <button class="btn" data-bulk-skipped="${kind}" style="margin-left:auto;padding:3px 9px;font-size:11.5px">Download skipped rows</button></div>
+        <div class="matrix-wrap" style="max-height:240px;overflow:auto;border:1px solid var(--rule2);border-radius:8px"><table class="reclist"><tbody>${skipRows}</tbody></table></div>
+        <div class="muted" style="font-size:11px;margin-top:6px">The download keeps every original column plus an <b>Error</b> column — fix those rows and upload the file again.</div></div>`:"";
+    return `<div class="card"><div class="card-head"><span class="card-title">Import complete — past ${nice} bookings</span>
+        <button class="drawer-close" data-bulk-close="${kind}" aria-label="Close" style="margin-left:auto">&times;</button></div>
+      <div class="form-body" style="display:block">
+        <div style="display:flex;gap:18px;margin-bottom:4px;font-size:13px">
+          <span style="color:#2e7d32;font-weight:600">&#10003; ${d.imported.length} imported</span>
+          ${d.skipped.length?`<span style="color:#c62828;font-weight:600">&#9888; ${d.skipped.length} skipped</span>`:`<span class="muted">no errors</span>`}</div>
+        ${impBlock}${skipBlock}
+        <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:18px;border-top:1px solid var(--rule2);padding-top:14px">
+          <button class="btn" data-bulk-again="${kind}">Import another file</button>
+          <button class="btn btn-primary" data-bulk-close="${kind}">Done</button></div></div></div>`;
+  }
+  const res = st.result;
+  const intro = `<div style="font-size:12.5px;color:var(--ink2);line-height:1.55;margin-bottom:4px">Upload a CSV of past ${nice} bookings — one row per booking (a single visit). <b>Required columns:</b> School, Location, Boards, Grade, POC, Email, Phone, VisitDate, Interested. Multi-value cells (Boards, Interested) use <code>;</code> to separate. Blank or unknown Status becomes <b>Ended</b>. Download the template for the full column list with sample rows.</div>`;
+  const picker = `<div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin:16px 0">
+      <label class="btn btn-primary" style="cursor:pointer;position:relative;overflow:hidden">Choose CSV file…
+        <input type="file" accept=".csv,text/csv" data-bulk-file="${kind}" style="position:absolute;inset:0;opacity:0;cursor:pointer"></label>
+      <button class="btn" data-bulk-template="${kind}">Download template</button>
+      ${st.fileName?`<span class="muted" style="font-size:12px">${escHtml(st.fileName)}</span>`:""}</div>`;
+  let preview="";
+  if(res){
+    if(res.empty){ preview=`<div style="padding:10px 12px;border-radius:6px;font-size:12.5px;background:#fdeceb;border:1px solid #f2b8b5;color:#9b2c2c">No rows found in the file. Check that it is a comma-separated CSV.</div>`; }
+    else {
+      const rowsHtml=res.records.map(r=>{
+        const tag=r.ok?`<span style="color:#2e7d32;font-weight:700">&#10003;</span>`:`<span style="color:#c62828;font-weight:700">&#9888;</span>`;
+        const detail=r.ok?`${escHtml(r.obj.School||"—")} <span class="muted">·</span> ${escHtml(r.obj.VisitDate||"—")} <span class="muted">·</span> ${bulkNum(r.obj.Students)} st <span class="muted">·</span> ${escHtml(bulkStatus(r.obj.Status))}`
+          :`<span style="color:#c62828">Row ${r.line}: ${escHtml(r.errs.join("; "))}</span>`;
+        return `<tr><td style="width:30px;text-align:center">${tag}</td><td style="font-size:12.5px">${detail}</td></tr>`;
+      }).join("");
+      preview=`<div style="display:flex;gap:18px;margin:6px 0 10px;font-size:13px">
+          <span style="color:#2e7d32;font-weight:600">&#10003; ${res.okCount} ready to import</span>
+          ${res.errCount?`<span style="color:#c62828;font-weight:600">&#9888; ${res.errCount} with errors (skipped)</span>`:""}</div>
+        <div class="matrix-wrap" style="max-height:320px;overflow:auto;border:1px solid var(--rule2);border-radius:8px"><table class="reclist"><tbody>${rowsHtml}</tbody></table></div>`;
+    }
+  }
+  const importBtn = res && !res.empty && res.okCount>0
+    ? `<button class="btn btn-primary" data-bulk-import="${kind}">Import ${res.okCount} booking${res.okCount>1?"s":""}</button>` : "";
+  return `<div class="card"><div class="card-head"><span class="card-title">Bulk upload — past ${nice} bookings</span>
+      <button class="drawer-close" data-bulk-close="${kind}" aria-label="Close" style="margin-left:auto">&times;</button></div>
+    <div class="form-body" style="display:block">${intro}${picker}${preview}
+      <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:18px;border-top:1px solid var(--rule2);padding-top:14px">
+        <button class="btn" data-bulk-close="${kind}">Cancel</button>${importBtn}</div></div></div>`;
+}
 const SCRIPTS = [
   {n:"Google Tag Manager",place:"head",pages:"Every page",note:"The container. Everything else can be managed inside GTM once this is in.",st:"Needs container ID"},
   {n:"Google Tag Manager — noscript",place:"body open",pages:"Every page",note:"The iframe fallback. Has to be the first thing inside the body or it does nothing.",st:"Needs container ID"},
@@ -3537,12 +3727,12 @@ let blockMselOpen = false;   // the block flyout's time-slot multi-select open s
 let carsub = "openings", selCareer = "", carDsub = "details";
 let selSchool = "", schsub = "overview", schtab = "records", schoolNewMode = "booking",
     schoolQ = "", schoolFStatus = "", schoolRange = "Monthly",
-    schoolDraft = null, schoolMsg = "", schoolEmailView = null, schoolEInvView = false, schoolEInvConfirm = false, schoolSaveConfirm = false;
+    schoolDraft = null, schoolMsg = "", schoolEmailView = null, schoolEInvView = false, schoolEInvConfirm = false, schoolSaveConfirm = false, schoolBulk = null;
 let mEdit = -1;   // generic Foundations master-row edit index
 let ruleDel = null;   // product Validation-rules: pending {ctx,i} awaiting delete confirmation
 let selSp = "", spsub = "overview", sptab = "records", spNewMode = "booking",
     spQ = "", spFStatus = "", spRange = "Monthly",
-    spDraft = null, spMsg = "", spEmailView = null, spSaveConfirm = false;
+    spDraft = null, spMsg = "", spEmailView = null, spSaveConfirm = false, spBulk = null;
 let appFRole = "", appFStatus = "", appQ = "", careerQ = "";
 let qryQ = "";
 let qryExpanded = new Set();
@@ -4054,6 +4244,33 @@ function deptDeleteLayer(){
     </div></div>`;
 }
 
+/* Upcoming school & sponsored-school visits (for the Reception dashboard panel).
+   Every future-dated visit from a non-cancelled booking, one row per visit, sorted by date.
+   An enquiry with no scheduled visits falls back to its preferred date. */
+function upcomingSchoolVisits(){
+  const ref = parseDMY(DASH.todayDate) || new Date();
+  const excluded = new Set(["Ended","Lost","Rejected","Cancelled"]);
+  const out=[];
+  const add=(rec,kind,idx)=>{
+    if(excluded.has(rec.status)) return;
+    const vs=(rec.visits||[]).filter(v=>v.date && parseDMY(v.date));
+    if(vs.length){
+      vs.forEach(v=>{ const d=parseDMY(v.date); if(d && d>=ref)
+        out.push({d,date:v.date,slot:v.slotId||"—",school:rec.school||"—",location:rec.location||"",
+          students:+v.students||0, adults:(+v.adults||0)+(+v.escorts||0)+(+v.teachersComp||0),
+          kind,idx,status:rec.status}); });
+    } else if(rec.prefDate && parseDMY(rec.prefDate)){
+      const d=parseDMY(rec.prefDate); if(d && d>=ref)
+        out.push({d,date:rec.prefDate,slot:"Enquiry · slot pending",school:rec.school||"—",location:rec.location||"",
+          students:+rec.expChildren||0, adults:+rec.expTeachers||0, kind,idx,status:rec.status});
+    }
+  };
+  (typeof SCHOOL_BOOKINGS!=="undefined"?SCHOOL_BOOKINGS:[]).forEach((r,i)=>add(r,"School",i));
+  (typeof SPONSORED_BOOKINGS!=="undefined"?SPONSORED_BOOKINGS:[]).forEach((r,i)=>add(r,"Sponsored",i));
+  out.sort((a,b)=>a.d-b.d);
+  return out;
+}
+
 const VIEWS = {
   checkin(){
     const TICK='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>';
@@ -4278,7 +4495,27 @@ const VIEWS = {
       <div class="matrix-wrap"><table class="reclist"><thead><tr><th>Member ID</th><th>Registered pair</th><th>Tier</th><th>Expires</th><th>Status</th></tr></thead>
       <tbody>${expRows}</tbody></table></div></div>`;
 
-    return tiles + occupancy + strip + `<div class="dash-row">${sessions}${attn}</div>` + `<div class="dash-row">${bars}${meters}</div>` + `<div class="dash-row">${sources}${bestday}</div>` + `<div class="dash-row">${membership}${expiring}</div>` + orders;
+    // ---- Upcoming schools (for Reception) ----
+    const upV=upcomingSchoolVisits();
+    const upStu=upV.reduce((a,r)=>a+r.students,0), upAd=upV.reduce((a,r)=>a+r.adults,0);
+    const kindTag=k=>`<span class="tag tag-${k==="Sponsored"?"a":"t"}">${k}</span>`;
+    const upRows=upV.length?upV.map(r=>`<tr data-open="${r.kind==="Sponsored"?"sponsored":"school"}:${r.idx}" style="cursor:pointer">
+        <td class="code" style="white-space:nowrap">${escHtml(r.date)}<div class="sub" style="text-transform:none">${escHtml(r.slot)}</div></td>
+        <td><b style="font-weight:500">${escHtml(r.school)}</b> ${kindTag(r.kind)}${r.location?`<div class="sub">${escHtml(r.location)}</div>`:""}</td>
+        <td class="code ctr">${r.students||"—"}</td>
+        <td class="code ctr">${r.adults||"—"}</td></tr>`).join("")
+      :'<tr><td colspan="4" class="muted" style="text-align:center;padding:22px">No upcoming school visits.</td></tr>';
+    const schoolsPanel=`<div class="card">
+      <div class="card-head"><span class="card-title">Upcoming schools</span><span class="card-note" style="margin-left:auto">for Reception</span></div>
+      <div style="display:flex;gap:22px;padding:11px 16px;border-bottom:1px solid var(--rule);font-size:12.5px">
+        <span><b style="font-size:15px">${upV.length}</b> upcoming visit${upV.length===1?"":"s"}</span>
+        <span><b style="font-size:15px">${upStu}</b> students</span>
+        <span><b style="font-size:15px">${upAd}</b> adults / teachers</span></div>
+      <div class="matrix-wrap" style="max-height:340px;overflow:auto"><table class="reclist"><thead><tr>
+        <th>Date &amp; slot</th><th>School</th><th class="ctr">Students</th><th class="ctr">Adults</th></tr></thead>
+      <tbody>${upRows}</tbody></table></div></div>`;
+
+    return tiles + occupancy + schoolsPanel + strip + `<div class="dash-row">${sessions}${attn}</div>` + `<div class="dash-row">${bars}${meters}</div>` + `<div class="dash-row">${sources}${bestday}</div>` + `<div class="dash-row">${membership}${expiring}</div>` + orders;
   },
   tiers(){
     return `${toolbar("Search membership tiers",MEMBERSHIP_TIERS.length+" plans")}
@@ -4829,6 +5066,7 @@ const VIEWS = {
       <button class="sub-tab" data-schtab="reports" aria-selected="${schtab==="reports"}">Reports</button></div>`;
 
     if(schtab==="reports") return tabs+`<div class="sub-body">${schoolReports()}</div>`;
+    if(schoolBulk) return tabs+`<div class="sub-body">${bulkPanel("school")}</div>`;
 
     /* ---- Records tab ---- */
     const openN=SCHOOL_BOOKINGS.filter(r=>["Open","In Discussion"].includes(r.status)).length;
@@ -4867,6 +5105,7 @@ const VIEWS = {
         placeholder="Search by ID, school, POC or location" aria-label="Search school records"></label>
       ${statusPick}
       <span class="tool-note" id="schoolCount">${SCHOOL_BOOKINGS.length} records</span>
+      <button class="btn" data-bulk-open="school">Bulk upload</button>
       <button class="btn" data-export="school">Download CSV</button></div>`;
     return tabs+`<div class="sub-body">${tiles}${toolbar}
       <div class="card"><div class="matrix-wrap"><table class="reclist" id="schoolTable"><thead><tr>
@@ -4928,6 +5167,7 @@ const VIEWS = {
       <button class="sub-tab" data-sptab="records" aria-selected="${sptab==="records"}">Bookings &amp; enquiries</button>
       <button class="sub-tab" data-sptab="reports" aria-selected="${sptab==="reports"}">Reports</button></div>`;
     if(sptab==="reports") return tabs+`<div class="sub-body">${sponsoredReports()}</div>`;
+    if(spBulk) return tabs+`<div class="sub-body">${bulkPanel("sponsored")}</div>`;
 
     const openN=SPONSORED_BOOKINGS.filter(r=>["Open","In Discussion"].includes(r.status)).length;
     const bookedN=SPONSORED_BOOKINGS.filter(r=>["Confirmed","Live","Ended"].includes(r.status)).length;
@@ -4964,6 +5204,7 @@ const VIEWS = {
         placeholder="Search by ID, organisation, sponsor or district" aria-label="Search sponsored records"></label>
       ${statusPick}
       <span class="tool-note" id="spCount">${SPONSORED_BOOKINGS.length} records</span>
+      <button class="btn" data-bulk-open="sponsored">Bulk upload</button>
       <button class="btn" data-export="sponsored">Download CSV</button></div>`;
     return tabs+`<div class="sub-body">${tiles}${toolbar}
       <div class="card"><div class="matrix-wrap"><table class="reclist" id="spTable"><thead><tr>
@@ -6455,7 +6696,7 @@ function blankVisit(){
 }
 function blankSchool(mode){
   return {id:nextSchoolId(), status:"Open", origin:mode==="booking"?"backend":"enquiry", created:fmtDMY(new Date()),
-    school:"",location:"",boards:[],boardsOther:"",grade:"",poc:"",designation:"",email:"",phone:"",
+    school:"",location:"",boards:[],boardsOther:"",grade:"",poc:"",designation:"",designationOther:"",email:"",phone:"",
     interested:[],interestedOther:"",prefDate:"",expChildren:"",expTeachers:"",note:"",
     visits:[], entryStudent:"", entryAdult:"",
     billName:"",billAddress:"",gstin:"",pan:"",comments:"",assignee:"",
@@ -6536,6 +6777,7 @@ function schoolForm(editing){
   const secPOC=section("Point of Contact",
     fld("Name of Point of Contact (POC)",t("poc",d.poc,"Enter full name of coordinating coordinator / teacher"),"",true,true)+
     fld("Designation",sel("designation",d.designation,SCHOOL_DESIGN,"—"))+
+    (d.designation==="Other"?fld("Other designation",t("designationOther",d.designationOther,"Specify the designation"),"","",true):"")+
     fld("Email of POC",t("email",d.email,"poc@school.edu"),"",true)+
     fld("Phone Number of POC",t("phone",d.phone,"+91 98765 43210"),"Include country code",true));
 
@@ -6601,7 +6843,7 @@ function schoolForm(editing){
       <button type="button" class="rep-add" data-school-add-optional="${i}" style="border-radius:4px;align-self:flex-start">+ Add optional</button></div>
   </div>`; };
   const secPricing=section("Entry pricing",
-    fld("Entry price preset",`<div class="selwrap"><select class="inp" data-school-preset><option value="">— pick a preset —</option>${ENTRY_PRICES.map(p=>`<option>${escHtml(p.name)}</option>`).join("")}</select></div>`,"Fills the per-head prices below; they stay editable.")+
+    fld("Entry price preset",`<div class="selwrap"><select class="inp" data-school-preset data-sf="entryPreset"><option value="">— pick a preset —</option>${ENTRY_PRICES.map(p=>`<option${d.entryPreset===p.name?" selected":""}>${escHtml(p.name)}</option>`).join("")}</select></div>`,"Fills the per-head prices below; they stay editable.")+
     fld("Entry price · per student",num("entryStudent",d.entryStudent))+
     fld("Entry price · per adult / teacher",num("entryAdult",d.entryAdult)));
   const secVisits=section("Visits",
@@ -6646,7 +6888,8 @@ function schoolForm(editing){
 function schoolCaptureForm(){
   const d=schoolDraft; if(!d) return;
   const g=k=>{const el=document.querySelector(`[data-sf="${k}"]`);return el?el.value:undefined;};
-  ["school","location","boardsOther","grade","poc","designation","email","phone","interestedOther","prefDate","note","entryStudent","entryAdult","billName","billAddress","gstin","pan","status","comments","assignee","expChildren","expTeachers"].forEach(k=>{const v=g(k);if(v!==undefined)d[k]=v;});
+  ["school","location","boardsOther","grade","poc","designation","designationOther","email","phone","interestedOther","prefDate","note","entryPreset","entryStudent","entryAdult","billName","billAddress","gstin","pan","status","comments","assignee","expChildren","expTeachers"].forEach(k=>{const v=g(k);if(v!==undefined)d[k]=v;});
+  if(d.designation!=="Other") d.designationOther="";
   const chipVals=key=>[...document.querySelectorAll(`[data-sfchips="${key}"] .chip-opt[data-on="1"]`)].map(c=>c.dataset.chipval);
   if(document.querySelector('[data-sfchips="boards"]')) d.boards=chipVals("boards");
   if(document.querySelector('[data-sfchips="interested"]')) d.interested=chipVals("interested");
@@ -6792,7 +7035,7 @@ function schoolDetail(){
   const overview=`<div class="card"><div class="card-head"><span class="card-title">School &amp; contact</span></div><div class="matrix-wrap"><table class="reclist"><tbody>
       ${row("School",escHtml(rec.school))}${row("Location",escHtml(rec.location))}${row("Education board",tags((rec.boards||[]).concat(rec.boardsOther?["Other: "+rec.boardsOther]:[])))}
       ${row("Grade / class",escHtml(rec.grade))}${row("Interested in",tags((rec.interested||[]).concat(rec.interestedOther?["Other: "+rec.interestedOther]:[])))}
-      ${row("Point of contact",escHtml(rec.poc)+(rec.designation?` <span class="muted">· ${escHtml(rec.designation)}</span>`:""))}
+      ${row("Point of contact",escHtml(rec.poc)+(rec.designation?` <span class="muted">· ${escHtml(rec.designation==="Other"&&rec.designationOther?rec.designationOther:rec.designation)}</span>`:""))}
       ${row("Email",rec.email?`<span class="code">${escHtml(rec.email)}</span>`:"")}${row("Phone",rec.phone?`<span class="code">${escHtml(rec.phone)}</span>`:"")}
       ${row("Preferred date",rec.prefDate)}${row("Expected",`${rec.expChildren||"—"} children · ${rec.expTeachers||"—"} staff`)}
       ${rec.assignee?row("Assignee",escHtml(rec.assignee)):""}
@@ -6923,7 +7166,7 @@ function sponsoredReports(){
 /* ---- Form ---- */
 function blankSp(mode){
   return {id:nextSpId(), status:"Open", origin:mode==="booking"?"backend":"enquiry", created:fmtDMY(new Date()),
-    school:"",location:"",boards:[],boardsOther:"",grade:"",poc:"",designation:"",email:"",phone:"",
+    school:"",location:"",boards:[],boardsOther:"",grade:"",poc:"",designation:"",designationOther:"",email:"",phone:"",
     orgType:"Funded (NGO)", sponsor:"", district:"", transport:{need:"No",vendor:""},
     interested:[],interestedOther:"",prefDate:"",expChildren:"",expTeachers:"",note:"",proofDoc:"",
     visits:[], entryStudent:"", entryAdult:"",
@@ -6967,6 +7210,7 @@ function spForm(editing){
   const secPOC=section("Point of Contact",
     fld("Name of POC / coordinator",t("poc",d.poc,"Full name of the coordinating teacher / POC"),"",true,true)+
     fld("Designation",sel("designation",d.designation,SCHOOL_DESIGN,"—"))+
+    (d.designation==="Other"?fld("Other designation",t("designationOther",d.designationOther,"Specify the designation"),"","",true):"")+
     fld("Email of POC",t("email",d.email,"poc@ngo.org"),"",true)+
     fld("Phone of POC",t("phone",d.phone,"+91 98765 43210"),"Include country code",true));
 
@@ -6985,7 +7229,7 @@ function spForm(editing){
 
   // Entry pricing
   const secPricing=section("Entry pricing",
-    fld("Entry price preset",`<div class="selwrap"><select class="inp" data-sp-preset><option value="">— pick a preset —</option>${ENTRY_PRICES.map(p=>`<option>${escHtml(p.name)}</option>`).join("")}</select></div>`,"Fills the per-head prices below; they stay editable. Billed to the sponsor, not the school.")+
+    fld("Entry price preset",`<div class="selwrap"><select class="inp" data-sp-preset data-spf="entryPreset"><option value="">— pick a preset —</option>${ENTRY_PRICES.map(p=>`<option${d.entryPreset===p.name?" selected":""}>${escHtml(p.name)}</option>`).join("")}</select></div>`,"Fills the per-head prices below; they stay editable. Billed to the sponsor, not the school.")+
     fld("Entry price · per student",num("entryStudent",d.entryStudent))+
     fld("Entry price · per adult / teacher",num("entryAdult",d.entryAdult)));
 
@@ -7093,7 +7337,8 @@ function spForm(editing){
 function spCaptureForm(){
   const d=spDraft; if(!d) return;
   const g=k=>{const el=document.querySelector(`[data-spf="${k}"]`);return el?el.value:undefined;};
-  ["school","location","orgType","district","boardsOther","grade","prefDate","poc","designation","email","phone","interestedOther","note","sponsor","authNumber","ngoGstin","ngoPan","proofDoc","entryStudent","entryAdult","billName","billAddress","gstin","pan","speciallyAbled","status","comments","assignee","expChildren","expTeachers"].forEach(k=>{const v=g(k);if(v!==undefined)d[k]=v;});
+  ["school","location","orgType","district","boardsOther","grade","prefDate","poc","designation","designationOther","email","phone","interestedOther","note","sponsor","authNumber","ngoGstin","ngoPan","proofDoc","entryPreset","entryStudent","entryAdult","billName","billAddress","gstin","pan","speciallyAbled","status","comments","assignee","expChildren","expTeachers"].forEach(k=>{const v=g(k);if(v!==undefined)d[k]=v;});
+  if(d.designation!=="Other") d.designationOther="";
   const upEl=document.querySelector("[data-sp-uprows]");
   if(upEl) d.underprivileged=[...upEl.querySelectorAll("[data-sp-uprow]")].map(r=>({title:(r.querySelector('[data-spf-up="title"]')||{}).value||"",count:(r.querySelector('[data-spf-up="count"]')||{}).value||""})).filter(x=>x.title||x.count);
   const tn=g("transport_need"), tv=g("transport_vendor"); d.transport=d.transport||{}; if(tn!==undefined)d.transport.need=tn; if(tv!==undefined)d.transport.vendor=tv;
@@ -7210,7 +7455,7 @@ function spDetail(){
       ${row("Organisation",escHtml(rec.school))}${row("Type",escHtml(rec.orgType))}${row("Location",escHtml(rec.location))}${row("District",escHtml(rec.district))}
       ${row("Education board",tags((rec.boards||[]).concat(rec.boardsOther?["Other: "+rec.boardsOther]:[])))}
       ${row("Grade / class",escHtml(rec.grade))}${row("Interested in",tags((rec.interested||[]).concat(rec.interestedOther?["Other: "+rec.interestedOther]:[])))}
-      ${row("Point of contact",escHtml(rec.poc)+(rec.designation?` <span class="muted">· ${escHtml(rec.designation)}</span>`:""))}
+      ${row("Point of contact",escHtml(rec.poc)+(rec.designation?` <span class="muted">· ${escHtml(rec.designation==="Other"&&rec.designationOther?rec.designationOther:rec.designation)}</span>`:""))}
       ${row("Email",rec.email?`<span class="code">${escHtml(rec.email)}</span>`:"")}${row("Phone",rec.phone?`<span class="code">${escHtml(rec.phone)}</span>`:"")}
       ${row("Preferred date",rec.prefDate)}${row("Expected",`${rec.expChildren||"—"} children · ${rec.expTeachers||"—"} staff`)}
       ${row("Transport",rec.transport&&rec.transport.need==="Yes"?("Yes"+(rec.transport.vendor?" · "+escHtml(rec.transport.vendor):"")):((rec.transport&&rec.transport.need)||"—"))}
@@ -8310,7 +8555,7 @@ document.addEventListener("click",e=>{
     if(a&&a.cv) careerOpenPdf(careerCvPdf(a), a.cv.name); return; }
   if(e.target.closest("[data-career-clear]")){ careerFDept=""; careerFType=""; careerFStatus="all"; render(); return; }
   const nav=e.target.closest(".mitem");
-  if(nav){ current=nav.dataset.k; mEdit=-1; ruleDel=null; venueAvail=null; venueCheck=null; selP=0; selW=0; selB=0; selE=0; esub="details"; eventCats=new Set(); selBooking=0; tab="list"; sub="details"; csub="details"; editD=-1; selD=0; dsub="summary"; editCond=-1; condDraft=null; draftDiscount=null; addOpen=null; progKind="event"; progCat="Event"; schoolDraft=null; schtab="records"; schoolEmailView=null; schoolMsg=""; schoolEInvView=false; schoolEInvConfirm=false; schoolSaveConfirm=false; spDraft=null; sptab="records"; spEmailView=null; spMsg=""; spSaveConfirm=false; render(); $(".stage").scrollTop=0; return; }
+  if(nav){ current=nav.dataset.k; mEdit=-1; ruleDel=null; venueAvail=null; venueCheck=null; selP=0; selW=0; selB=0; selE=0; esub="details"; eventCats=new Set(); selBooking=0; tab="list"; sub="details"; csub="details"; editD=-1; selD=0; dsub="summary"; editCond=-1; condDraft=null; draftDiscount=null; addOpen=null; progKind="event"; progCat="Event"; schoolDraft=null; schtab="records"; schoolEmailView=null; schoolMsg=""; schoolEInvView=false; schoolEInvConfirm=false; schoolSaveConfirm=false; schoolBulk=null; spDraft=null; sptab="records"; spEmailView=null; spMsg=""; spSaveConfirm=false; spBulk=null; render(); $(".stage").scrollTop=0; return; }
   const goto=e.target.closest("[data-goto]");
   if(goto){ current=goto.dataset.goto; mEdit=-1; selP=0; selW=0; selB=0; selE=0; selD=0; selBooking=0; tab="list"; sub="details"; csub="details"; dsub="summary"; addOpen=null; render(); $(".stage").scrollTop=0; return; }
   const t=e.target.closest("[data-tab]");
@@ -8464,6 +8709,32 @@ document.addEventListener("click",e=>{
   if(od){ const [kind,i]=od.dataset.open.split(":"); const idx=+i;
     if(kind==="prod") selP=idx; else if(kind==="camp"){ selW=idx; selB=0; progKind="camp"; } else if(kind==="event"){ selE=idx; progKind="event"; } else if(kind==="disc"){ selD=idx; dsub="summary"; } else if(kind==="member"){ selMember=idx; msub="summary"; } else if(kind==="tier"){ selTier=idx; } else if(kind==="shopitem"){ selShopItem=idx; sitab="details"; } else if(kind==="shopsale"){ selShopSale=idx; ssub="details"; } else if(kind==="shopcoupon"){ selShopCoupon=idx; } else if(kind==="school"){ selSchool=(SCHOOL_BOOKINGS[idx]||{}).id||""; schsub="overview"; schoolEmailView=null; schoolMsg=""; schoolEInvView=false; schoolEInvConfirm=false; } else if(kind==="sponsored"){ selSp=(SPONSORED_BOOKINGS[idx]||{}).id||""; spsub="overview"; spEmailView=null; spMsg=""; }
     tab="detail"; sub="details"; esub="details"; csub="details"; addOpen=null; render(); $(".stage").scrollTop=0; return; }
+  // ---- Bulk CSV import (School & Sponsored) ----
+  const bulkOpen=e.target.closest("[data-bulk-open]");
+  if(bulkOpen){ const k=bulkOpen.dataset.bulkOpen; if(k==="sponsored") spBulk={fileName:"",result:null}; else schoolBulk={fileName:"",result:null}; render(); $(".stage").scrollTop=0; return; }
+  const bulkClose=e.target.closest("[data-bulk-close]");
+  if(bulkClose){ if(bulkClose.dataset.bulkClose==="sponsored") spBulk=null; else schoolBulk=null; render(); return; }
+  const bulkTpl=e.target.closest("[data-bulk-template]");
+  if(bulkTpl){ const k=bulkTpl.dataset.bulkTemplate; downloadCSV(k==="sponsored"?"sponsored-import-template.csv":"school-import-template.csv", bulkTemplateRows(k)); return; }
+  const bulkImp=e.target.closest("[data-bulk-import]");
+  if(bulkImp){ const k=bulkImp.dataset.bulkImport; const st=k==="sponsored"?spBulk:schoolBulk; const res=st&&st.result; if(!res||res.empty){ return; }
+    const imported=[], skipped=[];
+    res.records.forEach(r=>{
+      if(r.ok){ const id=k==="sponsored"?nextSpId():nextSchoolId(); const rec=k==="sponsored"?spRowToRecord(r.obj,id):schoolRowToRecord(r.obj,id);
+        (k==="sponsored"?SPONSORED_BOOKINGS:SCHOOL_BOOKINGS).push(rec);
+        imported.push({id, school:rec.school, date:(rec.visits[0]||{}).date||rec.prefDate||"", status:rec.status}); }
+      else { skipped.push({line:r.line, school:String(r.obj.School||"").trim(), errs:r.errs, obj:r.obj}); }
+    });
+    const done={imported, skipped};
+    if(k==="sponsored") spBulk=Object.assign({}, st, {done}); else schoolBulk=Object.assign({}, st, {done});
+    render(); $(".stage").scrollTop=0; return; }
+  const bulkSkip=e.target.closest("[data-bulk-skipped]");
+  if(bulkSkip){ const k=bulkSkip.dataset.bulkSkipped; const st=k==="sponsored"?spBulk:schoolBulk; const d=st&&st.done; if(!d) return;
+    const cols=k==="sponsored"?SP_BULK_COLS:SCHOOL_BULK_COLS;
+    const rows=[cols.concat(["Error"])].concat(d.skipped.map(s=>cols.map(c=>s.obj[c]==null?"":s.obj[c]).concat([s.errs.join("; ")])));
+    downloadCSV(k==="sponsored"?"sponsored-import-errors.csv":"school-import-errors.csv", rows); return; }
+  const bulkAgain=e.target.closest("[data-bulk-again]");
+  if(bulkAgain){ const k=bulkAgain.dataset.bulkAgain; if(k==="sponsored") spBulk={fileName:"",result:null}; else schoolBulk={fileName:"",result:null}; render(); $(".stage").scrollTop=0; return; }
   // ---- School bookings handlers ----
   const schNew=e.target.closest("[data-school-new]");
   if(schNew){ schoolNewMode=schNew.dataset.schoolNew; schoolDraft=blankSchool(schoolNewMode); tab="new"; render(); $(".stage").scrollTop=0; return; }
@@ -8495,7 +8766,7 @@ document.addEventListener("click",e=>{
   const schDelO=e.target.closest("[data-school-del-optional]");
   if(schDelO){ schoolCaptureForm(); const d=schoolDraft; const [vi,oi]=schDelO.dataset.schoolDelOptional.split("|").map(Number); const v=d&&(d.visits||[])[vi]; if(v&&v.optionals) v.optionals.splice(oi,1); render(); return; }
   const schTab=e.target.closest("[data-schtab]");
-  if(schTab){ schtab=schTab.dataset.schtab; render(); $(".stage").scrollTop=0; return; }
+  if(schTab){ schtab=schTab.dataset.schtab; schoolBulk=null; render(); $(".stage").scrollTop=0; return; }
   const schDsub=e.target.closest("[data-schsub]");
   if(schDsub){ schsub=schDsub.dataset.schsub; render(); return; }
   const schRange=e.target.closest("[data-school-range]");
@@ -8546,7 +8817,7 @@ document.addEventListener("click",e=>{
   const spDelUp=e.target.closest("[data-sp-del-uprow]");
   if(spDelUp){ spCaptureForm(); const d=spDraft; if(d&&Array.isArray(d.underprivileged)) d.underprivileged.splice(+spDelUp.dataset.spDelUprow,1); render(); return; }
   const spTabBtn=e.target.closest("[data-sptab]");
-  if(spTabBtn){ sptab=spTabBtn.dataset.sptab; render(); $(".stage").scrollTop=0; return; }
+  if(spTabBtn){ sptab=spTabBtn.dataset.sptab; spBulk=null; render(); $(".stage").scrollTop=0; return; }
   const spDsub=e.target.closest("[data-spsub]");
   if(spDsub){ spsub=spDsub.dataset.spsub; render(); return; }
   const spRangeBtn=e.target.closest("[data-sp-range]");
@@ -8739,6 +9010,9 @@ document.addEventListener("click",e=>{
 });
 document.addEventListener("change",e=>{
   const oRowC=e.target.closest&&e.target.closest("[data-vorow],[data-spvorow]"); if(oRowC) syncOptCheckBtn(oRowC);
+  // Designation "Other" → reveal/hide the "Other designation" field on select change.
+  if(schoolDraft && e.target.closest && e.target.closest('[data-sf="designation"]')){ schoolCaptureForm(); render(); return; }
+  if(spDraft && e.target.closest && e.target.closest('[data-spf="designation"]')){ spCaptureForm(); render(); return; }
   const vaV=e.target.closest&&e.target.closest("[data-venueavail-venue]");
   if(vaV){ if(venueAvail){ venueAvail.venue=vaV.value; const d=document.querySelector("[data-venueavail-date]"); if(d) venueAvail.date=d.value.trim(); } render(); return; }
   const rCat=e.target.closest&&e.target.closest("[data-ratio-cat]");
@@ -8757,6 +9031,14 @@ document.addEventListener("change",e=>{
     render(); return; }
   const aSt=e.target.closest&&e.target.closest("[data-app-status]");
   if(aSt){ const a=appById(aSt.dataset.appStatus); if(a) a.status=aSt.value; render(); return; }
+  // ---- Bulk CSV import: file chosen ----
+  const bulkFile=e.target.closest&&e.target.closest("[data-bulk-file]");
+  if(bulkFile){ const kind=bulkFile.dataset.bulkFile; const file=bulkFile.files&&bulkFile.files[0]; if(!file) return;
+    const rd=new FileReader();
+    rd.onload=()=>{ const res=parseBulk(String(rd.result||""),kind);
+      if(kind==="sponsored") spBulk={fileName:file.name,result:res}; else schoolBulk={fileName:file.name,result:res}; render(); };
+    rd.onerror=()=>{ const res={empty:true,records:[],okCount:0,errCount:0}; if(kind==="sponsored") spBulk={fileName:file.name,result:res}; else schoolBulk={fileName:file.name,result:res}; render(); };
+    rd.readAsText(file); return; }
   // ---- School bookings ----
   if(e.target.closest&&e.target.closest("[data-school-filter]")){ schoolFStatus=e.target.value; render(); return; }
   if(e.target.closest&&e.target.closest("[data-school-status]")){ const rec=schoolById(selSchool); if(rec&&!schoolStatusLocked(rec)&&rec.status!==e.target.value){ const was=rec.status; rec.status=e.target.value; schoolLogEmail(rec,"Admin","Status changed "+was+" → "+rec.status+". Email sent to the POC.","status"); } render(); return; }
