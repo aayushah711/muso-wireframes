@@ -291,6 +291,11 @@ Owner answers from the fastapi-boilerplate schema Q&A, applied to the mockups:
 - **Plan HSN (Q5=A).** Plan form + detail carry an HSN / SAC code (`t.hsn`, default 999692).
 - **Careers (Q20=A).** Application `note` split into `msg` (candidate's message) and `hr` (HR notes, HR-only).
 
+### 20. Programs validation, strike-through prices, age range (2026-09-25)
+- **Validation rules on programs.** `CAMP_SUBS` gains a "Validation rules" tab reusing `SUB.rules`; handlers resolve the open record via `ruleTarget()` (product or program), categories via `ruleCats()` (all visitor categories when a program has none).
+- **Strike-through price (display only).** Product Prices tab: small "was" box under each price (`x.was[cat]`). Program batch form: "Strike-through price" (`af_bmrp` → batch `mrp`); pricing table gains a "Was" column.
+- **Age range.** Free-text "Minimum age" replaced by optional "Age range" (`min_age / max_age`, int pair) on product, program, camp and event forms; `ageValues()` parses old seed text ("9 years and over" → [9, ""]). Age-filter field-guide rows removed.
+
 ## Known wireframe simplifications / open notes
 - Auto discounts apply on **simplified bases** (whole-cart or the obvious line group), not a full `target/prods/cats` engine.
 - ~~Per "stack all", there is **no** mutual-exclusion (`no[]`) or biggest-saving enforcement in the POS — a member can get both the member add-on line and the Membership auto row.~~ — superseded by §19: one discount per order

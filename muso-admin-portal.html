@@ -1071,7 +1071,7 @@ const PROGRAM_SCHEMA = [
  ["Short code|code","string","Used in reports and on the attendee or ticket list."],
  ["Name|title","string","The name a visitor sees on the listing."],
  ["Category|category_id","enum","Event · Activity · Workshop · Summer Camp · Inspire Camp","A label — the configuration is the same whether it is an event or a camp; an event is simply a program with one batch."],
- ["Minimum age|min_age","string","Free text shown on the listing, e.g. “9 years and over”. Guidance for display only."],
+ ["Age range|min_age / max_age","int","Optional. Youngest and oldest age it is meant for, in years — drives the website age filter and shows on the listing. Guidance only, never enforced at checkout."],
  ["Visitor categories|visitor_categories[]","fk[]","→ Visitor categories. Which visitor categories this is sold to and priced for."],
  ["Booking cutoff|cutoff_days / cutoff_hours","int",CUTOFF_NOTE],
  ["HSN / SAC code|hsn_sac_id","fk","→ HSN / SAC codes"],
@@ -1079,13 +1079,13 @@ const PROGRAM_SCHEMA = [
  ...LISTING_FIELDS
 ];
 
-const CAMP_SUBS = [["details","Details"],["batches","Batches & days"],["pricing","Pricing"],["attendees","Register & running days"]];
+const CAMP_SUBS = [["details","Details"],["batches","Batches & days"],["pricing","Pricing"],["rules","Validation rules"],["attendees","Register & running days"]];
 
 const CAMP_SCHEMA = [
  ["Short code|code","string","Used in reports and on the attendee list."],
  ["Name visitors see|title","string","§2's example is “Kinetic Kids”."],
  ["Category|category_id","enum","Event · Activity · Workshop · Summer Camp · Inspire Camp","Chosen from the Program categories master. It is a label — the configuration is the same whether it is an event or a camp; an event is simply a program with one batch."],
- ["Minimum age|min_age","string","Free text shown on the listing, e.g. “9 years and over”. Guidance to the parent, for display only."],
+ ["Age range|min_age / max_age","int","Optional. Youngest and oldest age it is meant for, in years — drives the website age filter and shows on the listing. Guidance only, never enforced at checkout."],
  ["Where it runs|location_text","string","Printed on the confirmation. §2's example is Museum of Solutions, Lower Parel."],
  ["Bookings close this long before it starts|cutoff_days / cutoff_hours","int","Days then hours, counted back from the start of <b>each batch</b> rather than the workshop. §2 asks for two days, which is 2 and 0."],
  ["Invoice code|hsn_sac_id","fk","→ HSN / SAC codes"],
@@ -1112,7 +1112,7 @@ const EVENT_SCHEMA = [
  ["Event code|code","string",""],
  ["Event name|title","string",""],
  ["Category|category_id","enum","Event · Activity","From the same master as camps and workshops."],
- ["Minimum age|min_age","string","Free text shown on the listing, e.g. “7 years and over”. Guidance to the parent, for display only."],
+ ["Age range|min_age / max_age","int","Optional. Youngest and oldest age it is meant for, in years — drives the website age filter and shows on the listing. Guidance only, never enforced at checkout."],
  ["Date|date","date","One date. An event that repeats is two events, or a workshop with two batches."],
  ["Start time|start_time","time","One start time. An event is a single day and a single session."],
  ["Visitor categories|visitor_categories[]","fk[]","→ Visitor categories. Unlike a workshop, an event is priced per category — an adult attending pays an adult price."],
@@ -1126,7 +1126,7 @@ const FAQ_CAMPS = [["The workshop",[
  ["Name visitors see|title","The listing title.","“Kinetic Kids”.","Renaming it changes what a resent confirmation would say for a batch already booked."],
  ["Category|category_id","Which section of What's On it appears under, and whether it runs as a single session or multi-day batches.","Summer Camp.","Comes from the Program categories master, so marketing can add a category without a release."],
  ["Subtitle|subtitle","The line under the title on the listing.","Creativity • Design Thinking • Problem Solving.","Marketing copy, not a rule. Nothing validates against it."],
- ["Minimum age|min_age","The youngest a child the workshop is meant for.","9, from §2's “Children 9+ Yrs”.","Age is collected but not mandatory, so this cannot be enforced. It is shown on the listing and beside the age field, and a parent who books outside it is not stopped."],
+ ["Age range|min_age / max_age","The youngest and oldest the workshop is meant for — both optional.","9, from §2's “Children 9+ Yrs”.","Age is collected but not mandatory, so this cannot be enforced. It is shown on the listing and beside the age field, and a parent who books outside it is not stopped."],
  ["Where it runs|location_text","Printed on the confirmation and the reminder.","Museum of Solutions, Lower Parel.","Free text. If a batch runs somewhere else, that is a per-batch fact this field cannot express."],
  ["Default seats|capacity","The number a newly added batch starts with.","9, from §2.","This is only a starting value — <b>each batch owns its own number</b>. Changing it here does not touch batches already created, which is what the copy control on the Pricing tab is for."],
  ["Bookings close this long before it starts|cutoff_days / cutoff_hours","Days then hours before the batch begins.","2 and 0, so a Tuesday batch closes on the Sunday.","Measured from <b>each batch's</b> start, not the workshop's — August stays open long after July has closed. Two days is comfortable for a camp buying materials per child; set both to zero and someone books at midnight for a ten o'clock start."],
@@ -1134,7 +1134,6 @@ const FAQ_CAMPS = [["The workshop",[
  ["Description|description","The listing copy, with formatting.","Five mornings of building things that move.","§2 gives this a formatted text area, separate from the one-line subtitle. Both appear on the page and they are not interchangeable."],
  ["Photos and video|media[]","Files shown on the listing.","Four images and a video for Kinetic Kids.","The first image is the What\u2019s On card. Upload them in the wrong order and the card shows the wrong picture, which nothing warns you about."],
  ["Children may attend without an adult|unaccompanied_allowed","Whether a younger child can be booked with no adult on the same booking.","On for Kinetic Kids and the robotics taster, which are drop-offs. Off for the storytelling afternoon, which an adult sits through.","This is the setting that suspends the ticket type\u2019s own rule, and it belongs to the activity rather than the age band — two listings on the same band can differ. Setting it off while the band offers no adult ticket makes the listing unsellable, and the master refuses that pair rather than letting it reach the booking page."],
- ["Age filter|age_filter_id","Which band this appears under on What\u2019s On.","9 years and over.","Not the same as the minimum age. This is browsing — leave it blank and the listing appears under no age filter at all, so a parent narrowing by age never finds it."],
  ["Page title|seo_title","The headline a search engine shows.","Kinetic Kids summer camp at MuSo, Mumbai.","Falls back to the name when blank, which is usually too short to be useful in a search result."],
  ["Meta description|seo_description","The two lines under that headline.","A five-day making camp for children 9 and over\u2026","Around 155 characters before it is cut. Left blank, the search engine picks whatever the page starts with, which is often a navigation menu."],
  ["Web address|url_handle","The last part of the page address.","kinetic-kids gives muso.in/whats-on/kinetic-kids.","Changing it after the page has been shared breaks every existing link. Treat it as fixed once published."],
@@ -1159,7 +1158,7 @@ const FAQ_EVENTS = [["Events",[
  ["Category|category_id","Which section it appears under.","Activity.","Same master as camps and workshops, so one list serves all of What's On."],
  ["Date|date","The single day it runs.","22 August 2026.","An event that repeats is two events. If it repeats often, it is a workshop with batches — that is the line between the two sections."],
  ["Start and end time|start_time / end_time","The single window.","11:00–13:00.","One slot only. Needing two slots on one day means two events, each with its own capacity."],
- ["Minimum age|min_age","The youngest the event is meant for.","7.","Shown to the parent rather than enforced, since age is collected but not mandatory."],
+ ["Age range|min_age / max_age","The youngest and oldest the event is meant for — both optional.","7.","Shown to the parent rather than enforced, since age is collected but not mandatory."],
  ["Seats|capacity","How many this event takes.","20.","Belongs to this event alone. §4 excludes events from the building's 400, so a full event does not close the museum and a full museum does not close the event."],
  ["Who it can be sold to|visitor_categories[]","Which categories can book.","Adult, Child 12–17, Child 3–11.","This is the difference from a workshop. An event is priced per category, so an accompanying adult pays an adult price; a workshop is one price a seat."],
  ["Bookings close this long before it starts|cutoff_days / cutoff_hours","Days then hours before the event begins.","1 and 0.","One date means one cut-off, with none of the per-batch complication a camp has."],
@@ -1167,7 +1166,6 @@ const FAQ_EVENTS = [["Events",[
  ["Children may attend without an adult|unaccompanied_allowed","Whether a younger child can be booked with no adult on the same booking.","On for the robotics taster, a drop-off. Off for the storytelling afternoon, which an adult sits through.","It belongs to the activity, not the age band — two listings on the same band can differ. Setting it off while the band offers no adult ticket makes the listing unsellable, and the master refuses that pair."],
  ["Description|description","The listing copy, with formatting.","A two-hour introduction to building and programming a small robot.","§2 gives this a formatted text area, separate from the subtitle."],
  ["Photos and video|media[]","Files shown on the listing.","Two images on the robotics taster.","The first is the What\u2019s On card."],
- ["Age filter|age_filter_id","Which band this appears under on What\u2019s On.","Not set on either event yet.","Blank means the listing appears under no age filter, so a parent narrowing by age never sees it."],
  ["Page title|seo_title","The headline a search engine shows.","Storytelling afternoons at MuSo.","Falls back to the name when blank, which is usually too short to be useful."],
  ["Meta description|seo_description","The two lines under that headline.","Not set on either event yet.","Left blank, the search engine picks whatever the page starts with \u2014 often a navigation menu."],
  ["Web address|url_handle","The last part of the page address.","robotics-taster.","Events repeat as separate records, so two runs of the same thing need two handles. Add the month."],
@@ -2574,6 +2572,7 @@ const PROD_REST = [
   ["Visitor categories|visitor_categories[]","fk[]","→ Visitor categories. Which categories this is sold to. A category with no price row simply is not sold."],
   ["Booking cutoff|cutoff_days / cutoff_hours","int",CUTOFF_NOTE],
   ["HSN / SAC code|hsn_sac_id","fk","→ HSN / SAC codes. Tax rates come from the code, not the product."],
+  ["Age range|min_age / max_age","int","Optional. Youngest and oldest age it is meant for, in years — drives the website age filter and shows on the listing. Guidance only, never enforced at checkout."],
   ACTIVE_FIELD
 ];
 const PROD_SCHEMA = PROD_BASE.concat(PROD_PRODUCT_ONLY, PROD_REST);
@@ -2935,12 +2934,13 @@ const CAMP = {
       </div>
     </div>
     <div class="matrix-wrap"><table><thead><tr>
-      <th>Batch</th><th>Runs</th><th class="ctr">Price</th>
+      <th>Batch</th><th>Runs</th><th class="ctr">Price</th><th class="ctr">Was</th>
       <th class="ctr">Capacity</th><th class="ctr">Sold</th><th>Matches ${src.n}?</th></tr></thead>
     <tbody>${w.batches.map((x,i)=>`<tr>
       <td><b style="font-weight:500">${x.n}</b>${i===copyFrom?' <span class="mode">source</span>':""}</td>
       <td class="code">${x.from} – ${x.to}</td>
       <td class="ctr code"><b>${money(x.price)}</b></td>
+      <td class="ctr code muted">${x.mrp&&x.mrp>x.price?`<s>${money(x.mrp)}</s>`:"—"}</td>
       <td class="ctr code">${x.cap}</td>
       <td class="ctr code muted">${x.sold}</td>
       <td>${i===copyFrom?'<span class="muted">—</span>'
@@ -3728,6 +3728,7 @@ function batchFormCard(w){
       ${afFld("To date",`<input class="inp mono" id="af_bto" placeholder="05 Sep 2026">`)}
       ${afFld("Capacity",`<input class="inp mono" id="af_bcap" placeholder="${w.cap}">`,"Each batch owns its own.")}
       ${afFld("Price",`<input class="inp mono" id="af_bprice" placeholder="12999">`)}
+      ${afFld("Strike-through price",`<input class="inp mono" id="af_bmrp" placeholder="Optional, e.g. 14999">`,"Display only — shown crossed out next to the price so buyers see the saving. Never used in any calculation.")}
       ${afFld("Active",`<button type="button" class="sw" data-on="1"><i></i><span>On</span></button>`,"Turn it off to close the batch to new bookings. A batch that's currently in use (has attendees) can't be turned off.")}
     </div>${afFoot("Dates and days make a batch — its sessions are added next.","Add batch")}`);
 }
@@ -3884,7 +3885,7 @@ const SUB = {
   },
 
   rules(a){
-    const cats=a.cats||[];
+    const cats=ruleCats(a);
     a.rules=a.rules||{product:[],addon:[]};
     a.rules.product=a.rules.product||[]; a.rules.addon=a.rules.addon||[];
     const catOpts=sel=>cats.map(c=>`<option${c===sel?" selected":""}>${escHtml(c)}</option>`).join("");
@@ -3921,7 +3922,7 @@ const SUB = {
       <div class="confirm-box" role="dialog" aria-modal="true"><div class="confirm-title">Remove this rule?</div>
       <div class="confirm-body">${escHtml(ruleSentence(delRule))} This can't be undone.</div>
       <div class="confirm-actions"><button class="btn" data-rule-del-cancel="1">Cancel</button><button class="btn btn-danger" data-rule-del-confirm="1">Remove rule</button></div></div></div>` : "";
-    return intro+ctxCard("product","Entry rules","who may enter this product together, and in what ratio")+delConfirm;
+    return intro+ctxCard("product","Entry rules",`who may enter this ${current==="products"?"product":"program"} together, and in what ratio`)+delConfirm;
   },
 
   tax(a){
@@ -3947,7 +3948,7 @@ const SUB = {
 
   prices(a){
     return `<div class="note note-scope"><span class="note-mark">Structure</span><div>
-      A price is a <b>visitor category in one of this product's slots</b>. Nothing composite: 2 adults is two adult lines. A blank cell means that category is not sold in that slot — the absence of a price <b>is</b> the rule, so there is no separate allowlist.
+      A price is a <b>visitor category in one of this product's slots</b>. The small <b>was</b> box under each price is optional and display-only — shown struck through to the buyer, never used in any calculation. Nothing composite: 2 adults is two adult lines. A blank cell means that category is not sold in that slot — the absence of a price <b>is</b> the rule, so there is no separate allowlist.
     </div></div>
     <div class="card section-card">
       <div class="card-head card-head-tint"><span class="card-title">Prices</span>
@@ -3957,7 +3958,8 @@ const SUB = {
       <tbody>${a.slots.map(x=>`<tr>
         <td><b style="font-weight:500">${x.n}</b></td>
         <td class="code">${x.days} &middot; ${x.t1}&ndash;${x.t2}</td>
-        ${a.cats.map(c=>`<td class="ctr" style="width:104px"><input class="inp mono" value="${x.price[c]??""}" style="padding:5px 8px;text-align:right"></td>`).join("")}
+        ${a.cats.map(c=>`<td class="ctr" style="width:104px"><input class="inp mono" value="${x.price[c]??""}" style="padding:5px 8px;text-align:right" aria-label="${escAttr(c)} price">
+          <input class="inp mono" value="${(x.was&&x.was[c])??""}" placeholder="was" title="Strike-through price — display only, never used in a calculation" style="padding:3px 8px;text-align:right;margin-top:4px;font-size:11px;text-decoration:line-through;color:var(--ink3)" aria-label="${escAttr(c)} strike-through price"></td>`).join("")}
         <td class="muted" style="font-size:11.5px">${x.from} &ndash; ${x.to}</td></tr>`).join("")}
       </tbody></table></div>
     </div>`;
@@ -4694,7 +4696,7 @@ const VIEWS = {
     const section=(title,rows)=>`<section class="form-sec"><div class="form-sec-head"><span class="form-sec-title">${title}</span></div><div class="summary-grid">${rows.join("")}</div></section>`;
     const [days,hours]=offsetValues(e.cutoff);
     return `<div style="display:grid;gap:14px">
-      ${section("Basic information",[row("Event code",e.c),row("Event name",e.n),row("Category",e.cat),row("Minimum age",e.ages)])}
+      ${section("Basic information",[row("Event code",e.c),row("Event name",e.n),row("Category",e.cat),row("Age range",e.ages)])}
       ${section("Schedule",[row("Date",e.date),row("Start time",e.t1),row("Booking cutoff",`${days} days · ${hours} hours`)])}
       ${section("Capacity & tax",[row("Capacity",e.cap),row("Visitor categories",Object.keys(e.price).join(", ")),row("Tax rates",e.tax.split),row("HSN / SAC code",e.tax.code)])}
       ${section("Listing content",[row("Description",e.listing.desc),row("Media",e.listing.media),row("Unaccompanied attendance",e.listing.unacc?"Yes":"No")])}
@@ -5032,6 +5034,13 @@ const isAdultCat = n => /adult/i.test(String(n));
    A rule reads "for each `subject` ticket, require min..max `requires` tickets".
    min 1 makes the other category mandatory; min 0 lets the subject enter alone;
    a blank max means no upper limit. Held per product on P[i].rules.{product,addon}. */
+/* Validation rules live on products AND programs (owner, 2026-09-25) — the open record either way. */
+const ruleCats = a => (a && a.cats && a.cats.length) ? a.cats : CATS.map(c=>c.name);
+function ruleTarget(){
+  if(current==="products") return P[selP];
+  if(["programs","events","camps"].includes(current)){ const {arr,i}=curProgram(); return arr[i]; }
+  return null;
+}
 const ruleReqs = r => Array.isArray(r.requires) ? r.requires.filter(Boolean) : (r.requires ? [r.requires] : []);
 function ruleSentence(r){
   const S=r.subject||"—";
@@ -5158,7 +5167,7 @@ function productForm(editing=false){
   const addonSettings=PROD_PRODUCT_ONLY.map(f=>field(f,values));
   // Visitor-category ratio/pairing rules now live on the product's "Validation rules"
   // detail tab (persisted per product), so they are no longer duplicated on this form.
-  const booking=[field(PROD_REST[0],values), field(PROD_REST[1],values)];
+  const booking=[field(PROD_REST[0],values), field(PROD_REST[1],values), field(PROD_REST[3],values)];   // [3] = age range
   // Tax rates are attached to the HSN / SAC code, not to the product — so the product
   // only names its invoice code and inherits the rates from it.
   const finance=[field(PROD_REST[2],values)];
@@ -5187,12 +5196,12 @@ function createForm(schema,label,footNote,values={},editing=false){
     // group by field name so sections are stable regardless of schema order
     const byName=names=>names.map(n=>schema.find(f=>(f[0].split("|")[1]||f[0])===n)).filter(Boolean);
     const secs = label==="program" ? [
-      ["Basic information",["code","title","category_id","min_age","is_active"]],
+      ["Basic information",["code","title","category_id","min_age / max_age","is_active"]],
       ["Booking rules",["visitor_categories[]","cutoff_days / cutoff_hours"]],
       ["Tax",["hsn_sac_id"]],
       ["Listing content",["location_text","seo_title","subtitle","description","media[]","seo_description","seo_keywords","url_handle","unaccompanied_allowed"]]
     ] : [
-      ["Basic information",["code","title","category_id","min_age","is_active"]],
+      ["Basic information",["code","title","category_id","min_age / max_age","is_active"]],
       ["Schedule & capacity",["location_text","capacity","cutoff_days / cutoff_hours"]],
       ["Tax",["hsn_sac_id"]],
       ["Listing content",["subtitle","description","media[]","unaccompanied_allowed","seo_title","seo_description","seo_keywords","url_handle"]]
@@ -5905,7 +5914,7 @@ function curProgram(){
 function campDetail(){
   const {arr,i}=curProgram(); const w=arr[i]; const b=w.batches[selB]||w.batches[0];
   const tabs=`<div class="subs">${CAMP_SUBS.map(([k,l])=>`<button class="sub-tab" data-csub="${k}" aria-selected="${csub===k}">${l}</button>`).join("")}</div>`;
-  const body={details:CAMP.details,batches:CAMP.batches,pricing:CAMP.pricing,attendees:CAMP.attendees}[csub]||CAMP.details;
+  const body={details:CAMP.details,batches:CAMP.batches,pricing:CAMP.pricing,rules:w2=>SUB.rules(w2),attendees:CAMP.attendees}[csub]||CAMP.details;
   return `<div class="detailhead"><span class="tag tag-t">${w.btype}</span><h2 class="detailname">${w.n}</h2><span class="code">${w.c}</span></div>${tabs}<div class="sub-body">${body(w,b)}</div>`;
 }
 function eventDetail(){
@@ -6119,9 +6128,10 @@ function redeemFormCard(m){
       <button class="btn" data-addcancel="1">Cancel</button>
       <button class="btn btn-primary" data-redeem-next="${selMember}">Send OTP</button></div>`);
 }
+const ageValues=a=>{const m=String(a||"").match(/(\d+)(?:\s*[–-]\s*(\d+))?/);return [m?m[1]:"",m&&m[2]?m[2]:""];};
 const offsetValues=s=>{const m=String(s||"").match(/(?:(\d+)\s*days?\s*)?(\d+)\s*hours?/i);return [m&&m[1]||"0",m&&m[2]||"0"];};
 function eventEditValues(e){ return {
-  code:e.c,title:e.n,category_id:e.cat,min_age:e.ages,date:e.date,start_time:e.t1,
+  code:e.c,title:e.n,category_id:e.cat,"min_age / max_age":ageValues(e.ages),date:e.date,start_time:e.t1,
   capacity:e.cap,"visitor_categories[]":Object.keys(e.price),
   "cutoff_days / cutoff_hours":offsetValues(e.cutoff),
   hsn_sac_id:e.tax.code,unaccompanied_allowed:e.listing.unacc,description:e.listing.desc,media:e.listing.media,
@@ -6130,7 +6140,7 @@ function eventEditValues(e){ return {
 }; }
 function campEditValues(w){ return {
   code:w.c,title:w.n,category_id:w.cat,subtitle:w.sub,
-  min_age:w.ages,location_text:w.loc,capacity:w.cap,
+  "min_age / max_age":ageValues(w.ages),location_text:w.loc,capacity:w.cap,
   "cutoff_days / cutoff_hours":offsetValues(w.cutoff),
   hsn_sac_id:w.tax.code,unaccompanied_allowed:w.listing.unacc,description:w.listing.desc,media:w.listing.media,
   seo_title:w.listing.seoT,seo_description:w.listing.seoD,seo_keywords:w.listing.seoK,
@@ -6149,7 +6159,7 @@ function programDetail(){ return campDetail(); }
 const PROG_COMMON = [
   ["Short code|code","string","Used in reports and on the attendee or ticket list."],
   ["Name visitors see|title","string","The listing title."],
-  ["Minimum age|min_age","string","Free text shown on the listing, e.g. “9 years and over”. Guidance for display only."],
+  ["Age range|min_age / max_age","int","Optional. Youngest and oldest age it is meant for, in years — drives the website age filter and shows on the listing. Guidance only, never enforced at checkout."],
   ["Where it runs|location_text","string","Printed on the confirmation."],
   ["Bookings close before it starts|cutoff_days / cutoff_hours","int","Days then hours, counted back from the start."],
   ["Invoice code|hsn_sac_id","fk","→ HSN / SAC codes"]
@@ -8070,7 +8080,7 @@ function addSubmit(){
     const bfrom=g("af_bfrom")||"—", bto=g("af_bto")||"—";
     const def=(w.batches[0]&&w.batches[0].days&&w.batches[0].days[0])||{};
     w.batches.push({ n:g("af_bn")||("Batch "+(w.batches.length+1)), from:bfrom, to:bto,
-      cap:+g("af_bcap")||+w.cap||9, sold:0, price:+g("af_bprice")||0, days:genBatchDays(bfrom,bto,def.t1,def.t2) });
+      cap:+g("af_bcap")||+w.cap||9, sold:0, price:+g("af_bprice")||0, mrp:+g("af_bmrp")||null, days:genBatchDays(bfrom,bto,def.t1,def.t2) });
     selB=w.batches.length-1;
   } else if(addOpen==="day"){
     const b=w.batches[selB]; if(b) b.days.push({ d:g("af_dd")||"New day", t1:g("af_dt1")||"—", t2:g("af_dt2")||"—", note:g("af_dnote") });
@@ -8655,16 +8665,16 @@ document.addEventListener("click",e=>{
   if(bmtog){ captureBlockFlyout(); blockMselOpen=!blockMselOpen; render(); return; }
   // ---- product Validation-rules tab: add / remove a rule ----
   const radd=e.target.closest("[data-rule-add]");
-  if(radd){ const ctx=radd.dataset.ruleAdd, a=P[selP]; a.rules=a.rules||{product:[],addon:[]}; a.rules[ctx]=a.rules[ctx]||[];
-    const s=(a.cats||[])[0]||"", q=(a.cats||[]).find(c=>c!==s)||""; a.rules[ctx].push({subject:s,requires:[q],mode:"any",min:1,max:""}); render(); return; }
+  if(radd){ const ctx=radd.dataset.ruleAdd, a=ruleTarget(); if(!a) return; a.rules=a.rules||{product:[],addon:[]}; a.rules[ctx]=a.rules[ctx]||[];
+    const rc=ruleCats(a), s=rc[0]||"", q=rc.find(c=>c!==s)||""; a.rules[ctx].push({subject:s,requires:[q],mode:"any",min:1,max:""}); render(); return; }
   const rreq=e.target.closest("[data-rule-req]");
-  if(rreq){ const [ctx,i,cat]=rreq.dataset.ruleReq.split("|"), a=P[selP], rule=a.rules&&a.rules[ctx]&&a.rules[ctx][+i];
+  if(rreq){ const [ctx,i,cat]=rreq.dataset.ruleReq.split("|"), a=ruleTarget(), rule=a&&a.rules&&a.rules[ctx]&&a.rules[ctx][+i];
     if(rule){ let arr=Array.isArray(rule.requires)?rule.requires.slice():(rule.requires?[rule.requires]:[]);
       const j=arr.indexOf(cat); if(j>=0) arr.splice(j,1); else arr.push(cat); rule.requires=arr; render(); } return; }
   const rdel=e.target.closest("[data-rule-del]");
   if(rdel){ const [ctx,i]=rdel.dataset.ruleDel.split("|"); ruleDel={ctx,i:+i}; render(); return; }
   if(e.target.closest("[data-rule-del-cancel]")){ ruleDel=null; render(); return; }
-  if(e.target.closest("[data-rule-del-confirm]")){ const a=P[selP]; if(ruleDel&&a.rules&&a.rules[ruleDel.ctx]) a.rules[ruleDel.ctx].splice(ruleDel.i,1); ruleDel=null; render(); return; }
+  if(e.target.closest("[data-rule-del-confirm]")){ const a=ruleTarget(); if(ruleDel&&a&&a.rules&&a.rules[ruleDel.ctx]) a.rules[ruleDel.ctx].splice(ruleDel.i,1); ruleDel=null; render(); return; }
   const ao=e.target.closest("[data-addopen]");
   if(ao){ if(ao.dataset.addopen==="slot") editSlot=-1; if(ao.dataset.addopen==="block"){ editBlock=-1; blockDraft=seedBlockDraft(null); blockMselOpen=false; } addOpen=ao.dataset.addopen; render(); $(".stage").scrollTop=0; return; }
   const econds=e.target.closest("[data-editconds]");
@@ -8765,7 +8775,7 @@ document.addEventListener("change",e=>{
   const rCat=e.target.closest&&e.target.closest("[data-ratio-cat]");
   if(rCat){ prodRatio[rCat.dataset.ratioCat]=rCat.value; syncRatio(); return; }
   const rField=e.target.closest&&e.target.closest("[data-rule-field]");
-  if(rField){ const [ctx,i,field]=rField.dataset.ruleField.split("|"), a=P[selP];
+  if(rField){ const [ctx,i,field]=rField.dataset.ruleField.split("|"), a=ruleTarget();
     if(a&&a.rules&&a.rules[ctx]&&a.rules[ctx][+i]){ a.rules[ctx][+i][field]=e.target.value.trim(); render(); } return; }
 
   const cFilt=e.target.closest&&e.target.closest("[data-career-filter]");
