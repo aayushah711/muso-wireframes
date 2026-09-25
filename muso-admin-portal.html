@@ -1309,8 +1309,8 @@ const M = {
     d:"Default per-student and per-adult entry prices a school booking can pull in. Prices stay editable per booking once pulled.",
     view:"entryprices",
     schema:[["Label|name","string","How the preset reads, e.g. Standard 2026."],
-            ["Per student|student","money","Default entry price per student."],
-            ["Per adult / teacher|adult","money","Default entry price per accompanying adult or teacher."],
+            ["Per student|student","money","Default entry price per student — inclusive of 18% GST."],
+            ["Per adult / teacher|adult","money","Default entry price per accompanying adult or teacher — inclusive of 18% GST."],
             ["Active|is_active","bool","Turn it off to retire this preset."]]},
   sponsors:{g:0,n:"Sponsored School Sponsors",owner:"Partnerships & CSR",perm:"master.sponsor.manage",src:"Scope §9",q:1,
     d:"The funders a sponsored school visit is billed to — e.g. JSW Foundation. The sponsored-booking form picks one, and the visit's e-invoice is raised against it (the school pays nothing).",
@@ -1778,9 +1778,14 @@ function schoolCompute(rec){
     foodStudents+=+f.students||0; foodAdults+=+f.adults||0; foodComp+=+f.comp||0;
     const rate=(f.optionIds||[]).reduce((acc,nm)=>{const o=fbByName(nm);return o?{adult:acc.adult+(+o.adult||0),child:acc.child+(+o.child||0)}:acc;},{adult:0,child:0});
     foodTotal+=(+f.students||0)*rate.child+(+f.adults||0)*rate.adult; });
-  const subtotal=visitTotal+foodTotal;
-  const gstPct=18, gst=Math.round(subtotal*gstPct/100), cgst=Math.round(gst/2), sgst=gst-cgst;
-  const grand=subtotal+gst;
+  // Entry & F&B prices are entered GST-INCLUSIVE (same in the form and in bulk upload):
+  // the rate already contains 18% GST. The grand total is the sum of those inclusive
+  // amounts; the tax is extracted out of it rather than added on top.
+  const gross=visitTotal+foodTotal;                    // inclusive of GST
+  const gstPct=18;
+  const subtotal=Math.round(gross/(1+gstPct/100));     // taxable value (GST removed)
+  const gst=gross-subtotal, cgst=Math.round(gst/2), sgst=gst-cgst;
+  const grand=gross;                                   // total = inclusive amount
   const paid=(rec.payments||[]).reduce((a,p)=>a+(+p.amount||0),0);
   const balance=Math.max(0,grand-paid);
   return {students,adults,escorts,teachersComp,visitTotal,foodTotal,foodStudents,foodAdults,foodComp,subtotal,gstPct,gst,cgst,sgst,grand,paid,balance,
@@ -2400,7 +2405,7 @@ function bulkPanel(kind){
           <button class="btn btn-primary" data-bulk-close="${kind}">Done</button></div></div></div>`;
   }
   const res = st.result;
-  const intro = `<div style="font-size:12.5px;color:var(--ink2);line-height:1.55;margin-bottom:4px">Upload a CSV of past ${nice} bookings — one row per booking (a single visit). <b>Required columns:</b> School, Location, Boards, Grade, POC, Email, Phone, VisitDate, Interested. Multi-value cells (Boards, Interested) use <code>;</code> to separate. Blank or unknown Status becomes <b>Ended</b>. Download the template for the full column list with sample rows.</div>`;
+  const intro = `<div style="font-size:12.5px;color:var(--ink2);line-height:1.55;margin-bottom:4px">Upload a CSV of past ${nice} bookings — one row per booking (a single visit). <b>Required columns:</b> School, Location, Boards, Grade, POC, Email, Phone, VisitDate, Interested. Multi-value cells (Boards, Interested) use <code>;</code> to separate. Blank or unknown Status becomes <b>Ended</b>. Entry &amp; F&amp;B prices are read as <b>inclusive of 18% GST</b> — the same as the form. Download the template for the full column list with sample rows.</div>`;
   const picker = `<div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin:16px 0">
       <label class="btn btn-primary" style="cursor:pointer;position:relative;overflow:hidden">Choose CSV file…
         <input type="file" accept=".csv,text/csv" data-bulk-file="${kind}" style="position:absolute;inset:0;opacity:0;cursor:pointer"></label>
@@ -5061,7 +5066,7 @@ const VIEWS = {
     <div class="card"><div class="card-head"><span class="card-title">School Entry price presets</span>
       <span class="card-note">${ENTRY_PRICES.length} on file</span></div>
       <div class="matrix-wrap"><table><thead><tr>
-        <th>Preset</th><th class="ctr">Per student</th><th class="ctr">Per adult / teacher</th><th>Status</th><th>Actions</th></tr></thead>
+        <th>Preset</th><th class="ctr">Per student <span class="muted" style="font-weight:400">(incl. GST)</span></th><th class="ctr">Per adult / teacher <span class="muted" style="font-weight:400">(incl. GST)</span></th><th>Status</th><th>Actions</th></tr></thead>
       <tbody>${ENTRY_PRICES.map((p,i)=>`<tr>
         <td><b style="font-weight:500">${escHtml(p.name)}</b></td>
         <td class="code" style="text-align:center">${money(p.student)}</td>
@@ -6854,15 +6859,15 @@ function schoolForm(editing){
       ${numFld("F&B — adults / teachers","foodAdults",f.adults)}
       ${numFld("F&B — complementary","foodComp",f.comp,"Charged ₹0.")}
     </div>
-    <div style="margin-top:12px">${fld("F&B option",`<div class="selwrap"><select class="inp" data-vfsel="foodopt|${i}"><option value="">— none —</option>${fbActive.map(o=>`<option${(f.optionIds||[])[0]===o?" selected":""}>${escHtml(o)}</option>`).join("")}</select></div>`,"Adult & child pricing from the F&B options master.")}</div>
+    <div style="margin-top:12px">${fld("F&B option",`<div class="selwrap"><select class="inp" data-vfsel="foodopt|${i}"><option value="">— none —</option>${fbActive.map(o=>`<option${(f.optionIds||[])[0]===o?" selected":""}>${escHtml(o)}</option>`).join("")}</select></div>`,"Adult & child pricing from the F&B options master — inclusive of 18% GST.")}</div>
     ${subHead("Optionals (venue blocks)")}
     <div style="display:flex;flex-direction:column;gap:10px">${(v.optionals||[]).map((o,oi)=>optCard(i,o,oi)).join("")}
       <button type="button" class="rep-add" data-school-add-optional="${i}" style="border-radius:4px;align-self:flex-start">+ Add optional</button></div>
   </div>`; };
   const secPricing=section("Entry pricing",
-    fld("Entry price preset",`<div class="selwrap"><select class="inp" data-school-preset data-sf="entryPreset"><option value="">— pick a preset —</option>${ENTRY_PRICES.map(p=>`<option${d.entryPreset===p.name?" selected":""}>${escHtml(p.name)}</option>`).join("")}</select></div>`,"Fills the per-head prices below; they stay editable.")+
-    fld("Entry price · per student",num("entryStudent",d.entryStudent))+
-    fld("Entry price · per adult / teacher",num("entryAdult",d.entryAdult)));
+    fld("Entry price preset",`<div class="selwrap"><select class="inp" data-school-preset data-sf="entryPreset"><option value="">— pick a preset —</option>${ENTRY_PRICES.map(p=>`<option${d.entryPreset===p.name?" selected":""}>${escHtml(p.name)}</option>`).join("")}</select></div>`,"Fills the per-head prices below; they stay editable. Prices are inclusive of 18% GST.")+
+    fld("Entry price · per student",num("entryStudent",d.entryStudent),"Inclusive of 18% GST.")+
+    fld("Entry price · per adult / teacher",num("entryAdult",d.entryAdult),"Inclusive of 18% GST."));
   const secVisits=section("Visits",
     `<div class="fld" style="grid-column:1/-1;gap:14px">${(d.visits||[]).map(visitCard).join("")}
       <button type="button" class="rep-add" data-school-add-visit="1" style="border-radius:4px;align-self:flex-start">+ Add visit</button></div>`);
@@ -6966,8 +6971,11 @@ function schoolProformaInvoice(rec, mode){
   const gen = rec.einvoice&&rec.einvoice.generated;
   const lines=schoolProformaLines(rec);
   const partRows=lines.map((l,i)=>`<tr><td>${i+1}</td><td>${escHtml(l.name)}</td><td class="code">${l.hsn}</td><td class="code">${l.qty}</td><td class="code">${money(l.rate)}</td><td>Nos</td><td class="code">${money(l.amount)}</td></tr>`).join("");
-  const taxRows=`<tr class="inv-tax"><td colspan="6" style="text-align:right">CGST 9% Output</td><td class="code">${money(c.cgst)}</td></tr><tr class="inv-tax"><td colspan="6" style="text-align:right">SGST 9% Output</td><td class="code">${money(c.sgst)}</td></tr>`;
-  const hsnMap={}; lines.forEach(l=>{const half=9;const cg=Math.round(l.amount*half/100);const m=hsnMap[l.hsn]||(hsnMap[l.hsn]={hsn:l.hsn,taxable:0,cgst:0,sgst:0,half});m.taxable+=l.amount;m.cgst+=cg;m.sgst+=cg;});
+  // Prices are GST-inclusive, so the line amounts already sum to the total — no tax is
+  // added on top. The GST sitting inside is broken out (informational) and in the HSN table.
+  const taxRows=`<tr class="inv-tax"><td colspan="6" style="text-align:right">of which: CGST 9% (incl.)</td><td class="code">${money(c.cgst)}</td></tr><tr class="inv-tax"><td colspan="6" style="text-align:right">of which: SGST 9% (incl.)</td><td class="code">${money(c.sgst)}</td></tr>`;
+  const hsnMap={}; lines.forEach(l=>{const m=hsnMap[l.hsn]||(hsnMap[l.hsn]={hsn:l.hsn,gross:0,taxable:0,cgst:0,sgst:0,half:9});m.gross+=l.amount;});
+  Object.values(hsnMap).forEach(m=>{ m.taxable=Math.round(m.gross/1.18); const tax=m.gross-m.taxable; m.cgst=Math.round(tax/2); m.sgst=tax-m.cgst; });
   const hsnRows=Object.values(hsnMap).map(m=>`<tr><td class="code">${m.hsn}</td><td class="code">${money(Math.round(m.taxable))}</td><td class="code">${m.half}%</td><td class="code">${money(Math.round(m.cgst))}</td><td class="code">${m.half}%</td><td class="code">${money(Math.round(m.sgst))}</td><td class="code">${money(Math.round(m.cgst+m.sgst))}</td></tr>`).join("");
   const dated = eInvoice ? ((rec.einvoice&&rec.einvoice.on)||rec.created) : rec.created;
   // ---- actions row (differs for proforma vs the generated e-invoice) ----
@@ -6991,7 +6999,7 @@ function schoolProformaInvoice(rec, mode){
       </div>
       <div class="inv-buyer"><b>Buyer (Bill to)</b><div>${escHtml(rec.billName||rec.school||"—")}</div>${rec.billAddress?`<div>${escHtml(rec.billAddress)}</div>`:""}${rec.gstin?`<div>GSTIN/UIN: <span class="code">${escHtml(rec.gstin)}</span></div>${eInvoice?`<div>Place of Supply: ${MUSO_SELLER.state} (${MUSO_SELLER.stateCode})</div>`:""}`:'<div class="muted">No GSTIN on file — a tax invoice (not e-invoice) will be raised on completion.</div>'}</div>
       <div class="matrix-wrap"><table class="reclist inv-table"><thead><tr><th>Sl</th><th>Particulars</th><th>HSN/SAC</th><th>Qty</th><th>Rate</th><th>per</th><th>Amount</th></tr></thead><tbody>${partRows||`<tr><td colspan="7" class="muted" style="text-align:center;padding:14px">No priced lines yet — add visit headcounts and entry prices.</td></tr>`}${lines.length?taxRows:""}
-        <tr class="inv-total"><td colspan="6" style="text-align:right"><b>Total</b></td><td class="code"><b>${money(c.grand)}</b></td></tr></tbody></table></div>
+        <tr class="inv-total"><td colspan="6" style="text-align:right"><b>Total (incl. GST)</b></td><td class="code"><b>${money(c.grand)}</b></td></tr></tbody></table></div>
       <div class="inv-words">Amount Chargeable (in words): <b>INR ${amountInWords(c.grand).replace(/^Rupees /,"")}</b></div>
       ${lines.length?`<div class="matrix-wrap"><table class="reclist inv-hsn"><thead><tr><th>HSN/SAC</th><th>Taxable Value</th><th>CGST Rate</th><th>CGST Amt</th><th>SGST Rate</th><th>SGST Amt</th><th>Total Tax</th></tr></thead><tbody>${hsnRows}</tbody></table></div>`:""}
       <div class="inv-foot"><div><b>Company's Bank Details</b><div>Bank: ${MUSO_SELLER.bank.name}</div><div>A/c No.: <span class="code">${MUSO_SELLER.bank.ac}</span></div><div>IFSC: ${MUSO_SELLER.bank.ifsc}</div></div><div class="inv-sign"><div>for <b>${MUSO_SELLER.name}</b></div><div class="inv-sign-line"></div><div class="muted">Authorised Signatory</div></div></div>
@@ -7020,10 +7028,10 @@ function schoolProformaPdf(rec, mode){
   line("Particulars",ML,9,true,INK2);rt("Qty",ML+340,9,true,INK2);rt("Rate",ML+410,9,true,INK2);rt("Amount",W-MR,9,true,INK2);y-=15;
   schoolProformaLines(rec).forEach(l=>{line(l.name,ML,9,false,INK);rt(String(l.qty),ML+340,9,false,INK);rt(money(l.rate),ML+410,9,false,INK);rt(money(l.amount),W-MR,9,false,INK);y-=14;});
   y-=4;ops.push("q 0.878 0.898 0.918 RG 0.7 w "+ML+" "+y.toFixed(1)+" m "+(W-MR)+" "+y.toFixed(1)+" l S Q");y-=16;
-  rt("Sub total: "+money(c.subtotal),W-MR,9,false,INK2);y-=13;
-  rt("CGST 9%: "+money(c.cgst),W-MR,9,false,INK2);y-=13;
-  rt("SGST 9%: "+money(c.sgst),W-MR,9,false,INK2);y-=13;
-  rt("Grand total: "+money(c.grand),W-MR,11,true,INK);y-=18;
+  rt("Taxable value: "+money(c.subtotal),W-MR,9,false,INK2);y-=13;
+  rt("CGST 9% (incl.): "+money(c.cgst),W-MR,9,false,INK2);y-=13;
+  rt("SGST 9% (incl.): "+money(c.sgst),W-MR,9,false,INK2);y-=13;
+  rt("Grand total (incl. GST): "+money(c.grand),W-MR,11,true,INK);y-=18;
   line("Amount in words: "+amountInWords(c.grand),ML,9,false,INK2);y-=20;
   line(eInvoice?"Computer-generated tax invoice.":"Proforma invoice — for advance / estimation only, not a tax invoice.",ML,8,false,INK3);
   ops.push("BT /F1 8 Tf "+INK3+" rg 1 0 0 1 "+ML+" 40 Tm ("+pdfEsc(A("Museum of Solutions  -  "+rec.id+"  -  "+(eInvoice?"E-invoice":"Proforma")))+") Tj ET");
@@ -7063,11 +7071,11 @@ function schoolDetail(){
     <div class="card"><div class="card-head"><span class="card-title">Pricing &amp; food</span></div><div class="matrix-wrap"><table class="reclist"><tbody>
       ${row("Entry · per student",rec.entryStudent!==""&&rec.entryStudent!=null?money(rec.entryStudent):"")}
       ${row("Entry · per adult",rec.entryAdult!==""&&rec.entryAdult!=null?money(rec.entryAdult):"")}
-      ${row("Visit total",c.visitTotal?money(c.visitTotal):"")}
+      ${row("Visit total (incl. GST)",c.visitTotal?money(c.visitTotal):"")}
       ${row("F&B options (all visits)",tags(allFoodOpts))}
       ${row("F&B heads (all visits)",`${c.foodStudents} students · ${c.foodAdults} adults · ${c.foodComp} comp.`)}
-      ${row("Food total",c.foodTotal?money(c.foodTotal):"")}
-      ${row("Sub total",money(c.subtotal))}${row("GST (18%)",money(c.gst))}${row("Grand total",`<b>${money(c.grand)}</b>`)}
+      ${row("Food total (incl. GST)",c.foodTotal?money(c.foodTotal):"")}
+      ${row("Taxable value",money(c.subtotal))}${row("GST 18% (incl.)",money(c.gst))}${row("Grand total (incl. GST)",`<b>${money(c.grand)}</b>`)}
     </tbody></table></div></div>
     <div class="card"><div class="card-head"><span class="card-title">Billing</span></div><div class="matrix-wrap"><table class="reclist"><tbody>
       ${row("Billing name",escHtml(rec.billName))}${row("Billing address",escHtml(rec.billAddress))}
@@ -7246,9 +7254,9 @@ function spForm(editing){
 
   // Entry pricing
   const secPricing=section("Entry pricing",
-    fld("Entry price preset",`<div class="selwrap"><select class="inp" data-sp-preset data-spf="entryPreset"><option value="">— pick a preset —</option>${ENTRY_PRICES.map(p=>`<option${d.entryPreset===p.name?" selected":""}>${escHtml(p.name)}</option>`).join("")}</select></div>`,"Fills the per-head prices below; they stay editable. Billed to the sponsor, not the school.")+
-    fld("Entry price · per student",num("entryStudent",d.entryStudent))+
-    fld("Entry price · per adult / teacher",num("entryAdult",d.entryAdult)));
+    fld("Entry price preset",`<div class="selwrap"><select class="inp" data-sp-preset data-spf="entryPreset"><option value="">— pick a preset —</option>${ENTRY_PRICES.map(p=>`<option${d.entryPreset===p.name?" selected":""}>${escHtml(p.name)}</option>`).join("")}</select></div>`,"Fills the per-head prices below; they stay editable. Prices are inclusive of 18% GST. Billed to the sponsor, not the school.")+
+    fld("Entry price · per student",num("entryStudent",d.entryStudent),"Inclusive of 18% GST.")+
+    fld("Entry price · per adult / teacher",num("entryAdult",d.entryAdult),"Inclusive of 18% GST."));
 
   // Visits (own section; each visit carries schedule, headcounts, food, optionals)
   if(!Array.isArray(d.visits) || d.visits.length===0) d.visits=[blankVisit()];
@@ -7297,7 +7305,7 @@ function spForm(editing){
       ${numV("F&B — adults / teachers","foodAdults",f.adults)}
       ${numV("F&B — complementary","foodComp",f.comp,"Charged ₹0.")}
     </div>
-    <div style="margin-top:12px">${fld("F&B option",`<div class="selwrap"><select class="inp" data-spvfsel="foodopt|${i}"><option value="">— none —</option>${fbActive.map(o=>`<option${(f.optionIds||[])[0]===o?" selected":""}>${escHtml(o)}</option>`).join("")}</select></div>`,"Adult & child pricing from the F&B options master.")}</div>
+    <div style="margin-top:12px">${fld("F&B option",`<div class="selwrap"><select class="inp" data-spvfsel="foodopt|${i}"><option value="">— none —</option>${fbActive.map(o=>`<option${(f.optionIds||[])[0]===o?" selected":""}>${escHtml(o)}</option>`).join("")}</select></div>`,"Adult & child pricing from the F&B options master — inclusive of 18% GST.")}</div>
     ${subHead("Optionals (venue blocks)")}
     <div style="display:flex;flex-direction:column;gap:10px">${(v.optionals||[]).map((o,oi)=>optCard(i,o,oi)).join("")}
       <button type="button" class="rep-add" data-sp-add-optional="${i}" style="border-radius:4px;align-self:flex-start">+ Add optional</button></div>
@@ -7400,8 +7408,11 @@ function spInvoice(rec){
   const raised=rec.invoice&&rec.invoice.raised;
   const lines=schoolProformaLines(rec);
   const partRows=lines.map((l,i)=>`<tr><td>${i+1}</td><td>${escHtml(l.name)}</td><td class="code">${l.hsn}</td><td class="code">${l.qty}</td><td class="code">${money(l.rate)}</td><td>Nos</td><td class="code">${money(l.amount)}</td></tr>`).join("");
-  const taxRows=`<tr class="inv-tax"><td colspan="6" style="text-align:right">CGST 9% Output</td><td class="code">${money(c.cgst)}</td></tr><tr class="inv-tax"><td colspan="6" style="text-align:right">SGST 9% Output</td><td class="code">${money(c.sgst)}</td></tr>`;
-  const hsnMap={}; lines.forEach(l=>{const half=9;const cg=Math.round(l.amount*half/100);const m=hsnMap[l.hsn]||(hsnMap[l.hsn]={hsn:l.hsn,taxable:0,cgst:0,sgst:0,half});m.taxable+=l.amount;m.cgst+=cg;m.sgst+=cg;});
+  // Prices are GST-inclusive, so the line amounts already sum to the total — no tax is
+  // added on top. The GST sitting inside is broken out (informational) and in the HSN table.
+  const taxRows=`<tr class="inv-tax"><td colspan="6" style="text-align:right">of which: CGST 9% (incl.)</td><td class="code">${money(c.cgst)}</td></tr><tr class="inv-tax"><td colspan="6" style="text-align:right">of which: SGST 9% (incl.)</td><td class="code">${money(c.sgst)}</td></tr>`;
+  const hsnMap={}; lines.forEach(l=>{const m=hsnMap[l.hsn]||(hsnMap[l.hsn]={hsn:l.hsn,gross:0,taxable:0,cgst:0,sgst:0,half:9});m.gross+=l.amount;});
+  Object.values(hsnMap).forEach(m=>{ m.taxable=Math.round(m.gross/1.18); const tax=m.gross-m.taxable; m.cgst=Math.round(tax/2); m.sgst=tax-m.cgst; });
   const hsnRows=Object.values(hsnMap).map(m=>`<tr><td class="code">${m.hsn}</td><td class="code">${money(Math.round(m.taxable))}</td><td class="code">${m.half}%</td><td class="code">${money(Math.round(m.cgst))}</td><td class="code">${m.half}%</td><td class="code">${money(Math.round(m.sgst))}</td><td class="code">${money(Math.round(m.cgst+m.sgst))}</td></tr>`).join("");
   const note = raised
     ? `<span class="muted" style="font-size:11.5px">Raised on ${escHtml(rec.invoice.on||rec.created)} · e-invoice against the sponsor</span>`
@@ -7418,7 +7429,7 @@ function spInvoice(rec){
       </div>
       <div class="inv-buyer"><b>Billed to (Sponsor)</b><div>${escHtml(rec.sponsor||"—")}</div>${sp.addr?`<div>${escHtml(sp.addr)}</div>`:""}${sp.gstin?`<div>GSTIN/UIN: <span class="code">${escHtml(sp.gstin)}</span></div><div>Place of Supply: ${escHtml(sp.state||MUSO_SELLER.state)}</div>`:'<div class="muted">No sponsor selected yet.</div>'}<div class="muted" style="margin-top:4px">Beneficiary: ${escHtml(rec.school||"—")}${rec.district?" · "+escHtml(rec.district):""}</div></div>
       <div class="matrix-wrap"><table class="reclist inv-table"><thead><tr><th>Sl</th><th>Particulars</th><th>HSN/SAC</th><th>Qty</th><th>Rate</th><th>per</th><th>Amount</th></tr></thead><tbody>${partRows||`<tr><td colspan="7" class="muted" style="text-align:center;padding:14px">No priced lines yet — add visit headcounts and entry prices.</td></tr>`}${lines.length?taxRows:""}
-        <tr class="inv-total"><td colspan="6" style="text-align:right"><b>Total</b></td><td class="code"><b>${money(c.grand)}</b></td></tr></tbody></table></div>
+        <tr class="inv-total"><td colspan="6" style="text-align:right"><b>Total (incl. GST)</b></td><td class="code"><b>${money(c.grand)}</b></td></tr></tbody></table></div>
       <div class="inv-words">Amount Chargeable (in words): <b>INR ${amountInWords(c.grand).replace(/^Rupees /,"")}</b></div>
       ${lines.length?`<div class="matrix-wrap"><table class="reclist inv-hsn"><thead><tr><th>HSN/SAC</th><th>Taxable Value</th><th>CGST Rate</th><th>CGST Amt</th><th>SGST Rate</th><th>SGST Amt</th><th>Total Tax</th></tr></thead><tbody>${hsnRows}</tbody></table></div>`:""}
       <div class="inv-foot"><div><b>Company's Bank Details</b><div>Bank: ${MUSO_SELLER.bank.name}</div><div>A/c No.: <span class="code">${MUSO_SELLER.bank.ac}</span></div><div>IFSC: ${MUSO_SELLER.bank.ifsc}</div></div><div class="inv-sign"><div>for <b>${MUSO_SELLER.name}</b></div><div class="inv-sign-line"></div><div class="muted">Authorised Signatory</div></div></div>
@@ -7445,10 +7456,10 @@ function spInvoicePdf(rec){
   line("Particulars",ML,9,true,INK2);rt("Qty",ML+340,9,true,INK2);rt("Rate",ML+410,9,true,INK2);rt("Amount",W-MR,9,true,INK2);y-=15;
   schoolProformaLines(rec).forEach(l=>{line(l.name,ML,9,false,INK);rt(String(l.qty),ML+340,9,false,INK);rt(money(l.rate),ML+410,9,false,INK);rt(money(l.amount),W-MR,9,false,INK);y-=14;});
   y-=4;ops.push("q 0.878 0.898 0.918 RG 0.7 w "+ML+" "+y.toFixed(1)+" m "+(W-MR)+" "+y.toFixed(1)+" l S Q");y-=16;
-  rt("Sub total: "+money(c.subtotal),W-MR,9,false,INK2);y-=13;
-  rt("CGST 9%: "+money(c.cgst),W-MR,9,false,INK2);y-=13;
-  rt("SGST 9%: "+money(c.sgst),W-MR,9,false,INK2);y-=13;
-  rt("Grand total: "+money(c.grand),W-MR,11,true,INK);y-=18;
+  rt("Taxable value: "+money(c.subtotal),W-MR,9,false,INK2);y-=13;
+  rt("CGST 9% (incl.): "+money(c.cgst),W-MR,9,false,INK2);y-=13;
+  rt("SGST 9% (incl.): "+money(c.sgst),W-MR,9,false,INK2);y-=13;
+  rt("Grand total (incl. GST): "+money(c.grand),W-MR,11,true,INK);y-=18;
   line("Amount in words: "+amountInWords(c.grand),ML,9,false,INK2);y-=20;
   line("Cost borne by the sponsor; the school pays nothing. Computer-generated invoice.",ML,8,false,INK3);
   ops.push("BT /F1 8 Tf "+INK3+" rg 1 0 0 1 "+ML+" 40 Tm ("+pdfEsc(A("Museum of Solutions  -  "+rec.id+"  -  Sponsor invoice"))+") Tj ET");
@@ -7488,8 +7499,8 @@ function spDetail(){
     <div class="card"><div class="card-head"><span class="card-title">Pricing (billed to sponsor)</span></div><div class="matrix-wrap"><table class="reclist"><tbody>
       ${row("Entry · per student",rec.entryStudent!==""&&rec.entryStudent!=null?money(rec.entryStudent):"")}
       ${row("Entry · per adult",rec.entryAdult!==""&&rec.entryAdult!=null?money(rec.entryAdult):"")}
-      ${row("Visit total",c.visitTotal?money(c.visitTotal):"")}${row("Food total",c.foodTotal?money(c.foodTotal):"")}
-      ${row("Sub total",money(c.subtotal))}${row("GST (18%)",money(c.gst))}${row("Grand total",`<b>${money(c.grand)}</b>`)}
+      ${row("Visit total (incl. GST)",c.visitTotal?money(c.visitTotal):"")}${row("Food total",c.foodTotal?money(c.foodTotal):"")}
+      ${row("Taxable value",money(c.subtotal))}${row("GST 18% (incl.)",money(c.gst))}${row("Grand total (incl. GST)",`<b>${money(c.grand)}</b>`)}
     </tbody></table></div></div>
     <div class="card"><div class="card-head"><span class="card-title">Impact &amp; comments</span></div><div class="matrix-wrap"><table class="reclist"><tbody>
       ${row("Specially-abled children",rec.speciallyAbled?`<b>${rec.speciallyAbled}</b>`:"")}${row("Sponsored children",(Array.isArray(rec.sponsoredGroups)?rec.sponsoredGroups:[]).filter(r=>r.title||r.count).map(r=>escHtml(r.title||"—")+(r.count?": "+escHtml(r.count):"")).join(" · "))}${row("Comments",escHtml(rec.comments))}
