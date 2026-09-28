@@ -914,10 +914,10 @@ const GROUPS = [
   {name:"8 · People", color:"#0E6B8A"},
   {name:"9 · Bookings", color:"#1E7F3C"}
 ];
-const ORDER = ["categories","pools","tax","hsn","shopcats","progcats","departments","fboptions","schoolslots","entryprices","sponsors","districts","venues","products","programs","blackout","bookings","checkin",
+const ORDER = ["categories","pools","tax","hsn","shopcats","progcats","departments","fboptions","schoolslots","entryprices","sponsors","districts","transportvendors","foodvendors","venues","products","programs","blackout","bookings","checkin",
                "discounts","sources","scripts","tiers","members",
                "shopitems","shopsales","shopcoupons","career","school","sponsored"];   // "shopreports", "affiliates", "paymodes" hidden from the rail (code kept)
-const PHASE = {categories:0,pools:0,tax:0,hsn:0,shopcats:0,progcats:0,departments:0,fboptions:0,schoolslots:0,entryprices:0,sponsors:0,districts:0,venues:0, products:1, programs:1, blackout:2,
+const PHASE = {categories:0,pools:0,tax:0,hsn:0,shopcats:0,progcats:0,departments:0,fboptions:0,schoolslots:0,entryprices:0,sponsors:0,districts:0,transportvendors:0,foodvendors:0,venues:0, products:1, programs:1, blackout:2,
                discounts:3,affiliates:3,
                paymodes:4,sources:4,scripts:4,bookings:2,checkin:2,
                tiers:5,members:5,
@@ -926,8 +926,8 @@ const PHASE = {categories:0,pools:0,tax:0,hsn:0,shopcats:0,progcats:0,department
                school:8,sponsored:8};
 const PREREQ = {
   career:[], categories:[], pools:[], tax:[], hsn:[], shopcats:[], departments:[], paymodes:[], sources:[], scripts:[], progcats:[], bookings:["Products & add-ons"], checkin:["Products & add-ons"],
-  fboptions:[], schoolslots:["Products & add-ons"], entryprices:[], sponsors:[], districts:[], venues:[],
-  school:["School F&B options","School time slots"], sponsored:["Sponsored School Sponsors","School time slots"],
+  fboptions:[], schoolslots:["Products & add-ons"], entryprices:[], sponsors:[], districts:[], transportvendors:[], foodvendors:[], venues:[],
+  school:["School F&B options","School time slots"], sponsored:["Sponsored School Donors","School time slots"],
   products:["Visitor categories","Inventory pools","Tax rates","HSN / SAC codes"],
   programs:["Program categories","Visitor categories","Tax rates","HSN / SAC codes"],
   events:["Program categories","Visitor categories","Tax rates","HSN / SAC codes"],
@@ -1310,20 +1310,38 @@ const M = {
             ["Per student|student","money","Default entry price per student — inclusive of 18% GST."],
             ["Per adult / teacher|adult","money","Default entry price per accompanying adult or teacher — inclusive of 18% GST."],
             ["Active|is_active","bool","Turn it off to retire this preset."]]},
-  sponsors:{g:0,n:"Sponsored School Sponsors",owner:"Partnerships & CSR",perm:"master.sponsor.manage",src:"Scope §9",q:1,
+  sponsors:{g:0,n:"Sponsored School Donors",owner:"Partnerships & CSR",perm:"master.sponsor.manage",src:"Scope §9",q:1,
     d:"The funders a sponsored school visit is billed to — e.g. JSW Foundation. The sponsored-booking form picks one, and the visit's e-invoice is raised against it (the school pays nothing).",
     view:"sponsors",
-    schema:[["Sponsor|name","string","As it should read on the invoice, e.g. JSW Foundation."],
-            ["GSTIN|gstin","string","For the e-invoice raised against the sponsor."],
+    schema:[["Donor|name","string","As it should read on the invoice, e.g. JSW Foundation."],
+            ["GSTIN|gstin","string","For the e-invoice raised against the donor."],
             ["State|state","string","Place of supply, e.g. Maharashtra."],
-            ["Billing address|addr","string","Sponsor's registered address for the invoice."],
+            ["Billing address|addr","string","Donor's registered address for the invoice."],
             ["Contact email|email","string","Where the invoice and confirmations go."],
-            ["Active|is_active","bool","Turn it off to retire this sponsor."]]},
+            ["Active|is_active","bool","Turn it off to retire this donor."]]},
   districts:{g:0,n:"Sponsored School Districts",owner:"Partnerships & CSR",perm:"master.district.manage",src:"Scope §9",q:1,
     d:"The districts sponsored visitors come from — used for tagging and reporting on reach.",
     view:"districts",
     schema:[["District|name","string","District name, e.g. Palghar."],
             ["Active|is_active","bool","Turn it off to retire this district."]]},
+  transportvendors:{g:0,n:"Transport vendors",owner:"Partnerships & CSR",perm:"master.transportvendor.manage",src:"Scope §9",q:1,
+    d:"The bus operators a sponsored school visit can be assigned to. The sponsored-booking form picks one for transport.",
+    view:"transportvendors",
+    schema:[["Vendor|name","string","As it reads on the booking, e.g. Konkan Travels."],
+            ["GSTIN|gstin","string","For the vendor's tax records."],
+            ["PAN|pan","string","Vendor's PAN."],
+            ["Work order no.|workOrder","string","The MuSo work order / PO number for this vendor."],
+            ["No. of buses|buses","int","Buses this vendor can provide."],
+            ["Seater capacity|seaters","int","Seats per bus, e.g. 45."],
+            ["Active|is_active","bool","Turn it off to retire this vendor."]]},
+  foodvendors:{g:0,n:"Food vendors",owner:"Partnerships & CSR",perm:"master.foodvendor.manage",src:"Scope §9",q:1,
+    d:"The caterers a sponsored school visit's food is sourced from. The sponsored-booking form picks one as the food vendor.",
+    view:"foodvendors",
+    schema:[["Vendor|name","string","As it reads on the booking, e.g. Annapurna Caterers."],
+            ["GSTIN|gstin","string","For the vendor's tax records."],
+            ["PAN|pan","string","Vendor's PAN."],
+            ["Work order no.|workOrder","string","The MuSo work order / PO number for this vendor."],
+            ["Active|is_active","bool","Turn it off to retire this vendor."]]},
   venues:{g:0,n:"Venues",owner:"Events & Experiences",perm:"master.venue.manage",src:"Events and Experiences",q:1,
     d:"The rentable spaces at MuSo — the halls and rooms a booking can block. A school visit's optional workshop/orientation slots pick their space from this list.",
     view:"venues",
@@ -1337,7 +1355,7 @@ const M = {
     d:"School-visit enquiries and bookings in one place. A record starts as an enquiry and moves through its status to a confirmed, paid, completed visit — with its headcounts, food, schedule, proforma invoice, payments and email trail all on the booking.",
     view:"school"},
   sponsored:{g:8,n:"Sponsored School",owner:"Partnerships & CSR",perm:"sponsored.manage",src:"Scope §9",q:0,
-    d:"Sponsor-funded school / funded-visitor bookings (§9). Like School, but the visit cost is billed to a sponsor (e.g. JSW Foundation) rather than collected from the school — with transport, district, org type, post-visit remarks/photos, a student CSV, and a feedback + acknowledgement email.",
+    d:"Donor-funded school / funded-visitor bookings (§9). Like School, but the visit cost is billed to a donor (e.g. JSW Foundation) rather than collected from the school — with transport, district, org type, post-visit remarks/photos, a student CSV, and a feedback + acknowledgement email.",
     view:"sponsored"},
   shopreports:{g:6,n:"Shop reports",owner:"Shivam · Finance & Accounts",perm:"shop.report.view",src:"Scope §12",q:0,
     d:"Shop sales summary and the HSN/SAC-wise quantity + GST breakup for the GST return.",view:"shopreports"},
@@ -1588,6 +1606,8 @@ const SCHOOL_STATUSES = ["Open","In Discussion","Confirmed","Live","Ended","Lost
 /* Statuses a person may set by hand. Confirmed / Live / Ended are set automatically
    from payment receipt and the visit date, so they are not offered in the form. */
 const SCHOOL_MANUAL_STATUSES = ["Open","In Discussion","Lost","Rejected"];
+/* Sponsored visits have no payment, so "Confirmed" can't be automated — it is set by hand. */
+const SP_MANUAL_STATUSES = ["Open","In Discussion","Confirmed","Lost","Rejected"];
 const SCHOOL_DESIGN   = ["Agent","Admin","Teacher","Coordinator","Other"];   // "Other" → the "Other designation" text field
 
 /* One record carries both the enquiry fields and the backend booking fields;
@@ -1629,7 +1649,7 @@ const SCHOOL_BOOKINGS = [
              optionals:[{kind:"Workshop", venue:"Studio 2", date:"15 Oct 2026", time:"11:30–12:30"}]}],
     entryStudent:350, entryAdult:500,
     billName:"St. Xavier's High School", billAddress:"5 Mahapalika Marg, Fort, Mumbai 400001",
-    gstin:"27AAATS1234C1Z9", pan:"AAATS1234C", comments:"Proforma sent; 40% advance received.",
+    gstin:"27AAATS1234C1Z9", pan:"AAATS1234C", assignee:"Aditi Rao", comments:"Proforma sent; 40% advance received.",
     payments:[{on:"05 Sep 2026", mode:"Net banking", amount:35000, ref:"NEFT-XAV-4471"}],
     proformaUpload:null,
     timeline:[{on:"29 Aug 2026", who:"Aditi (VE)", what:"Backend booking created."},
@@ -1840,6 +1860,21 @@ const DISTRICTS = [
   {name:"Thane",           is_active:true},
   {name:"Raigad",          is_active:true}
 ];
+/* Transport vendors — the bus operators a sponsored visit can pick from. */
+const TRANSPORT_VENDORS = [
+  {name:"Konkan Travels",      gstin:"27AAECK1234M1Z5", pan:"AAECK1234M", workOrder:"WO/TR/2026/011", buses:6, seaters:45, is_active:true},
+  {name:"Sai Bus Service",     gstin:"27AAFCS5678N1Z9", pan:"AAFCS5678N", workOrder:"WO/TR/2026/014", buses:4, seaters:52, is_active:true},
+  {name:"Panvel Roadways",     gstin:"27AAGCP9012Q1Z3", pan:"AAGCP9012Q", workOrder:"WO/TR/2026/019", buses:3, seaters:40, is_active:true},
+  {name:"Sewri Transport Co.", gstin:"27AAHCS3456R1Z7", pan:"AAHCS3456R", workOrder:"WO/TR/2026/021", buses:5, seaters:48, is_active:true},
+  {name:"Worli Roadways",      gstin:"",                pan:"AAHCW3456R", workOrder:"WO/TR/2026/022", buses:2, seaters:35, is_active:false}
+];
+/* Food vendors — the caterers a sponsored visit's F&B is sourced from. */
+const FOOD_VENDORS = [
+  {name:"Annapurna Caterers", gstin:"27AABCA1234F1Z8", pan:"AABCA1234F", workOrder:"WO/FD/2026/007", is_active:true},
+  {name:"Tiffin Box Co.",     gstin:"27AABCT5678G1Z2", pan:"AABCT5678G", workOrder:"WO/FD/2026/012", is_active:true},
+  {name:"MuSo Kitchen",       gstin:"27AAQCM9400K1ZZ", pan:"AAQCM9400K", workOrder:"WO/FD/2026/001", is_active:true},
+  {name:"Sunrise Snacks",     gstin:"",                pan:"AABCS9012H", workOrder:"WO/FD/2026/018", is_active:false}
+];
 const sponsorByName = n => SPONSORS.find(s=>s.name===n);
 /* Rentable spaces (source: Rentals brochure) — a booking's optional workshop/orientation slots block one of these. */
 const VENUES = [
@@ -1932,6 +1967,40 @@ function syncOptCheckBtn(rowEl){
   const r=rowEl.querySelector(".optcheck-result"); if(r) r.remove();
 }
 
+/* ---- MuSo-wide availability (main visit date/slot) — museum-wide, no venue. Aggregates
+   every module's activities on a date: Events & Experiences + Birthdays + School samples
+   from VENUE_BOOKINGS, plus live School & Sponsored visits, plus this booking's own visits. */
+function musoDayBookings(date, src, skipVi){
+  const d = src==="sponsored"?spDraft:schoolDraft;
+  const draftId = d?d.id:null;
+  const out=[];
+  VENUE_BOOKINGS.filter(b=>b.date===date&&b.start&&b.end).forEach(b=>out.push({module:b.module,by:b.by,purpose:b.purpose,start:b.start,end:b.end,createdBy:b.createdBy||""}));
+  SCHOOL_BOOKINGS.forEach(r=>{ if(r.id===draftId) return; (r.visits||[]).forEach(v=>{ if(v.date===date){ const s=schoolSlotByName(v.slotId); if(s) out.push({module:"School",by:r.school||r.id,purpose:"School visit",start:s.start,end:s.end,createdBy:r.assignee||""}); } }); });
+  SPONSORED_BOOKINGS.forEach(r=>{ if(r.id===draftId) return; (r.visits||[]).forEach(v=>{ if(v.date===date){ const s=schoolSlotByName(v.slotId); if(s) out.push({module:"Sponsored School",by:r.school||r.id,purpose:"Sponsored visit",start:s.start,end:s.end,createdBy:r.assignee||""}); } }); });
+  if(d && Array.isArray(d.visits)) d.visits.forEach((v,vi)=>{ if(vi===skipVi) return; if(v.date===date){ const s=schoolSlotByName(v.slotId); if(s) out.push({module:"This booking",by:d.school||"This booking",purpose:"This booking",start:s.start,end:s.end,createdBy:d.assignee||""}); } });
+  return out;
+}
+/* Informational "Check availability" verdict for a main visit (never blocks — the museum hosts several groups at once). */
+function runMusoCheck(src,vi){
+  const d = src==="sponsored"?spDraft:schoolDraft;
+  const v = (((d||{}).visits)||[])[vi]||{};
+  const s = schoolSlotByName(v.slotId);
+  if(!v.date || !s) return {src,vi,status:"incomplete",msg:"Set a visit date and time slot to check."};
+  const ps=timeToMin(s.start), pe=timeToMin(s.end);
+  const over = musoDayBookings(v.date,src,vi).filter(b=>{const bs=timeToMin(b.start),be=timeToMin(b.end);return bs!=null&&be!=null&&bs<pe&&be>ps;});
+  if(!over.length) return {src,vi,status:"ok",msg:`Nothing else is planned for ${s.start}–${s.end} on ${v.date}. The day is clear for this slot.`};
+  const list=over.slice(0,3).map(b=>`${b.module} · ${b.by} (${b.start}–${b.end})`).join("; ");
+  return {src,vi,status:"info",msg:`${over.length} ${over.length>1?"activities overlap":"activity overlaps"} ${s.start}–${s.end} on ${v.date}: ${list}${over.length>3?` +${over.length-3} more`:""}. Booking is still allowed.`};
+}
+/* The inline verdict banner under a visit's date/slot row. */
+function musoCheckBanner(src,i){
+  if(!musoCheck || musoCheck.src!==src || musoCheck.vi!==i) return "";
+  const c = musoCheck.status==="ok" ? "background:#eaf7ee;border:1px solid #bfe6cb;color:#1e7f3c"
+          : musoCheck.status==="info" ? "background:#fff7e6;border:1px solid #f0d38a;color:#8a6100"
+          : "background:#eef2f7;border:1px solid #d4dbe4;color:#4a5568";
+  return `<div class="musocheck-result" style="margin-top:10px;padding:8px 11px;border-radius:6px;font-size:12px;${c}">${escHtml(musoCheck.msg)}</div>`;
+}
+
 /* ---- Enums (funded-visitor context) ---- */
 const SP_ORG_TYPES = ["Funded (NGO)","School"];
 const SP_TRANSPORT = ["Yes","No","Maybe"];
@@ -1944,7 +2013,7 @@ const SPONSORED_BOOKINGS = [
     school:"Aseema Charitable Trust", location:"Bandra East, Mumbai", boards:["State board"], boardsOther:"",
     grade:"Grade 5 & 6", poc:"Farida Lambay", designation:"Coordinator",
     email:"visits@aseema.org", phone:"+91 98201 55667",
-    orgType:"Funded (NGO)", sponsor:"", district:"Mumbai Suburban",
+    orgType:"Funded (NGO)", sponsor:"", donorTicketing:"", donorFood:"", donorTravel:"", district:"Mumbai Suburban",
     transport:{need:"Maybe", vendor:""},
     interested:["Museum Tour","Introduction to AI session"], interestedOther:"", prefDate:"22 Oct 2026",
     expChildren:80, expTeachers:8, note:"Sponsored children; would value the AI session if it fits the budget.",
@@ -1959,17 +2028,17 @@ const SPONSORED_BOOKINGS = [
     school:"Nanhi Kali — Palghar cluster", location:"Palghar", boards:["State board","Home schooling"], boardsOther:"",
     grade:"Grade 7", poc:"Sunita More", designation:"Teacher",
     email:"coordinator@nanhikali.org", phone:"+91 90045 88221",
-    orgType:"Funded (NGO)", sponsor:"JSW Foundation", district:"Palghar",
+    orgType:"Funded (NGO)", sponsor:"JSW Foundation", donorTicketing:"JSW Foundation", donorFood:"JSW Foundation", donorTravel:"JSW Foundation", district:"Palghar",
     transport:{need:"Yes", vendor:"Konkan Travels"},
     interested:["Museum Tour","Future Maker Program"], interestedOther:"", prefDate:"28 Oct 2026",
-    expChildren:120, expTeachers:10, note:"Sponsor budget approval in progress.",
+    expChildren:120, expTeachers:10, note:"Donor budget approval in progress.",
     proofDoc:"NanhiKali-80G.pdf",
     visits:[{date:"28 Oct 2026", slotId:"Afternoon slot 12:00–17:00", students:120, adults:10, escorts:4, teachersComp:0,
              food:{students:0,adults:0,comp:0,optionIds:[]}, optionals:[]}],
     entryStudent:350, entryAdult:500,
     ngoGstin:"", ngoPan:"AAATN5678K", authNumber:"", speciallyAbled:0, sponsoredGroups:[],
     postVisit:{remark:"", images:[]}, students:{uploaded:false,total:0,girls:0,boys:0}, feedback:{sent:false},
-    comments:"Awaiting sponsor confirmation and final numbers.", invoice:{raised:false, on:""},
+    assignee:"Neha Kulkarni", comments:"Awaiting donor confirmation and final numbers.", invoice:{raised:false, on:""},
     timeline:[{on:"10 Sep 2026", who:"Website", what:"Enquiry received — acknowledgement email sent to the POC."},
               {on:"13 Sep 2026", who:"Neha (CSR)", what:"Spoke to POC; JSW Foundation to fund. Status → In Discussion."}] },
 
@@ -1977,30 +2046,30 @@ const SPONSORED_BOOKINGS = [
     school:"Teach For India — M-East ward", location:"Govandi, Mumbai", boards:["State board"], boardsOther:"",
     grade:"Grade 6 to 8", poc:"Imran Shaikh", designation:"Admin",
     email:"mumbai@teachforindia.org", phone:"+91 98330 44556",
-    orgType:"Funded (NGO)", sponsor:"JSW Foundation", district:"Mumbai Suburban",
+    orgType:"Funded (NGO)", sponsor:"JSW Foundation", donorTicketing:"JSW Foundation", donorFood:"Tata Trusts", donorTravel:"JSW Foundation", district:"Mumbai Suburban",
     transport:{need:"Yes", vendor:"Sai Bus Service"},
     interested:["Museum Tour","Workshop"], interestedOther:"", prefDate:"14 Oct 2026",
     expChildren:150, expTeachers:12, note:"Annual sponsored visit.",
-    proofDoc:"TFI-registration.pdf",
+    proofDoc:"TFI-registration.pdf", foodVendor:"Annapurna Caterers",
     visits:[{date:"14 Oct 2026", slotId:"Afternoon slot 12:00–17:00", students:150, adults:12, escorts:5, teachersComp:0,
              food:{students:150,adults:12,comp:5,optionIds:["Snack box"]},
              optionals:[{kind:"Orientation", venue:"Auditorium", date:"14 Oct 2026", time:"14:15–14:45"}]}],
     entryStudent:350, entryAdult:500,
     ngoGstin:"", ngoPan:"AAATT9012Q", authNumber:"JSW/CSR/2026/0417", speciallyAbled:6, sponsoredGroups:[{title:"First-generation learners",count:"120"},{title:"Below poverty line",count:"45"}],
     postVisit:{remark:"", images:[]}, students:{uploaded:false,total:0,girls:0,boys:0}, feedback:{sent:false},
-    comments:"Function Process circulated to staff; e-invoice to JSW on completion.", invoice:{raised:false, on:""},
+    assignee:"Neha Kulkarni", comments:"Function Process circulated to staff; e-invoice to JSW on completion.", invoice:{raised:false, on:""},
     timeline:[{on:"30 Aug 2026", who:"Neha (CSR)", what:"Backend booking created; confirmation emailed to the NGO and Function Process circulated to staff."},
-              {on:"02 Sep 2026", who:"Neha (CSR)", what:"Sponsor and date locked. Status → Confirmed."}] },
+              {on:"02 Sep 2026", who:"Neha (CSR)", what:"Donor and date locked. Status → Confirmed."}] },
 
   { id:"SPS-004", status:"Ended", origin:"backend", created:"12 Jul 2026",
     school:"Pratham — Raigad", location:"Panvel, Raigad", boards:["State board"], boardsOther:"",
     grade:"Grade 5", poc:"Vikram Patil", designation:"Coordinator",
     email:"raigad@pratham.org", phone:"+91 99201 77883",
-    orgType:"Funded (NGO)", sponsor:"Tata Trusts", district:"Raigad",
+    orgType:"Funded (NGO)", sponsor:"Tata Trusts", donorTicketing:"Tata Trusts", donorFood:"Tata Trusts", donorTravel:"Tata Trusts", district:"Raigad",
     transport:{need:"Yes", vendor:"Panvel Roadways"},
     interested:["Museum Tour"], interestedOther:"", prefDate:"06 Aug 2026",
     expChildren:90, expTeachers:8, note:"",
-    proofDoc:"Pratham-80G.pdf",
+    proofDoc:"Pratham-80G.pdf", foodVendor:"Tiffin Box Co.",
     visits:[{date:"06 Aug 2026", slotId:"Afternoon slot 12:00–17:00", students:90, adults:8, escorts:2, teachersComp:0,
              food:{students:90,adults:8,comp:2,optionIds:["Standard lunch"]}, optionals:[]}],
     entryStudent:350, entryAdult:500,
@@ -2017,6 +2086,15 @@ const SPONSORED_BOOKINGS = [
 
 /* ---- Sponsored helpers (reuse School math + pills + PDF stack) ---- */
 const spById = id => SPONSORED_BOOKINGS.find(r=>r.id===id);
+/* Funding split — up to three donors cover Ticketing (entry fees), Food (F&B) and
+   Travel (transport). Each is optional and the same donor may cover more than one. */
+const SP_DONOR_TYPES = [["donorTicketing","Ticketing (entry fees)"],["donorFood","Food (F&B)"],["donorTravel","Travel (transport)"]];
+function spFunding(rec){
+  const c=schoolCompute(rec);
+  const amt={donorTicketing:c.visitTotal, donorFood:c.foodTotal, donorTravel:0};
+  return SP_DONOR_TYPES.map(([k,label])=>({key:k, label, donor:(rec[k]||"").trim(), amount:amt[k]}));
+}
+const spPrimaryDonor = rec => (rec.donorTicketing||rec.donorFood||rec.donorTravel||rec.sponsor||"").trim();
 /* Distinct organisations already on file — powers the Organisation typeahead. */
 function spDirectory(){ const seen={}, out=[]; SPONSORED_BOOKINGS.forEach(r=>{const k=(r.school||"").trim();if(!k||seen[k])return;seen[k]=1;out.push({name:r.school, rec:r});}); return out; }
 function nextSpId(){ const n=SPONSORED_BOOKINGS.reduce((mx,r)=>{const m=/SPS-(\d+)/.exec(r.id);return m?Math.max(mx,+m[1]):mx;},0); return "SPS-"+String(n+1).padStart(3,"0"); }
@@ -2027,7 +2105,7 @@ function spComposeEmail(rec, kind){
   const c=schoolCompute(rec);
   const sp=sponsorByName(rec.sponsor);
   const toSponsor = kind==="invoice";
-  const to = toSponsor ? (sp&&sp.email?sp.email:"the sponsor") : (rec.email||"the POC");
+  const to = toSponsor ? (sp&&sp.email?sp.email:"the donor") : (rec.email||"the POC");
   const v=(rec.visits||[])[0]||{};
   const money0=n=>"₹"+Number(n||0).toLocaleString("en-IN");
   const SUBJ={
@@ -2042,7 +2120,7 @@ function spComposeEmail(rec, kind){
   const subject=(SUBJ[kind]||SUBJ.confirm)+" ("+rec.id+")";
   const intro={
     ack:"Thank you for your enquiry! We've received your request for a sponsored school visit, and our Partnerships & CSR team will be in touch shortly to work out the date and details.",
-    confirm:"Your sponsored visit is booked. The cost is covered by the sponsor — there's nothing to pay. Here are the details we have on file.",
+    confirm:"Your sponsored visit is booked. The cost is covered by the donor — there's nothing to pay. Here are the details we have on file.",
     fp:"Function Process for an upcoming sponsored school visit — please prepare for the group below.",
     invoice:"Please find the tax invoice for the sponsored school visit below, raised against your organisation.",
     feedback:"It was a pleasure having you with us! One visit is never enough — we're a growing museum, and we look forward to welcoming you back with even more adventures and excitement next time. We'd love your feedback on the experience, food and transport.",
@@ -2050,14 +2128,14 @@ function spComposeEmail(rec, kind){
     status:"There's an update on your sponsored visit booking."
   }[kind]||"";
   const rows = kind==="ack" ? [
-    ["Enquiry ID", rec.id],["Organisation", rec.school||"—"],["Sponsor", rec.sponsor||"To be assigned"],
+    ["Enquiry ID", rec.id],["Organisation", rec.school||"—"],["Donor", rec.sponsor||"To be assigned"],
     ["Preferred date", rec.prefDate||"—"],["Expected children", rec.expChildren!==""&&rec.expChildren!=null?rec.expChildren:"—"],
     ["Transport support", (rec.transport&&rec.transport.need)||"—"]
   ] : kind==="invoice" ? [
     ["Invoice against", rec.sponsor||"—"],["Booking", rec.id],["Beneficiary", rec.school||"—"],
     ["Visit date", v.date||rec.prefDate||"—"],["Students · Adults", `${c.students} · ${c.adults}`],["Amount", money0(c.grand)]
   ] : [
-    ["Booking ID", rec.id],["Organisation", rec.school||"—"],["Sponsor", rec.sponsor||"—"],
+    ["Booking ID", rec.id],["Organisation", rec.school||"—"],["Donor", rec.sponsor||"—"],
     ["Visit date", v.date||rec.prefDate||"—"],["Time slot", v.slotId||"—"],["Students · Adults", `${c.students} · ${c.adults}`],
     ["Transport", rec.transport&&rec.transport.need==="Yes"?("Yes"+(rec.transport.vendor?" · "+rec.transport.vendor:"")):((rec.transport&&rec.transport.need)||"—")]
   ];
@@ -2065,10 +2143,10 @@ function spComposeEmail(rec, kind){
       <div style="font-weight:600;font-size:12.5px;margin-bottom:6px">Quick feedback</div>
       <div style="font-size:12px;color:var(--ink2)">• How was the museum experience?<br>• How was the food?<br>• How was the transport?</div>
       <div class="muted" style="font-size:11px;margin-top:8px">— With gratitude,<br>Facsimile signature · Museum of Solutions</div></div>` : "";
-  const closing = kind==="invoice" ? `This is a computer-generated tax invoice. The visit cost is borne by the sponsor; the school pays nothing.`
-    : kind==="feedback" ? `Your acknowledgement helps us report impact to the sponsor.`
+  const closing = kind==="invoice" ? `This is a computer-generated tax invoice. The visit cost is borne by the donor; the school pays nothing.`
+    : kind==="feedback" ? `Your acknowledgement helps us report impact to the donor.`
     : kind==="fp" ? `Please coordinate slot, inventory and F&B as per the details above.`
-    : `The school pays nothing for this visit — the cost is covered by the sponsor.`;
+    : `The school pays nothing for this visit — the cost is covered by the donor.`;
   const body=`<div style="text-align:center;margin-bottom:14px"><span style="font-family:var(--mono);font-size:26px;font-weight:800;letter-spacing:-.03em;color:#D64530">MuSo</span></div>
     <div class="muted" style="font-size:11px;letter-spacing:.08em;text-transform:uppercase;margin-bottom:4px">${rec.id}</div>
     <div style="font-size:17px;font-weight:600;margin-bottom:8px">${escHtml(SUBJ[kind]||SUBJ.confirm)}</div>
@@ -2089,15 +2167,15 @@ function spBackfillEmails(){ SPONSORED_BOOKINGS.forEach(rec=>{ (rec.timeline||[]
   else if(/confirmation emailed|Function Process/i.test(w)) en.email=spComposeEmail(rec,"confirm");
   else if(/Status\s*→/i.test(w)) en.email=spComposeEmail(rec,"status");
 }); }); }
-const SP_EXPORT_NAMES={sponsored:"sponsored-report.csv","sponsored-boards":"sponsored-by-board.csv","sponsored-sponsor":"sponsored-by-sponsor.csv"};
+const SP_EXPORT_NAMES={sponsored:"sponsored-report.csv","sponsored-boards":"sponsored-by-board.csv","sponsored-sponsor":"sponsored-by-donor.csv"};
 function spExportRows(kind){
   if(kind==="sponsored-boards"){ const map={}; SPONSORED_BOOKINGS.forEach(r=>{const c=schoolCompute(r);(r.boards||[]).forEach(b=>{const m=map[b]||(map[b]={board:b,recs:0,students:0});m.recs++;m.students+=c.students;});}); return [["Board","Records","Students"]].concat(Object.values(map).map(m=>[m.board,m.recs,m.students])); }
-  if(kind==="sponsored-sponsor"){ const map={}; SPONSORED_BOOKINGS.forEach(r=>{const c=schoolCompute(r);const k=r.sponsor||"(unassigned)";const m=map[k]||(map[k]={sponsor:k,recs:0,students:0,billed:0});m.recs++;m.students+=c.students;if(["Confirmed","Live","Ended"].includes(r.status))m.billed+=c.grand;}); return [["Sponsor","Records","Students","Billed"]].concat(Object.values(map).map(m=>[m.sponsor,m.recs,m.students,Math.round(m.billed)])); }
+  if(kind==="sponsored-sponsor"){ const map={}; SPONSORED_BOOKINGS.forEach(r=>{const c=schoolCompute(r); const billedOk=["Confirmed","Live","Ended"].includes(r.status); const seen=new Set(); spFunding(r).forEach(f=>{ if(!f.donor) return; const m=map[f.donor]||(map[f.donor]={sponsor:f.donor,recs:0,students:0,billed:0}); if(!seen.has(f.donor)){ m.recs++; m.students+=c.students; seen.add(f.donor); } if(billedOk) m.billed+=f.amount; }); }); return [["Donor","Records","Students","Billed"]].concat(Object.values(map).map(m=>[m.sponsor,m.recs,m.students,Math.round(m.billed)])); }
   // Full booking report — every sponsored booking field, plus visit-array aggregates.
-  return [["ID","Status","School / NGO name","Location","Type","District","Education board","Grade / Class","Name of POC","Designation","Email of POC","Phone of POC","Interested In","Preferred date of visit","Expected number of children","Expected number of teachers / staff","Transport support","Transport vendor","Proof of identity (NGO)","Message / Note","Sponsor","Authorisation number","GST number of NGO","PAN of NGO","Entry price preset","Entry price per student","Entry price per adult / teacher","Total Number of Visits","Start Date","Start Time slot","Total Students (all visits)","Total Adults / teachers (all visits)","Total Complementary adults (all visits)","Specially-abled children","Sponsored children remarks","Billing name","Billing address","GST number","PAN","Assignee","Comments","Taxable value","GST (18%)","Grand total (incl. GST)","Invoice raised","Created"]].concat(
+  return [["ID","School / NGO name","Location","District","Type","Authorisation number","GST number of NGO","PAN of NGO","Proof of identity","Education board","Grade / Class","Preferred date of visit","Expected number of children","Expected number of teachers / staff","Transport support","Transport vendor","Food vendor","Name of POC","Designation","Email of POC","Phone of POC","Interested In","Message / Note","Ticketing donor","Food donor","Travel donor","Entry price preset","Entry price per student","Entry price per adult / teacher","Total Number of Visits","Start Date","Start Time slot","Total Students (all visits)","Total Adults / teachers (all visits)","Total Complementary adults (all visits)","Billing name","Billing address","GST number","PAN","Specially-abled children","Sponsored children remarks","Assignee","Status","Comments","Taxable value","GST (18%)","Grand total (incl. GST)","Invoice raised","Created"]].concat(
     SPONSORED_BOOKINGS.map(r=>{const c=schoolCompute(r),va=visitAgg(r),t=r.transport||{};
       const groups=(r.sponsoredGroups||[]).map(g=>`${g.title}: ${g.count}`).join("; ");
-      return [r.id,r.status,r.school,r.location,r.orgType||"",r.district||"",bkBoards(r),r.grade,r.poc,bkDesig(r),r.email,r.phone,bkInterested(r),r.prefDate,r.expChildren,r.expTeachers,t.need||"",t.vendor||"",r.proofDoc||"",r.note,r.sponsor||"",r.authNumber||"",r.ngoGstin||"",r.ngoPan||"",r.entryPreset||"",r.entryStudent,r.entryAdult,va.count,va.startDate,va.startSlot,va.students,va.adults,va.comp,r.speciallyAbled||0,groups,r.billName,r.billAddress,r.gstin,r.pan,r.assignee||"",r.comments,c.subtotal,c.gst,c.grand,(r.invoice&&r.invoice.raised?"Yes":"No"),r.created];}));
+      return [r.id,r.school,r.location,r.district||"",r.orgType||"",r.authNumber||"",r.ngoGstin||"",r.ngoPan||"",r.proofDoc||"",bkBoards(r),r.grade,r.prefDate,r.expChildren,r.expTeachers,t.need||"",t.vendor||"",r.foodVendor||"",r.poc,bkDesig(r),r.email,r.phone,bkInterested(r),r.note,r.donorTicketing||"",r.donorFood||"",r.donorTravel||"",r.entryPreset||"",r.entryStudent,r.entryAdult,va.count,va.startDate,va.startSlot,va.students,va.adults,va.comp,r.billName,r.billAddress,r.gstin,r.pan,r.speciallyAbled||0,groups,r.assignee||"",r.status,r.comments,c.subtotal,c.gst,c.grand,(r.invoice&&r.invoice.raised?"Yes":"No"),r.created];}));
 }
 
 /* ---- Careers queries: the "ask us something" form on the careers page. Name,
@@ -2294,7 +2372,7 @@ const bulkUnderpriv = v => String(v==null?"":v).split(/;/).map(s=>s.trim()).filt
   .map(pair=>{ const c=pair.split(":"); return {title:(c[0]||"").trim(), count:(c[1]||"").trim()}; }).filter(x=>x.title);
 
 const SCHOOL_BULK_COLS=["School","Location","Boards","Grade","POC","Designation","Email","Phone","VisitDate","Slot","Students","Adults","Escorts","TeachersComp","FoodStudents","FoodAdults","FoodComp","FBOption","EntryStudent","EntryAdult","BillName","BillAddress","GSTIN","PAN","Status","AmountPaid","Assignee","Interested","Note","Comments"];
-const SP_BULK_COLS=["School","Location","OrgType","District","Boards","Grade","POC","Designation","Email","Phone","VisitDate","Slot","Students","Adults","Escorts","FoodStudents","FoodAdults","FoodComp","FBOption","EntryStudent","EntryAdult","Sponsor","AuthNumber","NgoGstin","NgoPan","ProofDoc","TransportNeed","TransportVendor","SpeciallyAbled","Underprivileged","BillName","BillAddress","GSTIN","PAN","Status","Assignee","Interested","Note","Comments"];
+const SP_BULK_COLS=["School","Location","District","OrgType","AuthNumber","NgoGstin","NgoPan","ProofDoc","Boards","Grade","VisitDate","TransportNeed","TransportVendor","FoodVendor","POC","Designation","Email","Phone","Interested","Note","TicketingDonor","FoodDonor","TravelDonor","EntryStudent","EntryAdult","Slot","Students","Adults","Escorts","FoodStudents","FoodAdults","FoodComp","FBOption","BillName","BillAddress","GSTIN","PAN","SpeciallyAbled","Underprivileged","Assignee","Status","Comments"];
 
 /* Required-field check, shared by both forms; returns an array of human-readable errors. */
 function bulkValidateRow(o){
@@ -2360,8 +2438,8 @@ function spRowToRecord(o,id){
     school:String(o.School).trim(), location:String(o.Location).trim(), boards:bulkSplit(o.Boards), boardsOther:"",
     grade:String(o.Grade).trim(), poc:String(o.POC).trim(), designation:String(o.Designation||"").trim(), designationOther:"",
     email:String(o.Email).trim(), phone:String(o.Phone).trim(),
-    orgType, sponsor:String(o.Sponsor||"").trim(), district:String(o.District||"").trim(),
-    transport:{need:tneed, vendor:String(o.TransportVendor||"").trim()},
+    orgType, donorTicketing:String(o.TicketingDonor||"").trim(), donorFood:String(o.FoodDonor||"").trim(), donorTravel:String(o.TravelDonor||"").trim(), sponsor:(String(o.TicketingDonor||"").trim()||String(o.FoodDonor||"").trim()||String(o.TravelDonor||"").trim()), district:String(o.District||"").trim(),
+    transport:{need:tneed, vendor:String(o.TransportVendor||"").trim()}, foodVendor:String(o.FoodVendor||"").trim(),
     interested:bulkSplit(o.Interested), interestedOther:"", prefDate:date,
     expChildren:students||"", expTeachers:adults||"", note:String(o.Note||"").trim(), proofDoc:String(o.ProofDoc||"").trim(),
     visits:[{date, slotId:bulkSlot(o.Slot), students, adults, escorts:bulkNum(o.Escorts), teachersComp:0,
@@ -2382,8 +2460,8 @@ const BULK_SCHOOL_SAMPLES=[
   {School:"DAV Public School",Location:"Airoli, Navi Mumbai",Boards:"CBSE",Grade:"Grade 8",POC:"Sneha Kulkarni",Designation:"Teacher",Email:"sneha.k@dav.sch.in",Phone:"+91 90040 55667",VisitDate:"03 Apr 2025",Slot:"Morning slot 9:30–14:30",Students:120,Adults:9,Escorts:3,TeachersComp:2,FoodStudents:0,FoodAdults:0,FoodComp:0,FBOption:"",EntryStudent:350,EntryAdult:500,BillName:"DAV Public School",BillAddress:"Sector 6, Airoli, Navi Mumbai 400708",GSTIN:"",PAN:"AAACD5566P",Status:"Ended",AmountPaid:46500,Assignee:"Aditi",Interested:"Museum Tour",Note:"",Comments:"Paid in full on the day."}
 ];
 const BULK_SP_SAMPLES=[
-  {School:"Muktangan — Worli",Location:"Worli, Mumbai",OrgType:"Funded (NGO)",District:"Mumbai Suburban",Boards:"State board",Grade:"Grade 5",POC:"Anjali Rane",Designation:"Coordinator",Email:"visits@muktangan.org",Phone:"+91 98201 33445",VisitDate:"18 Feb 2025",Slot:"Morning slot 9:30–14:30",Students:80,Adults:8,Escorts:3,FoodStudents:80,FoodAdults:8,FoodComp:3,FBOption:"Snack box",EntryStudent:350,EntryAdult:500,Sponsor:"JSW Foundation",AuthNumber:"JSW/CSR/2025/0112",NgoGstin:"",NgoPan:"AAATM1234N",ProofDoc:"Muktangan-12A.pdf",TransportNeed:"Yes",TransportVendor:"Worli Roadways",SpeciallyAbled:4,Underprivileged:"First-generation learners:60; Below poverty line:20",BillName:"Muktangan",BillAddress:"Worli, Mumbai 400018",GSTIN:"",PAN:"AAATM1234N",Status:"Ended",Assignee:"Neha",Interested:"Museum Tour;Introduction to AI session",Note:"Sponsored by JSW Foundation.",Comments:"Visit completed; e-invoice to JSW."},
-  {School:"Akanksha Foundation — Sewri",Location:"Sewri, Mumbai",OrgType:"Funded (NGO)",District:"Mumbai Suburban",Boards:"State board",Grade:"Grade 6 & 7",POC:"Imtiaz Shaikh",Designation:"Admin",Email:"programs@akanksha.org",Phone:"+91 90045 66778",VisitDate:"09 Mar 2025",Slot:"Afternoon slot 12:00–17:00",Students:110,Adults:10,Escorts:4,FoodStudents:110,FoodAdults:10,FoodComp:4,FBOption:"Standard lunch",EntryStudent:350,EntryAdult:500,Sponsor:"Tata Trusts",AuthNumber:"TT/GRANT/2025/0339",NgoGstin:"",NgoPan:"AAATA5678K",ProofDoc:"Akanksha-80G.pdf",TransportNeed:"Yes",TransportVendor:"Sewri Transport Co.",SpeciallyAbled:2,Underprivileged:"First-generation learners:90",BillName:"Akanksha Foundation",BillAddress:"Sewri, Mumbai 400015",GSTIN:"",PAN:"AAATA5678K",Status:"Ended",Assignee:"Neha",Interested:"Museum Tour;Workshop",Note:"",Comments:"Completed."}
+  {School:"Muktangan — Worli",Location:"Worli, Mumbai",OrgType:"Funded (NGO)",District:"Mumbai Suburban",Boards:"State board",Grade:"Grade 5",POC:"Anjali Rane",Designation:"Coordinator",Email:"visits@muktangan.org",Phone:"+91 98201 33445",VisitDate:"18 Feb 2025",Slot:"Morning slot 9:30–14:30",Students:80,Adults:8,Escorts:3,FoodStudents:80,FoodAdults:8,FoodComp:3,FBOption:"Snack box",EntryStudent:350,EntryAdult:500,TicketingDonor:"JSW Foundation",FoodDonor:"JSW Foundation",TravelDonor:"JSW Foundation",AuthNumber:"JSW/CSR/2025/0112",NgoGstin:"",NgoPan:"AAATM1234N",ProofDoc:"Muktangan-12A.pdf",TransportNeed:"Yes",TransportVendor:"Worli Roadways",FoodVendor:"Annapurna Caterers",SpeciallyAbled:4,Underprivileged:"First-generation learners:60; Below poverty line:20",BillName:"Muktangan",BillAddress:"Worli, Mumbai 400018",GSTIN:"",PAN:"AAATM1234N",Status:"Ended",Assignee:"Neha",Interested:"Museum Tour;Introduction to AI session",Note:"Sponsored by JSW Foundation.",Comments:"Visit completed; e-invoice to JSW."},
+  {School:"Akanksha Foundation — Sewri",Location:"Sewri, Mumbai",OrgType:"Funded (NGO)",District:"Mumbai Suburban",Boards:"State board",Grade:"Grade 6 & 7",POC:"Imtiaz Shaikh",Designation:"Admin",Email:"programs@akanksha.org",Phone:"+91 90045 66778",VisitDate:"09 Mar 2025",Slot:"Afternoon slot 12:00–17:00",Students:110,Adults:10,Escorts:4,FoodStudents:110,FoodAdults:10,FoodComp:4,FBOption:"Standard lunch",EntryStudent:350,EntryAdult:500,TicketingDonor:"Tata Trusts",FoodDonor:"Tata Trusts",TravelDonor:"Tata Trusts",AuthNumber:"TT/GRANT/2025/0339",NgoGstin:"",NgoPan:"AAATA5678K",ProofDoc:"Akanksha-80G.pdf",TransportNeed:"Yes",TransportVendor:"Sewri Transport Co.",FoodVendor:"Tiffin Box Co.",SpeciallyAbled:2,Underprivileged:"First-generation learners:90",BillName:"Akanksha Foundation",BillAddress:"Sewri, Mumbai 400015",GSTIN:"",PAN:"AAATA5678K",Status:"Ended",Assignee:"Neha",Interested:"Museum Tour;Workshop",Note:"",Comments:"Completed."}
 ];
 function bulkTemplateRows(kind){
   const cols = kind==="sponsored"?SP_BULK_COLS:SCHOOL_BULK_COLS;
@@ -2783,7 +2861,7 @@ const OPTIONS = {
   "School time slots":SCHOOL_SLOTS.map(s=>s.name),
   "School Entry price presets":ENTRY_PRICES.map(p=>p.name),
   "Museum tour slots":schoolTourSlots(),
-  "Sponsored School Sponsors":SPONSORS.map(s=>s.name),
+  "Sponsored School Donors":SPONSORS.map(s=>s.name),
   "Sponsored School Districts":DISTRICTS.map(d=>d.name)
 };
 
@@ -3800,6 +3878,8 @@ let editBlock = -1;   // index of the quota block being edited in the block flyo
 let blockDraft = null;   // quota-block flyout working copy {from,to,reason,slots:[],qtys:{}}
 let venueAvail = null;   // venue-availability flyout {venue,date,start,end,src,vi,oi}
 let venueCheck = null;   // inline "Check availability" verdict {src,vi,oi,status,msg}
+let musoAvail = null;    // MuSo-wide availability flyout {date,src,vi}
+let musoCheck = null;    // main-visit inline availability verdict {src,vi,status,msg}
 let blockMselOpen = false;   // the block flyout's time-slot multi-select open state
 // Careers: which opening the apply form is open for (-1 = closed), the composed
 // email shown after a successful send, and whether submit has been attempted.
@@ -5201,14 +5281,14 @@ const VIEWS = {
     return `<div class="note note-scope"><span class="note-mark">Structure</span><div>
       The funders a <b>sponsored school visit</b> is billed to. The sponsored-booking form picks one, and the visit's e-invoice is raised against it — the school pays nothing.
     </div></div>
-    <div class="card"><div class="card-head"><span class="card-title">Sponsored School Sponsors</span><span class="card-note">${SPONSORS.length} on file</span></div>
-      <div class="matrix-wrap"><table><thead><tr><th>Sponsor</th><th>GSTIN</th><th>State</th><th>Contact</th><th>Status</th><th>Actions</th></tr></thead>
+    <div class="card"><div class="card-head"><span class="card-title">Sponsored School Donors</span><span class="card-note">${SPONSORS.length} on file</span></div>
+      <div class="matrix-wrap"><table><thead><tr><th>Donor</th><th>GSTIN</th><th>State</th><th>Contact</th><th>Status</th><th>Actions</th></tr></thead>
       <tbody>${SPONSORS.map((s,i)=>`<tr>
         <td><b style="font-weight:500">${escHtml(s.name)}</b></td><td class="code">${escHtml(s.gstin||"—")}</td>
         <td>${escHtml(s.state||"—")}</td><td class="sub">${escHtml(s.email||"—")}</td>
         <td>${s.is_active?'<span class="pill pill-ok"><i class="dot"></i>Active</span>':'<span class="pill pill-off">Inactive</span>'}</td>
         <td><button class="btn" data-medit="${i}">Edit</button></td></tr>`).join("")}
-        ${addRowNew("Add sponsor")}</tbody></table></div></div>`;
+        ${addRowNew("Add donor")}</tbody></table></div></div>`;
   },
   districts(){
     return `<div class="note note-scope"><span class="note-mark">Structure</span><div>
@@ -5241,6 +5321,37 @@ const VIEWS = {
         ${addRowNew("Add venue")}</tbody></table></div></div>`;
   },
 
+  transportvendors(){
+    return `<div class="note note-scope"><span class="note-mark">Structure</span><div>
+      The bus operators a sponsored school visit can be assigned to — the sponsored-booking form picks one for transport.
+    </div></div>
+    <div class="card"><div class="card-head"><span class="card-title">Transport vendors</span><span class="card-note">${TRANSPORT_VENDORS.length} on file</span></div>
+      <div class="matrix-wrap"><table><thead><tr><th>Vendor</th><th>GSTIN</th><th>PAN</th><th>Work order no.</th><th class="ctr">Buses</th><th class="ctr">Seater</th><th>Status</th><th>Actions</th></tr></thead>
+      <tbody>${TRANSPORT_VENDORS.map((v,i)=>`<tr>
+        <td><b style="font-weight:500">${escHtml(v.name)}</b></td>
+        <td class="code">${escHtml(v.gstin||"—")}</td><td class="code">${escHtml(v.pan||"—")}</td>
+        <td class="code">${escHtml(v.workOrder||"—")}</td>
+        <td class="code" style="text-align:center">${v.buses||"—"}</td><td class="code" style="text-align:center">${v.seaters||"—"}</td>
+        <td>${v.is_active===false?'<span class="pill pill-off">Inactive</span>':'<span class="pill pill-ok"><i class="dot"></i>Active</span>'}</td>
+        <td><button class="btn" data-medit="${i}">Edit</button></td></tr>`).join("")}
+        ${addRowNew("Add transport vendor")}</tbody></table></div></div>`;
+  },
+
+  foodvendors(){
+    return `<div class="note note-scope"><span class="note-mark">Structure</span><div>
+      The caterers a sponsored school visit's food is sourced from — the sponsored-booking form picks one as the food vendor.
+    </div></div>
+    <div class="card"><div class="card-head"><span class="card-title">Food vendors</span><span class="card-note">${FOOD_VENDORS.length} on file</span></div>
+      <div class="matrix-wrap"><table><thead><tr><th>Vendor</th><th>GSTIN</th><th>PAN</th><th>Work order no.</th><th>Status</th><th>Actions</th></tr></thead>
+      <tbody>${FOOD_VENDORS.map((v,i)=>`<tr>
+        <td><b style="font-weight:500">${escHtml(v.name)}</b></td>
+        <td class="code">${escHtml(v.gstin||"—")}</td><td class="code">${escHtml(v.pan||"—")}</td>
+        <td class="code">${escHtml(v.workOrder||"—")}</td>
+        <td>${v.is_active===false?'<span class="pill pill-off">Inactive</span>':'<span class="pill pill-ok"><i class="dot"></i>Active</span>'}</td>
+        <td><button class="btn" data-medit="${i}">Edit</button></td></tr>`).join("")}
+        ${addRowNew("Add food vendor")}</tbody></table></div></div>`;
+  },
+
   sponsored(){
     const S=(p)=>`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${p}</svg>`;
     const kpi=(ico,color,label,value,sub)=>`<div class="setcard"><div class="kpi-top"><span class="kpi-ico kpi-${color}">${ico}</span><div class="set-k">${label}</div></div><div class="set-v pos">${value}</div><div class="kpi-sub">${sub}</div></div>`;
@@ -5258,7 +5369,7 @@ const VIEWS = {
       ${kpi(S('<path d="M3 21h18M5 21V7l7-4 7 4v14"/><path d="M9 21v-6h6v6"/>'),"blue","Open enquiries",openN,"awaiting or in discussion")}
       ${kpi(S('<path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>'),"teal","Confirmed bookings",bookedN,"confirmed · live · ended")}
       ${kpi(S('<circle cx="9" cy="7" r="4"/><path d="M2 21v-2a4 4 0 0 1 4-4h6a4 4 0 0 1 4 4v2"/>'),"amber","Students booked",students,"across all visits")}
-      ${kpi(S('<path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>'),"blue","Billed to sponsors",money(Math.round(billed)),"incl. GST, confirmed+")}
+      ${kpi(S('<path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>'),"blue","Billed to donors",money(Math.round(billed)),"incl. GST, confirmed+")}
     </div>`;
     const filtered=SPONSORED_BOOKINGS.filter(r=>!spFStatus||r.status===spFStatus);
     const rows=filtered.map(r=>{
@@ -5282,14 +5393,14 @@ const VIEWS = {
       ${SCHOOL_STATUSES.map(s=>`<option${s===spFStatus?" selected":""}>${s}</option>`).join("")}</select></div>`;
     const toolbar=`<div class="toolbar">
       <label class="search"><span>&#8981;</span><input data-sp-search value="${escAttr(spQ)}" autocomplete="off"
-        placeholder="Search by ID, organisation, sponsor or district" aria-label="Search sponsored records"></label>
+        placeholder="Search by ID, organisation, donor or district" aria-label="Search sponsored records"></label>
       ${statusPick}
       <span class="tool-note" id="spCount">${SPONSORED_BOOKINGS.length} records</span>
       <button class="btn" data-bulk-open="sponsored">Bulk upload</button>
       <button class="btn" data-export="sponsored">Download Report</button></div>`;
     return tabs+`<div class="sub-body">${tiles}${toolbar}
       <div class="card"><div class="matrix-wrap"><table class="reclist" id="spTable"><thead><tr>
-        <th>ID</th><th>Organisation</th><th>Sponsor</th><th>Visit / preferred</th><th>Heads</th><th>Status</th><th>Invoice</th><th></th></tr></thead>
+        <th>ID</th><th>Organisation</th><th>Donor</th><th>Visit / preferred</th><th>Heads</th><th>Status</th><th>Invoice</th><th></th></tr></thead>
       <tbody>${rows}
         <tr data-sp-newrow><td colspan="8"><button class="rep-add" data-sp-new="booking" style="border-radius:4px">+ New booking</button></td></tr>
         <tr data-sp-empty style="display:none"><td colspan="8" class="muted" style="text-align:center;padding:16px">No records match that search.</td></tr>
@@ -6854,6 +6965,34 @@ function venueAvailCard(){
       <div class="form-body" style="display:block">${filters}${body}</div>
     </aside></div>`;
 }
+/* MuSo-wide availability flyout — no venue; shows every module's activity on the date. */
+function musoAvailCard(){
+  if(!musoAvail) return "";
+  const {date,src,vi}=musoAvail;
+  const close='data-musoavail-close="1"';
+  const filters=`<div class="fld" style="margin:0 0 14px"><div class="lab"><span class="lab-n">Date</span></div>
+      <div style="display:flex;gap:8px"><input class="inp" data-musoavail-date value="${escAttr(date)}" placeholder="DD Mon YYYY" style="flex:1">
+        <button type="button" class="btn btn-primary" data-musoavail-apply="1">Apply</button></div></div>`;
+  let body;
+  if(!date){ body=`<div class="muted" style="padding:8px 4px">Enter a date above to see what's planned at MuSo that day.</div>`; }
+  else {
+    const books=musoDayBookings(date,src,vi).sort((a,b)=>(timeToMin(a.start)||0)-(timeToMin(b.start)||0));
+    if(!books.length){ body=`<div style="padding:10px 12px;border-radius:8px;background:#eaf7ee;border:1px solid #bfe6cb;color:#1e7f3c;font-size:12.5px">Nothing is planned at MuSo on ${escHtml(date)} — the day is open.</div>`; }
+    else {
+      const modPill=m=>`<span class="pill ${m==="This booking"?"pill-ok":"pill-off"}" style="font-size:10px">${escHtml(m)}</span>`;
+      const rows=books.map(b=>`<tr><td class="code" style="white-space:nowrap;color:var(--ink3);vertical-align:top">${escHtml(b.start)}–${escHtml(b.end)}</td><td>${modPill(b.module)} <b style="font-weight:500">${escHtml(b.by)}</b>${b.purpose&&b.purpose!==b.by?` <span class="muted">— ${escHtml(b.purpose)}</span>`:""}<div class="muted" style="font-size:11px;margin-top:2px">Created by ${b.createdBy?escHtml(b.createdBy):"—"}</div></td></tr>`).join("");
+      body=`<div class="muted" style="font-size:11.5px;margin-bottom:8px">${books.length} ${books.length>1?"activities":"activity"} planned on ${escHtml(date)} across Events and Experiences, School, Sponsored School and Birthdays.</div>
+        <div class="matrix-wrap"><table class="reclist"><thead><tr><th style="width:118px">Time</th><th>Planned</th></tr></thead><tbody>${rows}</tbody></table></div>`;
+    }
+  }
+  return `<div class="drawer-layer" id="musoAvailCard">
+    <button class="drawer-backdrop" ${close} aria-label="Close"></button>
+    <aside class="drawer-panel" role="dialog" aria-modal="true" aria-label="MuSo availability">
+      <div class="card-head"><span class="card-title">MuSo availability</span>
+        <button class="drawer-close" ${close} aria-label="Close">&times;</button></div>
+      <div class="form-body" style="display:block">${filters}${body}</div>
+    </aside></div>`;
+}
 function schoolForm(editing){
   if(!schoolDraft) schoolDraft = editing ? Object.assign(JSON.parse(JSON.stringify(schoolById(selSchool)||blankSchool("booking"))),{_mode:"booking"}) : blankSchool(schoolNewMode);
   const d=schoolDraft;
@@ -6931,9 +7070,10 @@ function schoolForm(editing){
     return `<div class="fld wide" data-vrow="${i}" style="border:1px solid var(--rule2);border-radius:8px;padding:14px;margin:0;gap:0">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px"><b style="font-size:12.5px">Visit ${i+1}</b>${i>0?`<button type="button" class="btn" data-school-del-visit="${i}">Remove</button>`:""}</div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px 16px;align-items:start">
-      ${fld("Date",`<input class="inp" data-vf="date" value="${esc(v.date)}" placeholder="DD Mon YYYY">`)}
-      ${fld("School time slot",`<div class="selwrap"><select class="inp" data-vf="slotId">${slotNames.map(n=>`<option${n===v.slotId?" selected":""}>${n}</option>`).join("")}</select></div>`,schoolMapNote(v.slotId))}
+      ${fld("Date",`<div style="display:flex;gap:8px"><input class="inp" data-vf="date" value="${esc(v.date)}" placeholder="DD Mon YYYY" style="flex:1"><button type="button" class="btn" data-school-musoview="${i}" style="white-space:nowrap">View availability</button></div>`)}
+      ${fld("School time slot",`<div style="display:flex;gap:8px"><div class="selwrap" style="flex:1"><select class="inp" data-vf="slotId">${slotNames.map(n=>`<option${n===v.slotId?" selected":""}>${n}</option>`).join("")}</select></div><button type="button" class="btn" data-school-musocheck="${i}" style="white-space:nowrap">Check availability</button></div>`,schoolMapNote(v.slotId))}
     </div>
+    ${musoCheckBanner("school",i)}
     <div style="${gridAuto};margin-top:12px">
       ${numFld("Students","students",v.students)}
       ${numFld("Adults / teachers","adults",v.adults)}
@@ -6992,7 +7132,7 @@ function schoolForm(editing){
       <div class="form-foot"><span class="form-err" id="schoolErr"></span>
         <button class="btn" data-school-cancel="1">Cancel</button>
         <button class="btn btn-primary" data-school-save="1">${saveLbl}</button></div>
-    </div></div>${saveConfirm}${venueAvailCard()}`;
+    </div></div>${saveConfirm}${venueAvailCard()}${musoAvailCard()}`;
 }
 /* Read the open form's fields back into the draft (so add/remove/preset keep typed values). */
 function schoolCaptureForm(){
@@ -7369,11 +7509,11 @@ function sponsoredReports(){
     ${kpi(S('<path d="M3 21h18M5 21V7l7-4 7 4v14"/>'),"blue","Sponsored visits",visitCount,"with a scheduled visit")}
     ${kpi(S('<circle cx="9" cy="7" r="4"/><path d="M2 21v-2a4 4 0 0 1 4-4h6a4 4 0 0 1 4 4v2"/>'),"teal","Students",agg.students,"across all visits")}
     ${kpi(S('<circle cx="12" cy="7" r="4"/><path d="M4 21v-2a4 4 0 0 1 4-4h8a4 4 0 0 1 4 4v2"/>'),"amber","Adults / teachers",agg.adults,"paid heads")}
-    ${kpi(S('<path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>'),"blue","Billed to sponsors",money(Math.round(billed)),"incl. GST, confirmed+")}
+    ${kpi(S('<path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>'),"blue","Billed to donors",money(Math.round(billed)),"incl. GST, confirmed+")}
   </div>`;
-  const spMap={}; SPONSORED_BOOKINGS.forEach(r=>{const c=schoolCompute(r);const k=r.sponsor||"(unassigned)";const m=spMap[k]||(spMap[k]={sponsor:k,recs:0,students:0,billed:0});m.recs++;m.students+=c.students;if(["Confirmed","Live","Ended"].includes(r.status))m.billed+=c.grand;});
-  const spRows=Object.values(spMap).map(m=>`<tr><td>${escHtml(m.sponsor)}</td><td class="code">${m.recs}</td><td class="code">${m.students}</td><td class="code">${money(Math.round(m.billed))}</td></tr>`).join("")||`<tr><td colspan="4" class="muted" style="text-align:center;padding:14px">No sponsor data yet.</td></tr>`;
-  const spTable=`<div class="card"><div class="card-head"><span class="card-title">By sponsor</span><button class="btn" style="margin-left:auto" data-export="sponsored-sponsor">Export CSV</button></div><div class="matrix-wrap"><table class="reclist"><thead><tr><th>Sponsor</th><th>Records</th><th>Students</th><th>Billed</th></tr></thead><tbody>${spRows}</tbody></table></div></div>`;
+  const spMap={}; SPONSORED_BOOKINGS.forEach(r=>{const c=schoolCompute(r); const billedOk=["Confirmed","Live","Ended"].includes(r.status); const seen=new Set(); spFunding(r).forEach(f=>{ if(!f.donor) return; const m=spMap[f.donor]||(spMap[f.donor]={sponsor:f.donor,recs:0,students:0,billed:0}); if(!seen.has(f.donor)){ m.recs++; m.students+=c.students; seen.add(f.donor); } if(billedOk) m.billed+=f.amount; }); });
+  const spRows=Object.values(spMap).map(m=>`<tr><td>${escHtml(m.sponsor)}</td><td class="code">${m.recs}</td><td class="code">${m.students}</td><td class="code">${money(Math.round(m.billed))}</td></tr>`).join("")||`<tr><td colspan="4" class="muted" style="text-align:center;padding:14px">No donor data yet.</td></tr>`;
+  const spTable=`<div class="card"><div class="card-head"><span class="card-title">By donor</span><button class="btn" style="margin-left:auto" data-export="sponsored-sponsor">Export CSV</button></div><div class="matrix-wrap"><table class="reclist"><thead><tr><th>Donor</th><th>Records</th><th>Students</th><th>Billed</th></tr></thead><tbody>${spRows}</tbody></table></div></div>`;
   const distMap={}; SPONSORED_BOOKINGS.forEach(r=>{const c=schoolCompute(r);const k=r.district||"(none)";const m=distMap[k]||(distMap[k]={district:k,recs:0,students:0});m.recs++;m.students+=c.students;});
   const distRows=Object.values(distMap).map(m=>`<tr><td>${escHtml(m.district)}</td><td class="code">${m.recs}</td><td class="code">${m.students}</td></tr>`).join("")||`<tr><td colspan="3" class="muted" style="text-align:center;padding:14px">No district data yet.</td></tr>`;
   const distTable=`<div class="card"><div class="card-head"><span class="card-title">By district (reach)</span><button class="btn" style="margin-left:auto" data-export="sponsored-boards">Export CSV</button></div><div class="matrix-wrap"><table class="reclist"><thead><tr><th>District</th><th>Records</th><th>Students</th></tr></thead><tbody>${distRows}</tbody></table></div></div>`;
@@ -7384,8 +7524,8 @@ function sponsoredReports(){
 function blankSp(mode){
   return {id:nextSpId(), status:"Open", origin:mode==="booking"?"backend":"enquiry", created:fmtDMY(new Date()),
     school:"",location:"",boards:[],boardsOther:"",grade:"",poc:"",designation:"",designationOther:"",email:"",phone:"",
-    orgType:"Funded (NGO)", sponsor:"", district:"", transport:{need:"No",vendor:""},
-    interested:[],interestedOther:"",prefDate:"",expChildren:"",expTeachers:"",note:"",proofDoc:"",
+    orgType:"Funded (NGO)", sponsor:"", donorTicketing:"", donorFood:"", donorTravel:"", district:"", transport:{need:"No",vendor:""},
+    interested:[],interestedOther:"",prefDate:"",expChildren:"",expTeachers:"",note:"",proofDoc:"",foodVendor:"",
     visits:[], entryStudent:"", entryAdult:"",
     ngoGstin:"", ngoPan:"", authNumber:"", speciallyAbled:0, sponsoredGroups:[],
     postVisit:{remark:"",images:[]}, students:{uploaded:false,total:0,girls:0,boys:0}, feedback:{sent:false},
@@ -7407,8 +7547,12 @@ function spForm(editing){
   const secOrg=`<section class="form-sec ta-host"><div class="form-sec-head"><span class="form-sec-title">Organisation</span></div><div class="form-sec-body">${
     fld("School / NGO name",`<div class="typeahead"><input class="inp" data-spf="school" data-sp-typeahead value="${esc(d.school)}" placeholder="Start typing to search existing organisations…" autocomplete="off"><div class="ta-menu" hidden></div></div>`,"Pick an organisation already on file to auto-fill its details.","",true)+
     fld("Location",t("location",d.location,"City / area"),"",true)+
+    fld("District",sel("district",d.district,DISTRICTS.filter(x=>x.is_active).map(x=>x.name),"—"),"From the Districts master.")+
     fld("Type",sel("orgType",d.orgType,SP_ORG_TYPES),"Funded visitors (NGO) or a school.")+
-    fld("District",sel("district",d.district,DISTRICTS.filter(x=>x.is_active).map(x=>x.name),"—"),"From the Districts master.")
+    fld("Authorisation number",t("authNumber",d.authNumber,"The authorisation no."))+
+    fld("GST number",t("ngoGstin",d.ngoGstin,"For our information (as applicable)"))+
+    fld("PAN",t("ngoPan",d.ngoPan,"For our information"))+
+    fld("Proof of identity",t("proofDoc",d.proofDoc,"e.g. 12A / 80G registration.pdf"),"Mandatory for funded visitors (upload — wireframe).","",true)
   }</div></section>`;
 
   const secBoard=section("Education Board",
@@ -7421,8 +7565,8 @@ function spForm(editing){
     fld("Expected number of children",num("expChildren",d.expChildren,"e.g., 120"))+
     fld("Expected number of teachers / staff",num("expTeachers",d.expTeachers,"e.g., 10"))+
     fld("Transport support",sel("transport_need",(d.transport||{}).need,SP_TRANSPORT),"Does the group need transport?")+
-    fld("Transport vendor",t("transport_vendor",(d.transport||{}).vendor,"If yes, the bus vendor"))+
-    fld("Proof of identity (NGO)",t("proofDoc",d.proofDoc,"e.g. 12A / 80G registration.pdf"),"Mandatory for funded visitors (upload — wireframe).","",true));
+    fld("Transport vendor",sel("transport_vendor",(d.transport||{}).vendor,[...new Set(TRANSPORT_VENDORS.filter(v=>v.is_active).map(v=>v.name).concat((d.transport||{}).vendor?[(d.transport||{}).vendor]:[]))],"— none —"),"From the Transport vendors master.")+
+    fld("Food vendor",sel("foodVendor",d.foodVendor,[...new Set(FOOD_VENDORS.filter(v=>v.is_active).map(v=>v.name).concat(d.foodVendor?[d.foodVendor]:[]))],"— none —"),"From the Food vendors master."));
 
   const secPOC=section("Point of Contact",
     fld("Name of POC / coordinator",t("poc",d.poc,"Full name of the coordinating teacher / POC"),"",true,true)+
@@ -7438,15 +7582,20 @@ function spForm(editing){
   const secAdditional=section("Additional Information",
     fld("Message / Note",ta("note",d.note),"Special assistance requests, lunch planning, etc.","",true));
 
-  const secSponsor=section("Sponsor &amp; funding",
-    fld("Sponsor",sel("sponsor",d.sponsor,SPONSORS.filter(s=>s.is_active).map(s=>s.name),"— choose a sponsor —"),"The visit's e-invoice is raised against this sponsor. The school pays nothing.")+
-    fld("Authorisation number",t("authNumber",d.authNumber,"Sponsor's CSR authorisation / PO no."))+
-    fld("GST number of NGO",t("ngoGstin",d.ngoGstin,"For our information (as applicable)"))+
-    fld("PAN of NGO",t("ngoPan",d.ngoPan,"For our information")));
+  const activeDonors=SPONSORS.filter(s=>s.is_active).map(s=>s.name);
+  const donorCell=(k,label,covers)=>`<div><div class="lab" style="margin-bottom:4px"><span class="lab-n">${label}</span></div>${sel(k,d[k],activeDonors,"— none —")}<div class="muted" style="font-size:10.5px;margin-top:3px">Covers ${covers}</div></div>`;
+  const secSponsor=section("Donor &amp; funding",
+    `<div class="fld wide" style="grid-column:1/-1;margin:0"><div class="lab"><span class="lab-n">Funding by donor</span></div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px 16px">
+        ${donorCell("donorTicketing","Ticketing donor","entry fees")}
+        ${donorCell("donorFood","Food donor","F&amp;B")}
+        ${donorCell("donorTravel","Travel donor","transport")}
+      </div>
+      <div class="muted" style="font-size:11px;margin-top:6px">Each is optional and the same donor may cover more than one. The e-invoice reflects the split — the school pays nothing.</div></div>`);
 
   // Entry pricing
   const secPricing=section("Entry pricing",
-    fld("Entry price preset",`<div class="selwrap"><select class="inp" data-sp-preset data-spf="entryPreset"><option value="">— pick a preset —</option>${ENTRY_PRICES.map(p=>`<option${d.entryPreset===p.name?" selected":""}>${escHtml(p.name)}</option>`).join("")}</select></div>`,"Fills the per-head prices below; they stay editable. Prices are inclusive of 18% GST. Billed to the sponsor, not the school.")+
+    fld("Entry price preset",`<div class="selwrap"><select class="inp" data-sp-preset data-spf="entryPreset"><option value="">— pick a preset —</option>${ENTRY_PRICES.map(p=>`<option${d.entryPreset===p.name?" selected":""}>${escHtml(p.name)}</option>`).join("")}</select></div>`,"Fills the per-head prices below; they stay editable. Prices are inclusive of 18% GST. Billed to the donor, not the school.")+
     fld("Entry price · per student",num("entryStudent",d.entryStudent),"Inclusive of 18% GST.")+
     fld("Entry price · per adult / teacher",num("entryAdult",d.entryAdult),"Inclusive of 18% GST."));
 
@@ -7483,9 +7632,10 @@ function spForm(editing){
     return `<div class="fld wide" data-spvrow="${i}" style="border:1px solid var(--rule2);border-radius:8px;padding:14px;margin:0;gap:0">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px"><b style="font-size:12.5px">Visit ${i+1}</b>${i>0?`<button type="button" class="btn" data-sp-del-visit="${i}">Remove</button>`:""}</div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px 16px;align-items:start">
-      ${fld("Date",`<input class="inp" data-spvf="date" value="${esc(v.date)}" placeholder="DD Mon YYYY">`)}
-      ${fld("School time slot",`<div class="selwrap"><select class="inp" data-spvf="slotId">${slotNames.map(n=>`<option${n===v.slotId?" selected":""}>${n}</option>`).join("")}</select></div>`,schoolMapNote(v.slotId))}
+      ${fld("Date",`<div style="display:flex;gap:8px"><input class="inp" data-spvf="date" value="${esc(v.date)}" placeholder="DD Mon YYYY" style="flex:1"><button type="button" class="btn" data-sp-musoview="${i}" style="white-space:nowrap">View availability</button></div>`)}
+      ${fld("School time slot",`<div style="display:flex;gap:8px"><div class="selwrap" style="flex:1"><select class="inp" data-spvf="slotId">${slotNames.map(n=>`<option${n===v.slotId?" selected":""}>${n}</option>`).join("")}</select></div><button type="button" class="btn" data-sp-musocheck="${i}" style="white-space:nowrap">Check availability</button></div>`,schoolMapNote(v.slotId))}
     </div>
+    ${musoCheckBanner("sponsored",i)}
     <div style="${gridAuto};margin-top:12px">
       ${numV("Students","students",v.students)}
       ${numV("Adults / teachers","adults",v.adults)}
@@ -7522,14 +7672,14 @@ function spForm(editing){
   const secBill=section("Billing (for invoicing)",
     fld("Billing name",t("billName",d.billName))+
     fld("Billing address",t("billAddress",d.billAddress),"","",true)+
-    fld("GST number",t("gstin",d.gstin),"For the beneficiary's records — the sponsor invoice is raised against the sponsor's GSTIN.")+
+    fld("GST number",t("gstin",d.gstin),"For the beneficiary's records — the donor invoice is raised against the donor's GSTIN.")+
     fld("PAN",t("pan",d.pan)));
 
   const statusLocked=false;
-  const statusOpts = SCHOOL_MANUAL_STATUSES.includes(d.status) ? SCHOOL_MANUAL_STATUSES : SCHOOL_MANUAL_STATUSES.concat([d.status]);
+  const statusOpts = SP_MANUAL_STATUSES.includes(d.status) ? SP_MANUAL_STATUSES : SP_MANUAL_STATUSES.concat([d.status]);
   const secStatus=section("Status & comments",
     fld("Assignee",t("assignee",d.assignee,"e.g. Faiz Khan"),"Optional — the MuSo staff member handling this booking.")+
-    fld("Status",sel("status",d.status,statusOpts),"Confirmed / Live / Ended follow the visit; set the rest here.")+
+    fld("Status",sel("status",d.status,statusOpts),"No payment on sponsored visits — set Confirmed here. Live / Ended follow the visit date and completion.")+
     fld("Comments",ta("comments",d.comments),"","",true));
 
   const body = secOrg+secBoard+secVisitDetails+secPOC+secInterested+secAdditional+secSponsor+secPricing+secVisits+secBill+secImpact+secStatus;
@@ -7550,13 +7700,14 @@ function spForm(editing){
       <div class="form-foot"><span class="form-err" id="spErr"></span>
         <button class="btn" data-sp-cancel="1">Cancel</button>
         <button class="btn btn-primary" data-sp-save="1">${saveLbl}</button></div>
-    </div></div>${saveConfirm}${venueAvailCard()}`;
+    </div></div>${saveConfirm}${venueAvailCard()}${musoAvailCard()}`;
 }
 function spCaptureForm(){
   const d=spDraft; if(!d) return;
   const g=k=>{const el=document.querySelector(`[data-spf="${k}"]`);return el?el.value:undefined;};
-  ["school","location","orgType","district","boardsOther","grade","prefDate","poc","designation","designationOther","email","phone","interestedOther","note","sponsor","authNumber","ngoGstin","ngoPan","proofDoc","entryPreset","entryStudent","entryAdult","billName","billAddress","gstin","pan","speciallyAbled","status","comments","assignee","expChildren","expTeachers"].forEach(k=>{const v=g(k);if(v!==undefined)d[k]=v;});
+  ["school","location","orgType","district","boardsOther","grade","prefDate","poc","designation","designationOther","email","phone","interestedOther","note","donorTicketing","donorFood","donorTravel","foodVendor","authNumber","ngoGstin","ngoPan","proofDoc","entryPreset","entryStudent","entryAdult","billName","billAddress","gstin","pan","speciallyAbled","status","comments","assignee","expChildren","expTeachers"].forEach(k=>{const v=g(k);if(v!==undefined)d[k]=v;});
   if(d.designation!=="Other") d.designationOther="";
+  d.sponsor=spPrimaryDonor(d);   // keep the derived "primary" donor in sync for search / at-a-glance / by-donor
   const upEl=document.querySelector("[data-sp-uprows]");
   if(upEl) d.sponsoredGroups=[...upEl.querySelectorAll("[data-sp-uprow]")].map(r=>({title:(r.querySelector('[data-spf-up="title"]')||{}).value||"",count:(r.querySelector('[data-spf-up="count"]')||{}).value||""})).filter(x=>x.title||x.count);
   const tn=g("transport_need"), tv=g("transport_vendor"); d.transport=d.transport||{}; if(tn!==undefined)d.transport.need=tn; if(tv!==undefined)d.transport.vendor=tv;
@@ -7609,8 +7760,8 @@ function spInvoice(rec){
   Object.values(hsnMap).forEach(m=>{ m.taxable=Math.round(m.gross/1.18); const tax=m.gross-m.taxable; m.cgst=Math.round(tax/2); m.sgst=tax-m.cgst; });
   const hsnRows=Object.values(hsnMap).map(m=>`<tr><td class="code">${m.hsn}</td><td class="code">${money(Math.round(m.taxable))}</td><td class="code">${m.half}%</td><td class="code">${money(Math.round(m.cgst))}</td><td class="code">${m.half}%</td><td class="code">${money(Math.round(m.sgst))}</td><td class="code">${money(Math.round(m.cgst+m.sgst))}</td></tr>`).join("");
   const note = raised
-    ? `<span class="muted" style="font-size:11.5px">Raised on ${escHtml(rec.invoice.on||rec.created)} · e-invoice against the sponsor</span>`
-    : `<span class="muted" style="font-size:11.5px">Preview — the e-invoice is raised to ${escHtml(rec.sponsor||"the sponsor")} once the visit is marked completed.</span>`;
+    ? `<span class="muted" style="font-size:11.5px">Raised on ${escHtml(rec.invoice.on||rec.created)} · e-invoice against the donor</span>`
+    : `<span class="muted" style="font-size:11.5px">Preview — the e-invoice is raised to ${escHtml(rec.sponsor||"the donor")} once the visit is marked completed.</span>`;
   return `<div class="invoice-actions">
       <button class="btn btn-primary" data-sp-invoice-pdf="1">Download invoice (PDF)</button>
       ${note}</div>
@@ -7621,13 +7772,15 @@ function spInvoice(rec){
         <div class="inv-party"><b>${MUSO_SELLER.name}</b><div>${MUSO_SELLER.addr.join("<br>")}</div><div>GSTIN/UIN: <span class="code">${MUSO_SELLER.gstin}</span></div><div>State: ${MUSO_SELLER.state}, Code: ${MUSO_SELLER.stateCode}</div></div>
         <div class="inv-party inv-meta"><div><span class="muted">Invoice No.</span><br><b>INV-${rec.id}</b></div><div><span class="muted">Dated</span><br><b>${escHtml((rec.invoice&&rec.invoice.on)||rec.created)}</b></div><div><span class="muted">Booking</span><br><b>${rec.id}</b></div></div>
       </div>
-      <div class="inv-buyer"><b>Billed to (Sponsor)</b><div>${escHtml(rec.sponsor||"—")}</div>${sp.addr?`<div>${escHtml(sp.addr)}</div>`:""}${sp.gstin?`<div>GSTIN/UIN: <span class="code">${escHtml(sp.gstin)}</span></div><div>Place of Supply: ${escHtml(sp.state||MUSO_SELLER.state)}</div>`:'<div class="muted">No sponsor selected yet.</div>'}<div class="muted" style="margin-top:4px">Beneficiary: ${escHtml(rec.school||"—")}${rec.district?" · "+escHtml(rec.district):""}</div></div>
+      <div class="inv-buyer"><b>Billed to (Donor)</b><div>${escHtml(rec.sponsor||"—")}</div>${sp.addr?`<div>${escHtml(sp.addr)}</div>`:""}${sp.gstin?`<div>GSTIN/UIN: <span class="code">${escHtml(sp.gstin)}</span></div><div>Place of Supply: ${escHtml(sp.state||MUSO_SELLER.state)}</div>`:'<div class="muted">No donor selected yet.</div>'}<div class="muted" style="margin-top:4px">Beneficiary: ${escHtml(rec.school||"—")}${rec.district?" · "+escHtml(rec.district):""}</div></div>
       <div class="matrix-wrap"><table class="reclist inv-table"><thead><tr><th>Sl</th><th>Particulars</th><th>HSN/SAC</th><th>Qty</th><th>Rate</th><th>per</th><th>Amount</th></tr></thead><tbody>${partRows||`<tr><td colspan="7" class="muted" style="text-align:center;padding:14px">No priced lines yet — add visit headcounts and entry prices.</td></tr>`}${lines.length?taxRows:""}
         <tr class="inv-total"><td colspan="6" style="text-align:right"><b>Total (incl. GST)</b></td><td class="code"><b>${money(c.grand)}</b></td></tr></tbody></table></div>
       <div class="inv-words">Amount Chargeable (in words): <b>INR ${amountInWords(c.grand).replace(/^Rupees /,"")}</b></div>
       ${lines.length?`<div class="matrix-wrap"><table class="reclist inv-hsn"><thead><tr><th>HSN/SAC</th><th>Taxable Value</th><th>CGST Rate</th><th>CGST Amt</th><th>SGST Rate</th><th>SGST Amt</th><th>Total Tax</th></tr></thead><tbody>${hsnRows}</tbody></table></div>`:""}
+      <div style="font-size:11px;font-weight:600;color:var(--ink2);margin:12px 0 6px">Funding split</div>
+      <div class="matrix-wrap"><table class="reclist"><thead><tr><th>Covers</th><th>Donor</th><th class="ctr">Amount (incl. GST)</th></tr></thead><tbody>${spFunding(rec).map(f=>`<tr><td>${escHtml(f.label)}</td><td>${f.donor?escHtml(f.donor):'<span class="muted">Not sponsored</span>'}</td><td class="code" style="text-align:right">${f.key==="donorTravel"?'<span class="muted">In kind</span>':money(f.amount)}</td></tr>`).join("")}</tbody></table></div>
       <div class="inv-foot"><div><b>Company's Bank Details</b><div>Bank: ${MUSO_SELLER.bank.name}</div><div>A/c No.: <span class="code">${MUSO_SELLER.bank.ac}</span></div><div>IFSC: ${MUSO_SELLER.bank.ifsc}</div></div><div class="inv-sign"><div>for <b>${MUSO_SELLER.name}</b></div><div class="inv-sign-line"></div><div class="muted">Authorised Signatory</div></div></div>
-      <div class="inv-note muted">The visit cost is borne by the sponsor; the school pays nothing. Computer-generated invoice.</div>
+      <div class="inv-note muted">The visit cost is borne by the donors per the funding split above; the school pays nothing. Computer-generated invoice.</div>
     </div>`;
 }
 function spInvoicePdf(rec){
@@ -7642,7 +7795,7 @@ function spInvoicePdf(rec){
   line(MUSO_SELLER.name,ML,10,true,INK2);y-=13; MUSO_SELLER.addr.forEach(a=>{line(a,ML,9,false,INK3);y-=12;});
   line("GSTIN: "+MUSO_SELLER.gstin,ML,9,false,INK3);y-=18;
   line("Invoice No.: INV-"+rec.id+"    Dated: "+((rec.invoice&&rec.invoice.on)||rec.created),ML,9,false,INK2);y-=16;
-  line("Billed to (Sponsor): "+(rec.sponsor||"-"),ML,10,true,INK);y-=13;
+  line("Billed to (Donor): "+(rec.sponsor||"-"),ML,10,true,INK);y-=13;
   if(sp.addr){line(sp.addr,ML,9,false,INK2);y-=12;}
   line(sp.gstin?("GSTIN: "+sp.gstin):"",ML,9,false,INK2);y-=12;
   line("Beneficiary: "+(rec.school||"-")+(rec.district?" · "+rec.district:""),ML,9,false,INK2);y-=18;
@@ -7654,9 +7807,11 @@ function spInvoicePdf(rec){
   rt("CGST 9% (incl.): "+money(c.cgst),W-MR,9,false,INK2);y-=13;
   rt("SGST 9% (incl.): "+money(c.sgst),W-MR,9,false,INK2);y-=13;
   rt("Grand total (incl. GST): "+money(c.grand),W-MR,11,true,INK);y-=18;
-  line("Amount in words: "+amountInWords(c.grand),ML,9,false,INK2);y-=20;
-  line("Cost borne by the sponsor; the school pays nothing. Computer-generated invoice.",ML,8,false,INK3);
-  ops.push("BT /F1 8 Tf "+INK3+" rg 1 0 0 1 "+ML+" 40 Tm ("+pdfEsc(A("Museum of Solutions  -  "+rec.id+"  -  Sponsor invoice"))+") Tj ET");
+  line("Amount in words: "+amountInWords(c.grand),ML,9,false,INK2);y-=18;
+  line("Funding split",ML,9,true,INK2);y-=14;
+  spFunding(rec).forEach(f=>{line(f.label+":  "+(f.donor||"Not sponsored"),ML,9,false,INK2);rt(f.key==="donorTravel"?"In kind":money(f.amount),W-MR,9,false,INK2);y-=13;});y-=6;
+  line("Cost borne by the donors per the funding split; the school pays nothing. Computer-generated invoice.",ML,8,false,INK3);
+  ops.push("BT /F1 8 Tf "+INK3+" rg 1 0 0 1 "+ML+" 40 Tm ("+pdfEsc(A("Museum of Solutions  -  "+rec.id+"  -  Donor invoice"))+") Tj ET");
   return pdfAssemble([ops.join("\n")], rec.id+"-invoice.pdf");
 }
 
@@ -7681,16 +7836,18 @@ function spDetail(){
       ${row("Email",rec.email?`<span class="code">${escHtml(rec.email)}</span>`:"")}${row("Phone",rec.phone?`<span class="code">${escHtml(rec.phone)}</span>`:"")}
       ${row("Preferred date",rec.prefDate)}${row("Expected",`${rec.expChildren||"—"} children · ${rec.expTeachers||"—"} staff`)}
       ${row("Transport",rec.transport&&rec.transport.need==="Yes"?("Yes"+(rec.transport.vendor?" · "+escHtml(rec.transport.vendor):"")):((rec.transport&&rec.transport.need)||"—"))}
+      ${row("Food vendor",escHtml(rec.foodVendor))}
       ${row("Proof of identity",escHtml(rec.proofDoc))}${rec.assignee?row("Assignee",escHtml(rec.assignee)):""}${row("Note",escHtml(rec.note))}
     </tbody></table></div></div>
-    <div class="card"><div class="card-head"><span class="card-title">Sponsor &amp; funding</span></div><div class="matrix-wrap"><table class="reclist"><tbody>
-      ${row("Sponsor",escHtml(rec.sponsor)||'<span class="muted">To be assigned</span>')}${row("Authorisation no.",escHtml(rec.authNumber))}
-      ${row("GST of NGO",rec.ngoGstin?`<span class="code">${escHtml(rec.ngoGstin)}</span>`:"")}${row("PAN of NGO",rec.ngoPan?`<span class="code">${escHtml(rec.ngoPan)}</span>`:"")}
-      ${row("Funding",'<span class="muted">Billed to sponsor — the school pays nothing.</span>')}
+    <div class="card"><div class="card-head"><span class="card-title">Donor &amp; funding</span></div><div class="matrix-wrap"><table class="reclist"><tbody>
+      ${spFunding(rec).map(f=>row(f.label, f.donor?`${escHtml(f.donor)} <span class="muted">· ${f.key==="donorTravel"?"in kind":money(f.amount)}</span>`:'<span class="muted">Not sponsored</span>')).join("")}
+      ${row("Authorisation number",escHtml(rec.authNumber))}
+      ${row("GST number",rec.ngoGstin?`<span class="code">${escHtml(rec.ngoGstin)}</span>`:"")}${row("PAN",rec.ngoPan?`<span class="code">${escHtml(rec.ngoPan)}</span>`:"")}
+      ${row("Funding",'<span class="muted">Split across donors — the school pays nothing.</span>')}
     </tbody></table></div></div>
     <div class="card"><div class="card-head"><span class="card-title">Visits &amp; headcount</span><span class="card-note">each visit carries its own food &amp; optionals</span></div>
       <div class="matrix-wrap"><table class="reclist"><thead><tr><th>#</th><th>Date</th><th>Slot → inventory</th><th>Students</th><th>Adults</th><th>Comp.</th><th>Food &amp; F&amp;B</th><th>Optionals</th></tr></thead><tbody>${visitRows}</tbody></table></div></div>
-    <div class="card"><div class="card-head"><span class="card-title">Pricing (billed to sponsor)</span></div><div class="matrix-wrap"><table class="reclist"><tbody>
+    <div class="card"><div class="card-head"><span class="card-title">Pricing (billed to donor)</span></div><div class="matrix-wrap"><table class="reclist"><tbody>
       ${row("Entry · per student",rec.entryStudent!==""&&rec.entryStudent!=null?money(rec.entryStudent):"")}
       ${row("Entry · per adult",rec.entryAdult!==""&&rec.entryAdult!=null?money(rec.entryAdult):"")}
       ${row("Visit total (incl. GST)",c.visitTotal?money(c.visitTotal):"")}${row("Food total",c.foodTotal?money(c.foodTotal):"")}
@@ -7700,12 +7857,12 @@ function spDetail(){
       ${row("Specially-abled children",rec.speciallyAbled?`<b>${rec.speciallyAbled}</b>`:"")}${row("Sponsored children",(Array.isArray(rec.sponsoredGroups)?rec.sponsoredGroups:[]).filter(r=>r.title||r.count).map(r=>escHtml(r.title||"—")+(r.count?": "+escHtml(r.count):"")).join(" · "))}${row("Comments",escHtml(rec.comments))}
     </tbody></table></div></div>`;
 
-  /* After visit */
+  /* Post visit */
   const st=rec.students||{}; const split = st.uploaded && st.total ? `<div style="margin-top:8px"><div style="display:flex;height:14px;border-radius:7px;overflow:hidden;border:1px solid var(--rule)"><div style="width:${Math.round((st.girls/st.total)*100)}%;background:var(--blue)"></div><div style="flex:1;background:var(--ok)"></div></div><div class="muted" style="font-size:11px;margin-top:4px">${st.girls} girls · ${st.boys} boys · ${st.total} total</div></div>` : '<div class="muted" style="font-size:12px">No student CSV uploaded yet.</div>';
   const afterVisit=`<div class="card"><div class="card-head"><span class="card-title">Post-visit remark</span></div><div class="card-body" style="font-size:12.5px">${rec.postVisit&&rec.postVisit.remark?escHtml(rec.postVisit.remark):'<span class="muted">Added on the booking form after the visit.</span>'}</div></div>
     <div class="card"><div class="card-head"><span class="card-title">Event photos</span><span class="card-note">${(rec.postVisit&&rec.postVisit.images||[]).length} uploaded</span><button class="btn" style="margin-left:auto" data-sp-upload="images">Upload photos</button></div>
       <div class="card-body">${(rec.postVisit&&rec.postVisit.images||[]).length?`<div style="display:flex;gap:8px;flex-wrap:wrap">${rec.postVisit.images.map(im=>`<div style="width:96px"><div style="height:64px;border-radius:6px;background:var(--blue-wash);display:flex;align-items:center;justify-content:center;color:var(--blue)">IMG</div><div class="sub" style="font-size:10.5px;margin-top:3px">${escHtml(im)}</div></div>`).join("")}</div>`:'<span class="muted" style="font-size:12px">No photos yet (wireframe upload).</span>'}</div></div>
-    <div class="card"><div class="card-head"><span class="card-title">Student information (CSV)</span><button class="btn" style="margin-left:auto" data-sp-upload="students">Upload CSV</button></div><div class="card-body">${split}</div></div>
+    <div class="card"><div class="card-head"><span class="card-title">Student information (CSV)</span><button class="btn" style="margin-left:auto" data-sp-student-template="1">Download format</button><button class="btn" style="margin-left:8px" data-sp-upload="students">Upload CSV</button></div><div class="card-body">${split}</div></div>
     <div class="card"><div class="card-head"><span class="card-title">Feedback &amp; acknowledgement</span></div><div class="card-body" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
       <span style="font-size:12.5px">${rec.feedback&&rec.feedback.sent?'<span class="pill pill-ok"><i class="dot"></i>Sent</span> Feedback + acknowledgement emailed to the POC.':'Not sent yet.'}</span>
       <button class="btn" data-sp-feedback="1">${rec.feedback&&rec.feedback.sent?"Resend feedback form":"Send feedback form"}</button></div></div>
@@ -7723,7 +7880,7 @@ function spDetail(){
 
   const aside=`<aside class="disc-summary-col">
     <div class="card"><div class="card-head"><span class="card-title">At a glance</span></div><div class="matrix-wrap"><table class="reclist"><tbody>
-      ${row("Status",schoolStatusPill(rec))}${row("Sponsor",escHtml(rec.sponsor)||'<span class="muted">—</span>')}${row("Students",`<b>${c.students}</b>`)}${row("Billed to sponsor",money(c.grand))}
+      ${row("Status",schoolStatusPill(rec))}${row("Donors",(()=>{const ds=[...new Set(spFunding(rec).map(f=>f.donor).filter(Boolean))];return ds.length?ds.map(escHtml).join(", "):'<span class="muted">—</span>';})())}${row("Students",`<b>${c.students}</b>`)}${row("Billed to donors",money(c.grand))}
     </tbody></table></div></div>
     <div class="card"><div class="card-head"><span class="card-title">Actions</span></div><div class="card-body" style="display:flex;flex-direction:column;gap:8px">
       <button class="btn btn-primary" data-sp-edit="1">Edit details</button>
@@ -7733,10 +7890,10 @@ function spDetail(){
       ${rec.status!=="Ended"?`<button class="btn" data-sp-complete="1">Mark completed</button>`:""}
     </div></div></aside>`;
 
-  const subs=[["overview","Overview"],["invoice","Sponsor invoice"],["after",`After visit`],["timeline",`Timeline · ${tl.length}`]];
+  const subs=[["overview","Overview"],["after",`Post visit`],["timeline",`Timeline · ${tl.length}`]];
   if(!subs.some(([k])=>k===spsub)) spsub="overview";
   const tabs=`<div class="subs">${subs.map(([k,l])=>`<button class="sub-tab" data-spsub="${k}" aria-selected="${spsub===k}">${l}</button>`).join("")}</div>`;
-  const bodyByTab = spsub==="invoice"?spInvoice(rec) : spsub==="after"?afterVisit : spsub==="timeline"?timeline : overview;
+  const bodyByTab = spsub==="after"?afterVisit : spsub==="timeline"?timeline : overview;
   const confirm = spMsg?`<div class="confirm-layer"><button class="confirm-backdrop" data-sp-msg-dismiss="1" aria-label="Close"></button>
     <div class="confirm-box" role="dialog" aria-modal="true"><div class="confirm-title">Done</div><div class="confirm-body">${escHtml(spMsg)}</div>
     <div class="confirm-actions"><button class="btn btn-primary" data-sp-msg-dismiss="1">Done</button></div></div></div>`:"";
@@ -8404,7 +8561,7 @@ function careerApplications(){
 /* Foundations master-row edit: the data array behind each simple master, so a row's
    Edit button can open the create form prefilled from that row (display-only). */
 const masterData = k => ({categories:CATS, tax:TAXRATES, hsn:HSNCODES, shopcats:SHOP_CATEGORIES, progcats:PROGCATS,
-  fboptions:FB_OPTIONS, schoolslots:SCHOOL_SLOTS, entryprices:ENTRY_PRICES, sponsors:SPONSORS, districts:DISTRICTS, venues:VENUES, pools:[POOLS.shared]}[k]);
+  fboptions:FB_OPTIONS, schoolslots:SCHOOL_SLOTS, entryprices:ENTRY_PRICES, sponsors:SPONSORS, districts:DISTRICTS, transportvendors:TRANSPORT_VENDORS, foodvendors:FOOD_VENDORS, venues:VENUES, pools:[POOLS.shared]}[k]);
 function masterEditValues(k, i){
   const row=(masterData(k)||[])[i]||{};
   if(k==="tax")  return {code:row.code,name:row.name,percentage:row.pct,is_active:true};
@@ -8778,11 +8935,11 @@ document.addEventListener("click",e=>{
     if(a&&a.cv) careerOpenPdf(careerCvPdf(a), a.cv.name); return; }
   if(e.target.closest("[data-career-clear]")){ careerFDept=""; careerFType=""; careerFStatus="all"; render(); return; }
   const nav=e.target.closest(".mitem");
-  if(nav){ current=nav.dataset.k; mEdit=-1; ruleDel=null; venueAvail=null; venueCheck=null; selP=0; selW=0; selB=0; selE=0; esub="details"; eventCats=new Set(); selBooking=0; tab="list"; sub="details"; csub="details"; editD=-1; selD=0; dsub="summary"; editCond=-1; condDraft=null; draftDiscount=null; addOpen=null; progKind="event"; progCat="Event"; schoolDraft=null; schtab="records"; schoolEmailView=null; schoolMsg=""; schoolEInvView=false; schoolEInvConfirm=false; schoolSaveConfirm=false; schoolBulk=null; schoolPayFlyout=false; schoolPayEdit=-1; schoolPayDel=-1; schoolCNFlyout=false; schoolCNView=false; spDraft=null; sptab="records"; spEmailView=null; spMsg=""; spSaveConfirm=false; spBulk=null; render(); $(".stage").scrollTop=0; return; }
+  if(nav){ current=nav.dataset.k; mEdit=-1; ruleDel=null; venueAvail=null; venueCheck=null; musoAvail=null; musoCheck=null; selP=0; selW=0; selB=0; selE=0; esub="details"; eventCats=new Set(); selBooking=0; tab="list"; sub="details"; csub="details"; editD=-1; selD=0; dsub="summary"; editCond=-1; condDraft=null; draftDiscount=null; addOpen=null; progKind="event"; progCat="Event"; schoolDraft=null; schtab="records"; schoolEmailView=null; schoolMsg=""; schoolEInvView=false; schoolEInvConfirm=false; schoolSaveConfirm=false; schoolBulk=null; schoolPayFlyout=false; schoolPayEdit=-1; schoolPayDel=-1; schoolCNFlyout=false; schoolCNView=false; spDraft=null; sptab="records"; spEmailView=null; spMsg=""; spSaveConfirm=false; spBulk=null; render(); $(".stage").scrollTop=0; return; }
   const goto=e.target.closest("[data-goto]");
   if(goto){ current=goto.dataset.goto; mEdit=-1; selP=0; selW=0; selB=0; selE=0; selD=0; selBooking=0; tab="list"; sub="details"; csub="details"; dsub="summary"; addOpen=null; render(); $(".stage").scrollTop=0; return; }
   const t=e.target.closest("[data-tab]");
-  if(t){ tab=t.dataset.tab; if(tab==="new"&&current==="bookings") resetBooking(); if(tab==="new"&&current==="shopsales") resetShopSale(); if(tab==="new"&&current==="programs"){progKind=progFormat(progCat)==="multi"?"camp":"event";eventCats=new Set();} if(tab==="new"&&current==="events") eventCats=new Set(); if(tab==="new"&&current==="discounts"){ draftDiscount=null; newVoucherPending=!!t.dataset.newvoucher; } if((tab==="new"||tab==="edit")&&current==="tiers") seedTierDraft(tab==="edit"); if(tab==="new"&&(current==="products"||current==="programs")) prodBuildingPool=false; if(tab==="new"&&current==="school") schoolDraft=blankSchool(schoolNewMode); if(tab==="new"&&current==="sponsored") spDraft=blankSp(spNewMode); if(tab==="list"){ schoolDraft=null; spDraft=null; } mEdit=-1; venueAvail=null; venueCheck=null; addOpen=null; render(); $(".stage").scrollTop=0; return; }
+  if(t){ tab=t.dataset.tab; if(tab==="new"&&current==="bookings") resetBooking(); if(tab==="new"&&current==="shopsales") resetShopSale(); if(tab==="new"&&current==="programs"){progKind=progFormat(progCat)==="multi"?"camp":"event";eventCats=new Set();} if(tab==="new"&&current==="events") eventCats=new Set(); if(tab==="new"&&current==="discounts"){ draftDiscount=null; newVoucherPending=!!t.dataset.newvoucher; } if((tab==="new"||tab==="edit")&&current==="tiers") seedTierDraft(tab==="edit"); if(tab==="new"&&(current==="products"||current==="programs")) prodBuildingPool=false; if(tab==="new"&&current==="school") schoolDraft=blankSchool(schoolNewMode); if(tab==="new"&&current==="sponsored") spDraft=blankSp(spNewMode); if(tab==="list"){ schoolDraft=null; spDraft=null; } mEdit=-1; venueAvail=null; venueCheck=null; musoAvail=null; musoCheck=null; addOpen=null; render(); $(".stage").scrollTop=0; return; }
   const medit=e.target.closest("[data-medit]");
   if(medit){ mEdit=+medit.dataset.medit; tab="edit"; render(); $(".stage").scrollTop=0; return; }
   if(e.target.closest("[data-medit-save]")){ mEdit=-1; tab="list"; render(); $(".stage").scrollTop=0; return; }
@@ -8995,6 +9152,17 @@ document.addEventListener("click",e=>{
     venueCheck=runVenueCheck("sponsored",vi,oi); render(); $(".stage").scrollTop=0; return; }
   if(e.target.closest("[data-venueavail-apply]")){ if(venueAvail){ const v=document.querySelector("[data-venueavail-venue]"), d=document.querySelector("[data-venueavail-date]"); if(v) venueAvail.venue=v.value; if(d) venueAvail.date=d.value.trim(); } render(); return; }
   if(e.target.closest("[data-venueavail-close]")){ venueAvail=null; render(); return; }
+  // ---- MuSo-wide availability (main visit) ----
+  const schMV=e.target.closest("[data-school-musoview]");
+  if(schMV){ schoolCaptureForm(); const vi=+schMV.dataset.schoolMusoview; const v=(((schoolDraft||{}).visits||[])[vi]||{}); musoAvail={date:v.date||"",src:"school",vi}; render(); $(".stage").scrollTop=0; return; }
+  const spMV=e.target.closest("[data-sp-musoview]");
+  if(spMV){ spCaptureForm(); const vi=+spMV.dataset.spMusoview; const v=(((spDraft||{}).visits||[])[vi]||{}); musoAvail={date:v.date||"",src:"sponsored",vi}; render(); $(".stage").scrollTop=0; return; }
+  const schMC=e.target.closest("[data-school-musocheck]");
+  if(schMC){ schoolCaptureForm(); musoCheck=runMusoCheck("school",+schMC.dataset.schoolMusocheck); render(); return; }
+  const spMC=e.target.closest("[data-sp-musocheck]");
+  if(spMC){ spCaptureForm(); musoCheck=runMusoCheck("sponsored",+spMC.dataset.spMusocheck); render(); return; }
+  if(e.target.closest("[data-musoavail-apply]")){ if(musoAvail){ const d=document.querySelector("[data-musoavail-date]"); if(d) musoAvail.date=d.value.trim(); } render(); return; }
+  if(e.target.closest("[data-musoavail-close]")){ musoAvail=null; render(); return; }
   const schAddV=e.target.closest("[data-school-add-visit]");
   if(schAddV){ schoolCaptureForm(); const d=schoolDraft; if(d){ (d.visits=d.visits||[]).push(blankVisit()); } render(); return; }
   const schDelV=e.target.closest("[data-school-del-visit]");
@@ -9055,7 +9223,7 @@ document.addEventListener("click",e=>{
   if(e.target.closest("[data-sp-edit]")){ const rec=spById(selSp); spDraft=rec?Object.assign(JSON.parse(JSON.stringify(rec)),{_mode:"booking"}):blankSp("booking"); tab="edit"; render(); $(".stage").scrollTop=0; return; }
   if(e.target.closest("[data-sp-cancel]")){ const editing=spById((spDraft||{}).id); spDraft=null; spSaveConfirm=false; tab=editing?"detail":"list"; render(); $(".stage").scrollTop=0; return; }
   const spSuggest=e.target.closest("[data-sp-suggest]");
-  if(spSuggest){ spCaptureForm(); const src=spDirectory().find(m=>m.name===spSuggest.dataset.spSuggest); if(src&&spDraft){ const r=src.rec; Object.assign(spDraft,{school:r.school,location:r.location,orgType:r.orgType,district:r.district,boards:(r.boards||[]).slice(),boardsOther:r.boardsOther||"",grade:r.grade,poc:r.poc,designation:r.designation,email:r.email,phone:r.phone,interested:(r.interested||[]).slice(),interestedOther:r.interestedOther||"",sponsor:r.sponsor,transport:{need:(r.transport||{}).need||"No",vendor:(r.transport||{}).vendor||""},ngoGstin:r.ngoGstin||"",ngoPan:r.ngoPan||"",proofDoc:r.proofDoc||""}); } render(); return; }
+  if(spSuggest){ spCaptureForm(); const src=spDirectory().find(m=>m.name===spSuggest.dataset.spSuggest); if(src&&spDraft){ const r=src.rec; Object.assign(spDraft,{school:r.school,location:r.location,orgType:r.orgType,district:r.district,boards:(r.boards||[]).slice(),boardsOther:r.boardsOther||"",grade:r.grade,poc:r.poc,designation:r.designation,email:r.email,phone:r.phone,interested:(r.interested||[]).slice(),interestedOther:r.interestedOther||"",sponsor:r.sponsor||"",donorTicketing:r.donorTicketing||"",donorFood:r.donorFood||"",donorTravel:r.donorTravel||"",foodVendor:r.foodVendor||"",transport:{need:(r.transport||{}).need||"No",vendor:(r.transport||{}).vendor||""},ngoGstin:r.ngoGstin||"",ngoPan:r.ngoPan||"",proofDoc:r.proofDoc||""}); } render(); return; }
   if(e.target.closest("[data-sp-save]")){ spCaptureForm(); spSaveConfirm=true; render(); return; }
   if(e.target.closest("[data-sp-save-cancel]")){ spSaveConfirm=false; render(); return; }
   if(e.target.closest("[data-sp-save-confirm]")){ if(bookingClashes("sponsored").length) return; const cb=document.getElementById("spNotify"); const notify=cb?cb.checked:true; const fp=document.getElementById("spFP"); const sendFP=fp?fp.checked:false; spSaveConfirm=false; spCommit(notify,sendFP); return; }
@@ -9084,9 +9252,10 @@ document.addEventListener("click",e=>{
   if(spExp && spExp.dataset.export.startsWith("sponsored")){ downloadCSV(SP_EXPORT_NAMES[spExp.dataset.export]||"sponsored.csv", spExportRows(spExp.dataset.export)); return; }
   if(e.target.closest("[data-sp-sendmail]")){ const rec=spById(selSp); if(rec){ spLogEmail(rec,"CSR","Email sent to "+(rec.email||"the POC")+" with the sponsored-visit details.","confirm"); spMsg="Email sent to "+(rec.email||"the POC")+". Open it from the Timeline via “View email”. (Wireframe — no email is actually sent.)"; } render(); return; }
   if(e.target.closest("[data-sp-feedback]")){ const rec=spById(selSp); if(rec){ rec.feedback=rec.feedback||{}; rec.feedback.sent=true; spLogEmail(rec,"System","Feedback + acknowledgement form emailed to the POC.","feedback"); spMsg="Feedback + acknowledgement form sent to "+(rec.email||"the POC")+". (Wireframe — no email is actually sent.)"; } render(); return; }
-  if(e.target.closest("[data-sp-complete]")){ const rec=spById(selSp); if(rec){ rec.status="Ended"; rec.invoice=rec.invoice||{}; rec.invoice.raised=true; rec.invoice.on=fmtDMY(new Date()); spLogEmail(rec,"Finance","Visit completed; e-invoice raised to "+(rec.sponsor||"the sponsor")+". Status → Ended.","invoice"); } render(); return; }
+  if(e.target.closest("[data-sp-complete]")){ const rec=spById(selSp); if(rec){ rec.status="Ended"; rec.invoice=rec.invoice||{}; rec.invoice.raised=true; rec.invoice.on=fmtDMY(new Date()); spLogEmail(rec,"Finance","Visit completed; e-invoice raised to "+(rec.sponsor||"the donor")+". Status → Ended.","invoice"); } render(); return; }
   const spPdf=e.target.closest("[data-sp-invoice-pdf]");
   if(spPdf){ const rec=spById(selSp); if(rec) careerOpenPdf(spInvoicePdf(rec), rec.id+"-invoice.pdf"); return; }
+  if(e.target.closest("[data-sp-student-template]")){ downloadCSV("sponsored-student-info-format.csv", [["Student name","Gender","Age","Grade / Class","Guardian name","Guardian contact"],["Aarav Sharma","Boy","10","Grade 5","Meena Sharma","+91 98200 00001"],["Diya Patel","Girl","11","Grade 6","Ramesh Patel","+91 98200 00002"]]); return; }
   const spUp=e.target.closest("[data-sp-upload]");
   if(spUp){ const rec=spById(selSp); const kind=spUp.dataset.spUpload; if(rec){ rec.postVisit=rec.postVisit||{images:[]};
       if(kind==="images"){ (rec.postVisit.images=rec.postVisit.images||[]).push("event-photo-"+((rec.postVisit.images||[]).length+1)+".jpg"); spLog(rec,"CSR","Event photo uploaded."); }
@@ -9269,6 +9438,7 @@ document.addEventListener("click",e=>{
 document.addEventListener("change",e=>{
   if(e.target.matches&&e.target.matches("[data-apply-member]")){ syncDiscountForm(); render(); return; }   // show / hide the plan picker
   const oRowC=e.target.closest&&e.target.closest("[data-vorow],[data-spvorow]"); if(oRowC) syncOptCheckBtn(oRowC);
+  if(e.target.matches&&e.target.matches('[data-vf="slotId"],[data-spvf="slotId"]')&&musoCheck){ musoCheck=null; const r=document.querySelector(".musocheck-result"); if(r) r.remove(); }
   // Designation "Other" → reveal/hide the "Other designation" field on select change.
   if(schoolDraft && e.target.closest && e.target.closest('[data-sf="designation"]')){ schoolCaptureForm(); render(); return; }
   if(spDraft && e.target.closest && e.target.closest('[data-spf="designation"]')){ spCaptureForm(); render(); return; }
@@ -9351,6 +9521,7 @@ function ageFromDOB(str){
 function ageLabel(str){ const a=ageFromDOB(str); return a===null?"":(a===0?"Under 1 yr":a+(a===1?" yr":" yrs")); }
 document.addEventListener("input",e=>{
   const oRow=e.target.closest&&e.target.closest("[data-vorow],[data-spvorow]"); if(oRow) syncOptCheckBtn(oRow);
+  if(e.target.matches&&e.target.matches('[data-vf="date"],[data-spvf="date"]')&&musoCheck){ musoCheck=null; const r=document.querySelector(".musocheck-result"); if(r) r.remove(); }
   if(e.target.id==="schoolCNAmt"){ const a=+e.target.value||0, t=Math.round(a/1.18), g=a-t, cg=Math.round(g/2), sg=g-cg; const bd=document.getElementById("schoolCNBreakdown"); if(bd) bd.textContent="Of which GST (18%): "+money(g)+" (CGST "+money(cg)+" + SGST "+money(sg)+") · Taxable "+money(t); return; }
   if(e.target.matches&&e.target.matches("[data-app-search]")){ appQ=e.target.value; syncCareerSearch(); return; }
   if(e.target.matches&&e.target.matches("[data-career-search]")){ careerQ=e.target.value; syncCareerSearch(); return; }
