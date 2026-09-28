@@ -1250,7 +1250,7 @@ const M = {
             ["Discount their link gives|discount_id","fk","→ Discounts & offers. The discount their link triggers, per §1.10."]]},
 
   paymodes:{g:4,n:"Payment modes",owner:"Aniket · Reception team",perm:"master.finance.manage",src:"Scope §1.9",q:0,
-    d:"POS takes card, UPI and cash. Online takes card, UPI and net banking. Kept as a master so the two lists stay separate.",
+    d:"POS takes card, UPI and cash. Online takes card, UPI and net banking. Kept as a master so the two lists stay separate. Voucher is a built-in mode that is not edited or switched off here: it is offered only on the POS order screen, and a voucher code pays part or all of the total.",
     schema:[["Short code|code","string","CARD, UPI, CASH, NETBANKING"],["Name shown at payment|name","string",""],
             ["Where it can be used|channels[]","enum[]","pos · online","§1.9: cash is POS-only, net banking is online-only."],["Accepted|is_active","bool",""]]},
   scripts:{g:4,n:"Tracking scripts",owner:"Sushmita · Website",perm:"settings.scripts.manage",src:"Scope §12",q:0,
@@ -2650,7 +2650,6 @@ const DISC_PM  = ["any of","all of"];
 const DISC_KINDS = ["Items in the basket","Customer holds a membership","A code is entered",
                     "The booking date","Arrived via an affiliate link","Applied by staff"];
 
-let newVoucherPending = false;   // set by "+ New voucher"; discountForm starts the draft as a voucher
 const DISCOUNTS = [
   {n:"Add-on bundling — combined total",vt:"Percentage",prods:[],dates:["01 Apr 2026","31 Mar 2027"],maxr:"",codes:null,
    prec:10,status:"Approved",maker:"Hasmukh",checker:"Suryanarayan",apply:"auto",
@@ -2709,25 +2708,23 @@ const DISCOUNTS = [
    target:"The chosen items",value:"Percentage",v:"10%",
    src:"category discount: 10% off any program (workshop, camp or event) for members, applied automatically"},
 
-  {n:"",kind:"voucher",codeType:"series",series:{prefix:"FREETOUR",from:"1",to:"50"},auto:false,staffOnly:false,memberOnly:false,
-   covers:["MuSo Tour"],caps:{"Adult":"2","Child 3–11":"2"},
-   dates:["01 Sep 2026","31 Mar 2027"],visit:["",""],maxr:"50",
-   codes:{oncePerUser:true,gen:"1"},prec:80,status:"Approved",maker:"Hasmukh",checker:"Suryanarayan",cond:[],value:"Voucher",v:"",
-   src:"voucher: a free MuSo Tour visit for up to 2 adults and 2 children — 50 single-use codes"},
-
-  {n:"PRESSDAY",kind:"voucher",auto:false,staffOnly:true,memberOnly:false,
-   covers:["MuSo Tour","Mini Golf"],caps:{},
-   dates:["01 Oct 2026","31 Oct 2026"],visit:["",""],maxr:"",
-   codes:{oncePerUser:true,gen:"1"},prec:85,status:"Approved",maker:"Sushmita",checker:"Suryanarayan",cond:[],value:"Voucher",v:"",
-   src:"voucher: press day — MuSo Tour and Mini Golf free, no limit on tickets"},
-
   {n:"",codeType:"series",series:{prefix:"JSW",from:"1",to:"100"},vt:"Flat amount",auto:false,staffOnly:true,memberOnly:false,
    dates:["01 Sep 2026","31 Dec 2026"],visit:["",""],maxr:"100",
    codes:{oncePerUser:true,gen:"1"},prec:60,status:"Approved",maker:"Hasmukh",checker:"Suryanarayan",
    cond:[],
    value:"Flat amount",v:"₹500",
    utm:{source:"",medium:"",campaign:"",term:"",content:""},
-   src:"JSW employee vouchers — a series of 100 single-use codes (JSW001–JSW100), ₹500 off each"}
+   src:"JSW employee codes — a series of 100 single-use codes (JSW001–JSW100), ₹500 off each"}
+];
+
+/* Vouchers (owner, 2026-09-28): a voucher is a PAYMENT METHOD, not a discount. It is a flat amount, issued only when a
+   credit note is settled as a voucher instead of a refund, and it pays part or all of an order (the total, GST included).
+   One code, one use: if the order is smaller than the voucher, the rest is lost. Valid 12 months, editable at issue. */
+const VOUCHERS = [
+  {code:"CN-V7K2P9",amount:1200,expires:"30 Sep 2027",status:"Active",issued:"28 Sep 2026",source:"Credit note CRN-SB-1004 (school booking)"},
+  {code:"CN-A3M8Q4",amount:400,expires:"15 Aug 2027",status:"Active",issued:"15 Aug 2026",source:"Credit note CRN-SB-0987 (school booking)"},
+  {code:"CN-X9R2T6",amount:800,expires:"01 Jun 2027",status:"Redeemed",usedOn:"BK-1041",issued:"01 Jun 2026",source:"Credit note CRN-SB-0951 (school booking)"},
+  {code:"CN-M4D7H2",amount:500,expires:"01 Aug 2026",status:"Expired",issued:"01 Aug 2025",source:"Credit note CRN-SB-0802 (school booking)"}
 ];
 
 const DISC_ITEMS = () => [...P.map(x=>x.n), ...EVENTS.map(x=>x.n), ...WORKSHOPS.map(x=>x.n)];
@@ -3310,7 +3307,6 @@ function applyInfo(d){
 function audienceText(a){ return a.staffOnly&&a.memberOnly?"staff & members only":a.staffOnly?"staff only":a.memberOnly?"members only":"everyone"; }
 function applyText(d){ const a=applyInfo(d); return (a.auto?"Auto-applied":"Applied with the code")+" · "+audienceText(a); }
 function discountSummary(d){
-  if(isVoucher(d)) return "Voucher — when the code is entered, makes "+voucherPhrase(d)+".";
   const a=applyInfo(d);
   const aud=audienceText(a);
   const lead=(a.auto?"Applies automatically":"Applies when the code is entered")+(aud!=="everyone"?`, ${aud},`:"");
@@ -3327,7 +3323,7 @@ function applyBadge(d){
   const a=applyInfo(d);
   const aud={"staff & members only":"Staff & members","staff only":"Staff only","members only":"Members only","everyone":"Everyone"}[audienceText(a)];
   const whoCls=(a.staffOnly||a.memberOnly)?'<span class="pill pill-off">'+aud+'</span>':'<span class="mode">'+aud+'</span>';
-  return (isVoucher(d)?'<span class="pill pill-ok" style="background:#EEF3FF;color:var(--blue)"><i class="dot"></i>Voucher</span> ':'')+(a.auto?'<span class="pill pill-ok"><i class="dot"></i>Auto-applied</span>':'<span class="mode">Code entered</span>')+' '+whoCls;
+  return (a.auto?'<span class="pill pill-ok"><i class="dot"></i>Auto-applied</span>':'<span class="mode">Code entered</span>')+' '+whoCls;
 }
 function condSummaryText(c){
   const cc=Object.assign({k:"Items in the basket"},c||{});
@@ -3335,14 +3331,12 @@ function condSummaryText(c){
 }
 /* Short "what the customer gets" phrase — the discounted items are the basket items. */
 function valueOnlyPhrase(d){
-  if(isVoucher(d)) return "Visit free · "+capsText(d);
   if(!d.v) return "a discount";
   if(d.value==="Flat amount") return "₹"+String(d.v).replace(/[^0-9.]/g,"")+" off";
   return d.v+" off";   // percentage, e.g. "15% off"
 }
 /* One merged summary for the section: what triggers it + what the customer gets. */
 function discountRuleSummary(d){
-  if(isVoucher(d)) return `Enter the voucher and <b>${voucherPhrase(d)}</b>`;
   const bd=condDraftFromDiscount(d);
   const val=valueOnlyPhrase(d);
   if(bd.prods&&bd.prods.length){
@@ -3357,11 +3351,10 @@ function discSummaryPanel(d){
   const rows=[
     ["Method", a.auto?"Automatic discount":(isSeries(d)?("Series · "+codeLabel(d)):("Code · "+(d.n||"—")))],
     ["For", aud.charAt(0).toUpperCase()+aud.slice(1)],
-    isVoucher(d)?["Covers", (d.covers||[]).join(", ")||"—"]:["Amount", d.v?(d.value?d.value+" · "+d.v:d.v):"—"],
-    ...(isVoucher(d)?[["Tickets", capsText(d)]]:[]),
+    ["Amount", d.v?(d.value?d.value+" · "+d.v:d.v):"—"],
     ["Runs", d.dates&&d.dates[0]?(d.dates[0]+(d.dates[1]?" – "+d.dates[1]:" onward")):"Any time"],
     ...(d.visit&&d.visit[0]?[["Visit",d.visit[0]+(d.visit[1]&&d.visit[1]!==d.visit[0]?" – "+d.visit[1]:"")]]:[]),
-    ...(isSeries(d)?[["Vouchers", seriesCount(d.series).toLocaleString()+" codes"]]:[]),
+    ...(isSeries(d)?[["Codes", seriesCount(d.series).toLocaleString()+" codes"]]:[]),
     ["Per user", (d.codes&&d.codes.oncePerUser===false)?"Reusable":"Once"],
     ["Total uses", d.maxr||"No limit"],
     ["Status", d.status||"Draft"]
@@ -3433,8 +3426,6 @@ function syncDiscountForm(){
   const am=document.querySelector("[data-apply-member]"); if(am) d.memberOnly=!!am.checked;
   const mt=document.querySelector("[data-member-tiers]"); if(mt) d.memberTiers=[...mt.querySelectorAll('.chip-opt[data-on="1"]')].map(b=>b.dataset.chipval);
   const co=document.querySelector("[data-code-once]"); if(co){ d.codes=d.codes||{gen:"1"}; d.codes.oncePerUser=co.dataset.on==="1"; }
-  const vc=document.querySelector("[data-voucher-covers]"); if(vc) d.covers=[...vc.querySelectorAll('.chip-opt[data-on="1"]')].map(b=>b.dataset.chipval);
-  document.querySelectorAll("[data-vcap]").forEach(el=>{ d.caps=d.caps||{}; const n=el.value.replace(/[^0-9]/g,""); if(n) d.caps[el.dataset.vcap]=n; else delete d.caps[el.dataset.vcap]; });
   document.querySelectorAll("[data-series]").forEach(el=>{ d.series=d.series||{prefix:"",from:"1",to:"100"}; d.series[el.dataset.series]=el.value; });
 }
 /* Live in-form summaries so the user sees what they are configuring. */
@@ -3451,7 +3442,7 @@ function saveDiscount(){
 }
 /* A 12-character alphanumeric discount code (ambiguous chars omitted). */
 function genCode(){ const cs="ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; let s=""; for(let i=0;i<12;i++) s+=cs.charAt(Math.floor(Math.random()*cs.length)); return s; }
-/* ---- voucher series: one discount → many unique codes (prefix + numeric range) ---- */
+/* ---- code series: one discount → many unique codes (prefix + numeric range) ---- */
 const SERIES_CAP = 1000;   // most codes the wireframe will render in one list
 function seriesPad(to){ return String(Math.max(1,Math.floor(+to||0))).length; }
 function seriesCount(s){ const a=Math.floor(+s.from||0),b=Math.floor(+s.to||0); return b>=a?(b-a+1):0; }
@@ -3459,15 +3450,10 @@ function seriesCode(s,n){ return (s.prefix||"")+String(n).padStart(seriesPad(s.t
 function seriesCodes(s,cap){ const out=[],a=Math.floor(+s.from||0),b=Math.floor(+s.to||0),lim=cap||SERIES_CAP; for(let n=a;n<=b&&out.length<lim;n++) out.push(seriesCode(s,n)); return out; }
 function seriesLabel(s){ const a=Math.floor(+s.from||0),b=Math.floor(+s.to||0); return seriesCode(s,a)+"–"+seriesCode(s,b); }   // e.g. JSW001–JSW100
 /* The code identity shown across listing / summary / detail. */
-/* The Approved code-based discount a typed code belongs to (by name, condition code, or series voucher), or null. */
+/* The Approved code-based discount a typed code belongs to (by name, condition code, or series code), or null. */
 function findDiscountByCode(code){ const up=String(code||"").trim().toUpperCase(); if(!up) return null;
   const seriesHit=d=>{ if(!isSeries(d)) return false; const s=d.series; if(!up.startsWith(String(s.prefix||"").toUpperCase())) return false; const n=parseInt(up.replace(/\D/g,""),10); return !isNaN(n)&&n>=+s.from&&n<=+s.to; };
   return DISCOUNTS.find(d=>d.status==="Approved"&&!applyInfo(d).auto&&(String(d.n||"").toUpperCase()===up||(d.cond||[]).some(c=>String(c.code||"").toUpperCase()===up)||seriesHit(d)))||null; }
-/* A voucher is a discount whose reward is "the visit is free": 100% off the products it covers, for up to
-   caps[category] tickets of each category (no cap = no limit). Created on the Discounts page (owner, 2026-09-25). */
-function isVoucher(d){ return !!d&&d.kind==="voucher"; }
-function capsText(d){ const c=Object.entries(d.caps||{}).filter(([,n])=>+n>0); return c.length?"up to "+c.map(([k,n])=>n+" "+k).join(", "):"no limit on tickets"; }
-function voucherPhrase(d){ return (d.covers&&d.covers.length?d.covers.join(" + "):"nothing yet")+" free — "+capsText(d); }
 /* Only one discount per booking: a second code is refused, naming the one already on the order. "" when the code may go on. */
 function oneDiscountRefusal(code,existing){ if(!existing.length) return "";
   return "Only one discount per booking. Remove "+existing[0].toUpperCase()+" first to use "+String(code).toUpperCase()+" instead."; }
@@ -3520,16 +3506,9 @@ function shareFormCard(){
 }
 function discountForm(editing){
   if(!editing && !draftDiscount) draftDiscount={n:"",auto:false,staffOnly:false,memberOnly:false,cond:[],dates:["",""],value:"Percentage",v:"",prec:"",status:"Draft",maker:"",checker:"—",codes:{oncePerUser:true,gen:"1"},maxr:"",visit:["",""],utm:{source:"",medium:"",campaign:"",term:"",content:""},codeType:"single",series:{prefix:"",from:"1",to:"100"}};
-  if(!editing && newVoucherPending){ Object.assign(draftDiscount,{kind:"voucher",auto:false,value:"Voucher",v:"",covers:[],caps:{}}); newVoucherPending=false; }
   const d = editing ? DISCOUNTS[selD] : draftDiscount;
   const v = discountValues(d);
   const a = applyInfo(d);
-  const vch = isVoucher(d);
-  const kindToggle = `<div class="fld wide"><div class="lab"><span class="lab-n">What is it</span>${tip("A discount takes a percentage or amount off. A voucher makes the visit free: 100% off the products it covers, typed on the order screen's Voucher tab.")}</div>
-      <div class="seg2">
-        <button type="button" class="seg2-btn" data-dkind="discount" data-on="${vch?0:1}">Discount</button>
-        <button type="button" class="seg2-btn" data-dkind="voucher" data-on="${vch?1:0}">Voucher — free visit</button>
-      </div></div>`;
   const methodControl=`<div class="fld wide"><div class="lab"><span class="lab-n">Discount method</span>${tip("A discount code must be entered at checkout. An automatic discount applies on its own with nothing typed.")}<span class="lab-req">Required</span></div>
     <div class="selwrap"><select class="inp" data-method>
       <option value="code"${a.auto?"":" selected"}>Discount code</option>
@@ -3540,7 +3519,7 @@ function discountForm(editing){
   const serErr = isSer ? seriesError(series) : "";
   const serPreview = isSer ? (()=>{ if(serErr) return serErr; const list=seriesCodes(series,4); const n=seriesCount(series);
       return `${list.slice(0,3).join(", ")}${n>3?` … ${seriesCode(series,Math.floor(+series.to||0))}`:""} · ${n.toLocaleString()} code${n===1?"":"s"}`; })() : "";
-  const codeTypeToggle = `<div class="fld wide"><div class="lab"><span class="lab-n">Code type</span>${tip("A single code everyone shares, or a voucher series that issues one unique code per voucher (e.g. JSW001–JSW100).")}</div>
+  const codeTypeToggle = `<div class="fld wide"><div class="lab"><span class="lab-n">Code type</span>${tip("A single code everyone shares, or a code series that issues one unique code each (e.g. JSW001–JSW100).")}</div>
       <div class="seg2">
         <button type="button" class="seg2-btn" data-codetype="single" data-on="${isSer?0:1}">Single code</button>
         <button type="button" class="seg2-btn" data-codetype="series" data-on="${isSer?1:0}">Code series</button>
@@ -3551,7 +3530,7 @@ function discountForm(editing){
           <button type="button" class="btn" data-gencode style="flex:none;white-space:nowrap">Generate random code</button>
           <button type="button" class="btn" data-sharelink style="flex:none;white-space:nowrap"><span style="margin-right:4px">&#128279;</span><span>Get a shareable link</span></button></div>
         <div style="font-size:11px;color:var(--ink3);margin-top:4px">Customers must enter this code at checkout.</div></div>`;
-  const seriesControl = `<div class="fld wide"><div class="lab"><span class="lab-n">Voucher series</span>${tip("A shared prefix plus a number range. The suffix is padded to the width of the last number, so 1–100 gives 001–100.")}<span class="lab-req">Required</span></div>
+  const seriesControl = `<div class="fld wide"><div class="lab"><span class="lab-n">Code series</span>${tip("A shared prefix plus a number range. The suffix is padded to the width of the last number, so 1–100 gives 001–100.")}<span class="lab-req">Required</span></div>
         <div style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap">
           <div style="flex:2;min-width:120px"><div style="font-size:10.5px;color:var(--ink3);margin-bottom:3px">Prefix</div><input class="inp mono" data-series="prefix" value="${escAttr(series.prefix||"")}" placeholder="e.g. JSW"></div>
           <div style="flex:1;min-width:72px"><div style="font-size:10.5px;color:var(--ink3);margin-bottom:3px">From</div><input class="inp mono" data-series="from" value="${escAttr(series.from||"")}" placeholder="1"></div>
@@ -3569,16 +3548,7 @@ function discountForm(editing){
       ${a.memberOnly?`<div style="margin:2px 0 0 24px"><div style="font-size:11.5px;color:var(--ink3);margin-bottom:4px">Which plans — none ticked means every plan</div><div class="chips" data-member-tiers>${MEMBERSHIP_TIERS.map(t=>`<button type="button" class="chip-add chip-opt" data-on="${(d.memberTiers||[]).includes(t.name)?1:0}" data-chipval="${escAttr(t.name)}">${t.name}</button>`).join("")}</div></div>`:""}
     </div>`;
   const basics=`<section class="form-sec"><div class="form-sec-head"><span class="form-sec-title">Basics</span></div>
-    <div class="form-sec-body">${kindToggle}${vch?"":methodControl}${identityControl}${audienceControl}${dfld("is_active",v)}</div></section>`;
-  const coverOpts = P.map(x=>x.n);
-  const capCats = CATS.map(c=>c.name);
-  const voucherSection=`<section class="form-sec" style="grid-column:1/-1"><div class="form-sec-head"><span class="form-sec-title">What the voucher makes free</span>${tip("The products whose tickets become free. Anything else on the same order is paid as normal.")}</div>
-    <div class="form-sec-body">
-      <div class="fld wide" style="grid-column:1/-1"><div class="lab"><span class="lab-n">Free products</span><span class="lab-req">Required</span></div>
-        <div class="chips" data-voucher-covers>${coverOpts.map(n=>`<button type="button" class="chip-add chip-opt" data-on="${(d.covers||[]).includes(n)?1:0}" data-chipval="${escAttr(n)}">${n}</button>`).join("")}</div></div>
-      <div class="fld wide" style="grid-column:1/-1"><div class="lab"><span class="lab-n">Most free tickets per visitor type</span>${tip("Leave a box empty for no limit. Tickets beyond the limit are paid at the normal price.")}<span class="lab-req">Optional</span></div>
-        <div style="display:flex;gap:10px;flex-wrap:wrap">${capCats.map(c=>`<label style="display:flex;flex-direction:column;gap:3px;min-width:110px"><span style="font-size:10.5px;color:var(--ink3)">${c}</span><input class="inp mono" data-vcap="${escAttr(c)}" value="${escAttr((d.caps||{})[c]||"")}" placeholder="No limit" inputmode="numeric"></label>`).join("")}</div></div>
-    </div></section>`;
+    <div class="form-sec-body">${methodControl}${identityControl}${audienceControl}${dfld("is_active",v)}</div></section>`;
   const condSection=`<section class="form-sec" style="grid-column:1/-1"><div class="form-sec-head"><span class="form-sec-title">Discount rule</span>${tip("The items and quantity an order must contain, and how much comes off those same items.")}</div>
     <div class="form-sec-body">
       <div class="fld wide" style="grid-column:1/-1"><div class="lab"><span class="lab-n">Items &amp; quantity</span>${tip("The items and quantity the order must contain. The discount comes off these same items.")}</div>
@@ -3592,14 +3562,14 @@ function discountForm(editing){
     <div class="form-sec-body">${dfld("valid_from / valid_to",v)}${dfld("visit_from / visit_to",v)}${onceControl}${dfld("max_redemptions",v)}${dfld("status",v)}</div></section>`;
   return `<div><div class="disc-layout">
       <div class="disc-main"><div class="card">
-        <div class="card-head"><span class="card-title">${editing?(vch?"Edit voucher":"Edit discount"):(vch?"New voucher":"New discount")}</span></div>
+        <div class="card-head"><span class="card-title">${editing?"Edit discount":"New discount"}</span></div>
         <div class="form-body product-form">
           ${basics}
-          ${vch?voucherSection:condSection}
+          ${condSection}
           ${whenSection}
         </div>
         <div class="form-foot"><button class="btn" data-tab="list">Cancel</button>
-          <button class="btn btn-primary" data-savediscount="1">${editing?(vch?"Save voucher":"Save discount"):(vch?"Create voucher":"Create discount")}</button></div>
+          <button class="btn btn-primary" data-savediscount="1">${editing?"Save discount":"Create discount"}</button></div>
       </div></div>
       <aside class="disc-summary-col"><div class="card">
         <div class="card-head"><span class="card-title">Summary</span></div>
@@ -3745,13 +3715,13 @@ function discDetailBody(d){
     let codeCard;
     if(isSeries(d)){
       const s=d.series, total=seriesCount(s), codes=seriesCodes(s,SERIES_CAP), capped=total>codes.length;
-      // deterministic mock: roughly every 3rd voucher redeemed, so the list reads as live
+      // deterministic mock: roughly every 3rd code redeemed, so the list reads as live
       const rows=codes.map((c,i)=>{ const redeemed=(i%3===1); return `<tr>
         <td class="code"><b style="font-weight:600">${c}</b></td>
         <td>${redeemed?'<span class="pill pill-off">Redeemed</span>':'<span class="pill pill-ok"><i class="dot"></i>Unused</span>'}</td>
         <td class="code muted">${validTo}</td></tr>`; }).join("");
-      codeCard=`<div class="card"><div class="card-head"><span class="card-title">Voucher series</span>
-          <span class="card-note">${escAttr(s.prefix||"")} · ${s.from}–${s.to} · ${total.toLocaleString()} codes · one per voucher</span></div>
+      codeCard=`<div class="card"><div class="card-head"><span class="card-title">Code series</span>
+          <span class="card-note">${escAttr(s.prefix||"")} · ${s.from}–${s.to} · ${total.toLocaleString()} codes · one per code</span></div>
         <div class="card-body" style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;border-bottom:1px solid var(--rule)">
           <span class="code" style="font-size:13px"><b style="font-weight:600">${seriesLabel(s)}</b></span>
           <span style="flex:1"></span>
@@ -3781,7 +3751,7 @@ function discDetailBody(d){
       <div class="card"><div class="matrix-wrap"><table><thead><tr><th style="width:34%">Field</th><th>Value</th></tr></thead>
       <tbody>
         ${row("Method",applyText(d))}
-        ${isSeries(d)?row("Voucher series",codeLabel(d)+" · "+seriesCount(d.series).toLocaleString()+" codes"):""}
+        ${isSeries(d)?row("Code series",codeLabel(d)+" · "+seriesCount(d.series).toLocaleString()+" codes"):""}
         ${row("Reward",valueOnlyPhrase(d))}
         ${row("Applies to",it.length?it.join(", "):"Any item")}
         ${row("Offer runs between",d.dates[0]?(d.dates[0]+(d.dates[1]?" – "+d.dates[1]:" onward")):"Any time")}
@@ -3818,7 +3788,7 @@ let qryExpanded = new Set();
 let deptEditing = "", deptDeleting = "";
 let careerFDept = "", careerFType = "", careerFStatus = "all";
 let current = "dashboard", selP = 0, tab = "list", sub = "details",
-    selW = 0, selB = 0, selE = 0, esub = "details", eventCats = new Set(), selBooking = 0, bookingProduct = 0, bookingSlot = "", bookingDiscountCode = "", bookingDiscountCodes = [], bookingDiscountError = "", bookingCodeTab = "discount", csub = "details", copyFrom = 0, copyTo = new Set(), copyWhat = new Set(["price","seats"]), editD = -1,
+    selW = 0, selB = 0, selE = 0, esub = "details", eventCats = new Set(), selBooking = 0, bookingProduct = 0, bookingSlot = "", bookingDiscountCode = "", bookingDiscountCodes = [], bookingDiscountError = "", bookingVoucher = null, bookingVoucherCode = "", bookingVoucherError = "", bookingPay2 = "Cash", csub = "details", copyFrom = 0, copyTo = new Set(), copyWhat = new Set(["price","seats"]), editD = -1,
     progKind = "event", progCat = "Event", prodBuildingPool = false,
     bookingProducts = new Map(), bookingAddons = new Map(), bookingPrograms = new Map(), bookingPay = "Cash", bookingTab = "products",
     bookingCustomer = {name:"",phone:"",email:"",member:null,location:"",pincode:"",gstin:""}, bookingCustomerLinked = -1, bookingStep = 1, bookingOpenItem = null, bookingCalMonth = null, bookingCancelConfirm = false, bookingDiscountTried = false, bookingStep1Tried = false, bookingRedeemVisit = false, bookingRedeemAdult = false,
@@ -4734,7 +4704,7 @@ const VIEWS = {
         ${addRowNew("Add blackout date")}</tbody></table></div></div>`;
   },
   discounts(){
-    const seg=`<div class="cond-summary" style="margin-bottom:16px">Discounts never combine. When more than one applies to an order, the single discount that gives the customer the <b>biggest saving</b> is applied automatically. A <b>voucher</b> is a discount that makes the visit free; it is typed on the order screen's Voucher tab and counts as the booking's one discount.</div>`;
+    const seg=`<div class="cond-summary" style="margin-bottom:16px">Discounts never combine. When more than one applies to an order, the single discount that gives the customer the <b>biggest saving</b> is applied automatically. Vouchers are not discounts: they are a payment method, used when taking payment on an order.</div>`;
     return seg+toolbar("Search discounts",DISCOUNTS.length+" discounts")+
     `<div class="card"><div class="matrix-wrap"><table class="reclist"><thead><tr>
       <th>Code / title</th><th>Method</th><th>Reward</th><th>Applies to</th><th>Status</th><th>Actions</th></tr></thead>
@@ -4745,7 +4715,7 @@ const VIEWS = {
       <td style="font-size:12px">${it.length?it.join(", "):'<span class="muted">Any item</span>'}</td>
       <td>${d.status==="Approved"?'<span class="pill pill-ok"><i class="dot"></i>Approved</span>':'<span class="pill pill-draft"><i class="dot"></i>'+d.status+'</span>'}</td>
       <td><button class="btn" data-editd="${i}" aria-label="Edit ${d.n}">Edit</button></td></tr>`;}).join("")}
-      <tr><td colspan="6" style="display:flex;gap:8px"><button class="rep-add" data-tab="new" style="border-radius:4px">+ New discount</button><button class="rep-add" data-tab="new" data-newvoucher="1" style="border-radius:4px">+ New voucher</button></td></tr>
+      <tr><td colspan="6" style="display:flex;gap:8px"><button class="rep-add" data-tab="new" style="border-radius:4px">+ New discount</button></td></tr>
     </tbody></table></div></div>`;
   },
 
@@ -5632,7 +5602,7 @@ function bookingForm(editing=false){
   const hasProgram=[...bookingPrograms.values()].some(anyQty);
   let maxCatQty=0; [...bookingProducts.values(),...bookingAddons.values()].forEach(cf=>{ Object.values(catQtys(cf)).forEach(n=>{ if(n>maxCatQty) maxCatQty=n; }); });
   const pctOf=(v,base)=>String(v).includes("%")?base*(parseFloat(v)||0)/100:Math.min(base,parseFloat(String(v).replace(/[^0-9.]/g,""))||0);
-  // typed codes — several per order; each matches an Approved code-based discount by d.n, cond code, or series voucher
+  // typed codes — several per order; each matches an Approved code-based discount by d.n, cond code, or series code
   const findCodeDisc=findDiscountByCode;
   const codeHits=bookingDiscountCodes.map(c=>({code:c,d:findCodeDisc(c)}));
   // auto-applied — evaluate each Approved automatic discount against the cart (simplified conditions)
@@ -5648,21 +5618,8 @@ function bookingForm(editing=false){
   // typed code, automatic offers, the member add-on perk — is a candidate; only the one saving most applies.
   // The rest are listed as not applied. A tie goes to the earlier candidate.
   const addonDiscountPct=member?(member.addonDiscountPct||0):0;
-  // A voucher frees every paid ticket of the products it covers, up to caps[category] tickets per
-  // category across the whole order (no cap = all of them). Membership-redeemed tickets are already free.
-  const voucherValue=d=>{ const left={...(d.caps||{})}; let v=0;
-    const take=(prod,cfg,paidOnly)=>{ if(!prod||!(d.covers||[]).includes(prod.n)) return;
-      combosOf(cfg).forEach(combo=>{ const s=slotFor(prod.slots,combo);
-        prod.cats.forEach(c=>{ let q=(combo.qty&&combo.qty[c])||0; if(!q) return;
-          if(left[c]!==undefined&&left[c]!==""){ const n=Math.min(q,+left[c]); left[c]=+left[c]-n; q=n; }
-          v+=q*priceIn(s,c); }); }); };
-    [...bookingProducts].forEach(([i,cfg])=>take(P[i],cfg));
-    [...bookingAddons].forEach(([code,cfg])=>take(P.find(x=>x.c===code),cfg));
-    return v; };
   const discCandidates=[
-    ...codeHits.filter(x=>x.d).map(x=>isVoucher(x.d)
-      ?{label:"Voucher "+x.code.toUpperCase(),v:"visit free",amount:voucherValue(x.d),kind:"voucher"}
-      :{label:codeLabel(x.d),v:x.d.v+" off",amount:pctOf(x.d.v,subtotal),kind:"code"}),
+    ...codeHits.filter(x=>x.d).map(x=>({label:codeLabel(x.d),v:x.d.v+" off",amount:pctOf(x.d.v,subtotal),kind:"code"})),
     ...autoDiscs.map(x=>({label:x.label,v:x.v,amount:x.amount,kind:"auto"})),
     ...(member&&addonDiscountPct&&addonRawTotal?[{label:"★ "+member.tier+" add-on perk",v:addonDiscountPct+"%",amount:addonRawTotal*addonDiscountPct/100,kind:"member"}]:[])
   ];
@@ -5880,22 +5837,32 @@ function bookingForm(editing=false){
     const mlines=(redeemAdultCount>0?freeLine("Adult",redeemAdultCount):"")+freeLine("Child",redeemVisitCount);
     cartRows.push(cartGroup("Membership visit",`${member.tier} · ${redeemVisitCount} visit${redeemVisitCount>1?"s":""}`,mlines));
   }
+  // Voucher = a payment method (owner, 2026-09-28). Verified by code; pays min(voucher, total due). Any leftover of the
+  // voucher is lost (one code, one use). If the order is bigger, the rest is taken with a second method.
+  const vch=bookingPay==="Voucher"?bookingVoucher:null;
+  const vchApplied=(vch&&grand>0)?Math.min(vch.amount,grand):0;
+  const toPay=Math.max(0,grand-vchApplied);
+  const vchLost=vch?Math.max(0,vch.amount-vchApplied):0;
+  const voucherBox=bookingPay!=="Voucher"?"":`<div class="summary-voucher">
+      <div class="booking-discount"><input class="inp mono" id="bookingVoucherCode" placeholder="Voucher code, e.g. CN-V7K2P9" value="${escAttr(bookingVoucherCode)}"${vch?" disabled":""}>${vch?`<button class="btn" data-remove-voucher="1">Remove</button>`:`<button class="btn" data-verify-voucher="1">Verify</button>`}</div>
+      ${bookingVoucherError?`<div role="alert" style="color:var(--stop);font-size:12px;margin:4px 0 2px">${escHtml(bookingVoucherError)}</div>`:""}
+      ${vch?`<div class="booking-summary-row" style="color:var(--ok)"><span>Voucher ${escHtml(vch.code)} · worth ${money(vch.amount)}</span><span>− ${money(vchApplied)}</span></div>
+      ${toPay>0?`<div class="booking-summary-row" style="font-weight:600"><span>Still to pay</span><span>${money(toPay)}</span></div>
+      <div class="summary-pay-lbl">Pay the remaining ${money(toPay)} with</div>
+      <div class="summary-pay-grid">${["Cash","Card","UPI"].map(m=>`<button class="summary-pay-btn" data-book-pay2="${escAttr(m)}" aria-pressed="${bookingPay2===m}">${m}</button>`).join("")}</div>`:`<div style="font-size:11.5px;color:var(--ink3);margin:2px 0">The voucher covers this booking.${vchLost>0?" The unused "+money(vchLost)+" is not refunded — the code is used up.":""}</div>`}`
+      :`<div style="font-size:10.5px;color:var(--ink3);margin:8px 0 4px;font-family:var(--mono);letter-spacing:.06em;text-transform:uppercase">Vouchers to try — click to fill</div>
+      <div class="chips" style="margin:0 0 6px">${VOUCHERS.map(v=>`<button type="button" class="chip-add" data-try-voucher="${escAttr(v.code)}"><b style="font-weight:600">${escHtml(v.code)}</b> · ${money(v.amount)} · ${escHtml(v.status)}</button>`).join("")}</div>`}
+    </div>`;
+  const voucherPending=bookingPay==="Voucher"&&!vch&&grand>0;
+  const ctaLabel=grand<=0?"Confirm free booking":voucherPending?"Verify the voucher to continue":vch?(toPay>0?"Take payment · "+money(toPay)+" "+bookingPay2+" + voucher "+money(vchApplied):"Confirm booking · paid by voucher"):"Take payment · "+money(grand);
   const summaryPay=hasItems?`<div class="summary-pay">
     ${grand>0?`<div class="summary-pay-lbl">Payment method</div>
-    <div class="summary-pay-grid">${["Cash","Card","UPI"].map(m=>`<button class="summary-pay-btn" data-book-pay="${escAttr(m)}" aria-pressed="${bookingPay===m}">${m}</button>`).join("")}</div>`:`<div class="summary-pay-lbl">Nothing to pay — the voucher covers this booking</div>`}
-    ${editing?"":`<button class="btn btn-primary summary-pay-cta">${grand>0?"Take payment · "+money(grand):"Confirm free booking"}</button>`}
+    <div class="summary-pay-grid">${["Cash","Card","UPI","Voucher"].map(m=>`<button class="summary-pay-btn" data-book-pay="${escAttr(m)}" aria-pressed="${bookingPay===m}">${m}</button>`).join("")}</div>${voucherBox}`:`<div class="summary-pay-lbl">Nothing to pay</div>`}
+    ${editing?"":`<button class="btn btn-primary summary-pay-cta"${voucherPending?" disabled":""}>${ctaLabel}</button>`}
   </div>`:"";
   const summary=`<aside class="booking-summary"><div class="booking-summary-head">Order summary${cartRows.length?` <span class="booking-summary-count">${cartRows.length} item${cartRows.length===1?"":"s"}</span>`:""}</div><div class="booking-summary-body">
     ${cartRows.length?cartRows.join(""):`<div class="pos-empty">Nothing added yet.<br>Pick a product or program to begin.</div>`}
-    <div class="seg2" style="margin:10px 0 6px" role="tablist" aria-label="Code type">
-      <button type="button" class="seg2-btn" role="tab" data-book-codetab="discount" data-on="${bookingCodeTab==="voucher"?0:1}" aria-selected="${bookingCodeTab!=="voucher"}">Discount code</button>
-      <button type="button" class="seg2-btn" role="tab" data-book-codetab="voucher" data-on="${bookingCodeTab==="voucher"?1:0}" aria-selected="${bookingCodeTab==="voucher"}">Voucher</button>
-    </div>
-    <div class="booking-discount"><input class="inp mono" id="bookingDiscountCode" placeholder="${bookingCodeTab==="voucher"?"Voucher code, e.g. FREETOUR01":"Discount code"}" value="${escAttr(bookingDiscountCode)}"><button class="btn" data-apply-book-discount="1">Apply</button></div>
-    ${bookingCodeTab==="voucher"?`<div style="font-size:11px;color:var(--ink3);margin:0 0 4px">A voucher makes the tickets it covers free. It counts as this booking's one discount.</div>
-    <div style="font-size:10.5px;color:var(--ink3);margin:6px 0 4px;font-family:var(--mono);letter-spacing:.06em;text-transform:uppercase">Vouchers to try — click to apply</div>
-    <div class="chips" style="margin:0 0 6px">${DISCOUNTS.filter(d=>isVoucher(d)&&d.status==="Approved").map(d=>{ const code=isSeries(d)?seriesCode(d.series,Math.floor(+d.series.from||1)):d.n;
-      return `<button type="button" class="chip-add" data-try-voucher="${escAttr(code)}" title="${escAttr(voucherPhrase(d))}"><b style="font-weight:600">${escHtml(isSeries(d)?codeLabel(d):code)}</b> · ${escHtml((d.covers||[]).join(" + "))} · ${escHtml(capsText(d))}</button>`; }).join("")}</div>`:""}
+    <div class="booking-discount"><input class="inp mono" id="bookingDiscountCode" placeholder="Discount code" value="${escAttr(bookingDiscountCode)}"><button class="btn" data-apply-book-discount="1">Apply</button></div>
     ${bookingDiscountError?`<div role="alert" style="color:var(--stop);font-size:12px;margin:4px 0 2px">${escHtml(bookingDiscountError)}</div>`:""}
     ${codeHits.length?`<div class="chips" style="margin:6px 0">${codeHits.map((x,i)=>`<span class="msel-tag" style="${x.d?"":"background:var(--stop-wash,#fdecec);color:var(--stop)"}">${escHtml(x.code)}${x.d?"":" · not recognised"}<button type="button" data-remove-book-code="${i}" aria-label="Remove ${escAttr(x.code)}">&times;</button></span>`).join("")}</div>`:""}
     <div class="booking-summary-row"><span>Subtotal</span><span>${money(subtotal)}</span></div>
@@ -7128,6 +7095,7 @@ function schoolCreditNoteDoc(rec){
       <div class="inv-words">Amount credited (in words): <b>INR ${amountInWords(cc.amount).replace(/^Rupees /,"")}</b></div>
       <div class="matrix-wrap"><table class="reclist inv-hsn"><thead><tr><th>HSN/SAC</th><th>Taxable Value</th><th>CGST Rate</th><th>CGST Amt</th><th>SGST Rate</th><th>SGST Amt</th><th>Total Tax</th></tr></thead><tbody>${hsnRows}</tbody></table></div>
       ${cn.remark?`<div class="inv-words" style="font-weight:400">Remark: ${escHtml(cn.remark)}</div>`:""}
+      ${cn.voucher?`<div class="inv-words" style="font-weight:400">Settled by voucher <span class="code"><b>${escHtml(cn.voucher.code)}</b></span> for ${money(cc.amount)} — valid until ${escHtml(cn.voucher.expires||"—")}. Usable as a payment method on a later order.</div>`:`<div class="inv-words" style="font-weight:400">Settled by refund to the school.</div>`}
       <div class="inv-foot"><div><b>Company's Bank Details</b><div>Bank: ${MUSO_SELLER.bank.name}</div><div>A/c No.: <span class="code">${MUSO_SELLER.bank.ac}</span></div><div>IFSC: ${MUSO_SELLER.bank.ifsc}</div></div><div class="inv-sign"><div>for <b>${MUSO_SELLER.name}</b></div><div class="inv-sign-line"></div><div class="muted">Authorised Signatory</div></div></div>
       <div class="inv-note muted">Credit note issued under Section 34 of the CGST Act — reduces MuSo's output tax against the referenced invoice. Computer generated.</div>
     </div>`;
@@ -7323,6 +7291,9 @@ function schoolDetail(){
           <div class="fld" style="margin:0"><div class="lab"><span class="lab-n">Credit type</span></div><div class="selwrap"><select class="inp" data-school-cn-type id="schoolCNType"><option>Full (entire invoice)</option><option>Partial amount</option></select></div></div>
           <div class="fld" style="margin:0"><div class="lab"><span class="lab-n">Amount (incl. GST)</span></div><input class="inp mono" id="schoolCNAmt" type="number" min="0" max="${c.grand}" value="${c.grand}" disabled></div>
           <div class="fld wide" style="margin:0;grid-column:1/-1"><div class="muted" id="schoolCNBreakdown" style="font-size:11.5px">Of which GST (18%): ${money(cnInit.gst)} (CGST ${money(cnInit.cgst)} + SGST ${money(cnInit.sgst)}) · Taxable ${money(cnInit.taxable)}</div></div>
+          <div class="fld" style="margin:0"><div class="lab"><span class="lab-n">Settle as</span></div><div class="selwrap"><select class="inp" data-school-cn-settle id="schoolCNSettle"><option>Refund to the school</option><option>Voucher</option></select></div></div>
+          <div class="fld" style="margin:0;display:none" id="schoolCNVoucherRow"><div class="lab"><span class="lab-n">Voucher valid until</span></div><input class="inp mono" id="schoolCNVoucherExp" value="${escAttr(fmtDMY(new Date(new Date().getFullYear()+1,new Date().getMonth(),new Date().getDate())))}" placeholder="dd Mon yyyy"></div>
+          <div class="fld wide" style="margin:0;grid-column:1/-1"><div class="muted" style="font-size:11.5px">A voucher is a flat amount the school can use as payment on a later order. One code, one use: any part of it that an order does not use is lost.</div></div>
           <div class="fld wide" style="margin:0;grid-column:1/-1"><div class="lab"><span class="lab-n">Remark</span></div><textarea class="inp" id="schoolCNRemark" rows="2" style="resize:vertical" placeholder="Optional note for the record"></textarea></div>
         </div>
         <div class="muted" style="font-size:11px;margin-top:14px;line-height:1.6">A credit note reduces MuSo's output tax against this invoice and is reported with its own IRN. One credit note can be raised per booking. Issue by 30 Nov following the financial year of the original supply.</div>
@@ -8543,7 +8514,7 @@ function addSubmit(){
   addOpen=null; render(); $(".stage").scrollTop=0;
 }
 
-function resetBooking(){ bookingProducts=new Map(); bookingAddons=new Map(); bookingPrograms=new Map(); bookingPay="Cash"; bookingDiscountCode=""; bookingDiscountCodes=[]; bookingDiscountError=""; bookingCodeTab="discount"; bookingDiscountTried=false; bookingStep1Tried=false; bookingTab="products"; bookingCustomer={name:"",phone:"",email:"",member:null,location:"",pincode:"",gstin:"",state:"Maharashtra"}; bookingCustomerLinked=-1; bookingStep=1; bookingOpenItem=null; bookingCalMonth=null; bookingCancelConfirm=false; bookingRedeemVisit=false; bookingRedeemAdult=false; }
+function resetBooking(){ bookingProducts=new Map(); bookingAddons=new Map(); bookingPrograms=new Map(); bookingPay="Cash"; bookingDiscountCode=""; bookingDiscountCodes=[]; bookingDiscountError=""; bookingVoucher=null; bookingVoucherCode=""; bookingVoucherError=""; bookingPay2="Cash"; bookingDiscountTried=false; bookingStep1Tried=false; bookingTab="products"; bookingCustomer={name:"",phone:"",email:"",member:null,location:"",pincode:"",gstin:"",state:"Maharashtra"}; bookingCustomerLinked=-1; bookingStep=1; bookingOpenItem=null; bookingCalMonth=null; bookingCancelConfirm=false; bookingRedeemVisit=false; bookingRedeemAdult=false; }
 
 /* Products a membership tier can grant access to — those that carry time slots. */
 function tierProductPool(){ return P.filter(p=>p.slots&&p.slots.length); }
@@ -8782,7 +8753,7 @@ document.addEventListener("click",e=>{
   const goto=e.target.closest("[data-goto]");
   if(goto){ current=goto.dataset.goto; mEdit=-1; selP=0; selW=0; selB=0; selE=0; selD=0; selBooking=0; tab="list"; sub="details"; csub="details"; dsub="summary"; addOpen=null; render(); $(".stage").scrollTop=0; return; }
   const t=e.target.closest("[data-tab]");
-  if(t){ tab=t.dataset.tab; if(tab==="new"&&current==="bookings") resetBooking(); if(tab==="new"&&current==="shopsales") resetShopSale(); if(tab==="new"&&current==="programs"){progKind=progFormat(progCat)==="multi"?"camp":"event";eventCats=new Set();} if(tab==="new"&&current==="events") eventCats=new Set(); if(tab==="new"&&current==="discounts"){ draftDiscount=null; newVoucherPending=!!t.dataset.newvoucher; } if((tab==="new"||tab==="edit")&&current==="tiers") seedTierDraft(tab==="edit"); if(tab==="new"&&(current==="products"||current==="programs")) prodBuildingPool=false; if(tab==="new"&&current==="school") schoolDraft=blankSchool(schoolNewMode); if(tab==="new"&&current==="sponsored") spDraft=blankSp(spNewMode); if(tab==="list"){ schoolDraft=null; spDraft=null; } mEdit=-1; venueAvail=null; venueCheck=null; addOpen=null; render(); $(".stage").scrollTop=0; return; }
+  if(t){ tab=t.dataset.tab; if(tab==="new"&&current==="bookings") resetBooking(); if(tab==="new"&&current==="shopsales") resetShopSale(); if(tab==="new"&&current==="programs"){progKind=progFormat(progCat)==="multi"?"camp":"event";eventCats=new Set();} if(tab==="new"&&current==="events") eventCats=new Set(); if(tab==="new"&&current==="discounts"){ draftDiscount=null; } if((tab==="new"||tab==="edit")&&current==="tiers") seedTierDraft(tab==="edit"); if(tab==="new"&&(current==="products"||current==="programs")) prodBuildingPool=false; if(tab==="new"&&current==="school") schoolDraft=blankSchool(schoolNewMode); if(tab==="new"&&current==="sponsored") spDraft=blankSp(spNewMode); if(tab==="list"){ schoolDraft=null; spDraft=null; } mEdit=-1; venueAvail=null; venueCheck=null; addOpen=null; render(); $(".stage").scrollTop=0; return; }
   const medit=e.target.closest("[data-medit]");
   if(medit){ mEdit=+medit.dataset.medit; tab="edit"; render(); $(".stage").scrollTop=0; return; }
   if(e.target.closest("[data-medit-save]")){ mEdit=-1; tab="list"; render(); $(".stage").scrollTop=0; return; }
@@ -8801,9 +8772,7 @@ document.addEventListener("click",e=>{
   if(e.target.closest("[data-savediscount]")){ saveDiscount(); return; }
   const ctype=e.target.closest&&e.target.closest("[data-codetype]");
   if(ctype){ syncDiscountForm(); curDiscount().codeType=ctype.dataset.codetype; render(); return; }
-  const dkind=e.target.closest&&e.target.closest("[data-dkind]");
-  if(dkind){ syncDiscountForm(); const d=curDiscount(); d.kind=dkind.dataset.dkind==="voucher"?"voucher":undefined; if(d.kind){ d.auto=false; d.value="Voucher"; d.v=""; d.covers=d.covers||[]; d.caps=d.caps||{}; } else if(d.value==="Voucher"){ d.value="Percentage"; } render(); return; }
-
+  
   const expSer=e.target.closest&&e.target.closest("[data-export-series]");
   if(expSer){ const dd=DISCOUNTS[+expSer.dataset.exportSeries]; if(dd&&isSeries(dd)){ const b=expSer.querySelector("span")||expSer, t=b.textContent; b.textContent=`Prepared ${seriesCount(dd.series).toLocaleString()} codes`; setTimeout(()=>{b.textContent=t;},1600); } return; }
   if(e.target.closest("[data-gencode]")){ const el=document.getElementById("discountCode"); if(el) el.value=genCode(); return; }
@@ -8822,15 +8791,23 @@ document.addEventListener("click",e=>{
     return; }
   if(e.target.closest("[data-apply-book-discount]")){ const c=(document.getElementById("bookingDiscountCode")?.value||"").trim(); bookingDiscountError="";
     if(c&&!bookingDiscountCodes.some(x=>x.toUpperCase()===c.toUpperCase())){ const hit=findDiscountByCode(c);
-      const wrongTab=hit&&(bookingCodeTab==="voucher")!==isVoucher(hit)?(c.toUpperCase()+(isVoucher(hit)?" is a voucher — use the Voucher tab.":" is a discount code — use the Discount code tab.")):"";
-      const why=wrongTab||oneDiscountRefusal(c,bookingDiscountCodes);
+      const why=oneDiscountRefusal(c,bookingDiscountCodes);
       if(why){ bookingDiscountError=why; bookingDiscountCode=c; render(); return; }
       bookingDiscountCodes.push(c); }
     bookingDiscountCode=""; bookingDiscountTried=!!c; render(); return; }
   const tryV=e.target.closest("[data-try-voucher]");
-  if(tryV){ const inp=document.getElementById("bookingDiscountCode"); if(inp) inp.value=tryV.dataset.tryVoucher; document.querySelector("[data-apply-book-discount]")?.click(); return; }
-  const codeTab=e.target.closest("[data-book-codetab]");
-  if(codeTab){ bookingCodeTab=codeTab.dataset.bookCodetab; bookingDiscountError=""; render(); return; }
+  if(tryV){ const inp=document.getElementById("bookingVoucherCode"); if(inp) inp.value=tryV.dataset.tryVoucher; bookingVoucherCode=tryV.dataset.tryVoucher; document.querySelector("[data-verify-voucher]")?.click(); return; }
+  if(e.target.closest("[data-verify-voucher]")){ const c=(document.getElementById("bookingVoucherCode")?.value||"").trim().toUpperCase(); bookingVoucherCode=c; bookingVoucherError=""; bookingVoucher=null;
+    const v=VOUCHERS.find(x=>x.code===c);
+    if(!c) bookingVoucherError="Enter the voucher code.";
+    else if(!v) bookingVoucherError="No voucher has the code "+c+".";
+    else if(v.status==="Redeemed") bookingVoucherError=c+" was already used"+(v.usedOn?" on "+v.usedOn:"")+".";
+    else if(v.status==="Expired") bookingVoucherError=c+" expired on "+v.expires+".";
+    else bookingVoucher=v;
+    render(); return; }
+  if(e.target.closest("[data-remove-voucher]")){ bookingVoucher=null; bookingVoucherCode=""; bookingVoucherError=""; render(); return; }
+  const bkPay2=e.target.closest("[data-book-pay2]");
+  if(bkPay2){ bookingPay2=bkPay2.dataset.bookPay2; render(); return; }
   const rmCode=e.target.closest("[data-remove-book-code]");
   if(rmCode){ bookingDiscountCodes.splice(+rmCode.dataset.removeBookCode,1); bookingDiscountError=""; render(); return; }
   const editp=e.target.closest("[data-editp]");
@@ -9040,7 +9017,8 @@ document.addEventListener("click",e=>{
   // ---- Credit note (School) ----
   if(e.target.closest("[data-school-cn-gen]")){ const rec=schoolById(selSchool); if(rec&&rec.einvoice&&rec.einvoice.generated&&!rec.creditNote){ schoolCNFlyout=true; } render(); return; }
   if(e.target.closest("[data-school-cn-close]")){ schoolCNFlyout=false; render(); return; }
-  if(e.target.closest("[data-school-cn-save]")){ const rec=schoolById(selSchool); if(rec&&rec.einvoice&&rec.einvoice.generated&&!rec.creditNote){ const c=schoolCompute(rec); const reason=(document.getElementById("schoolCNReason")||{}).value||"Adjustment"; const full=((document.getElementById("schoolCNType")||{}).value||"").indexOf("Full")===0; let amount=full?c.grand:Math.max(0,+((document.getElementById("schoolCNAmt")||{}).value)||0); amount=Math.min(amount,c.grand); const remark=((document.getElementById("schoolCNRemark")||{}).value||"").trim(); if(amount>0){ rec.creditNote={number:"CRN-"+rec.id,on:fmtDMY(new Date()),reason,full,amount,remark}; schoolLog(rec,"Finance","Credit note "+rec.creditNote.number+" for "+money(amount)+(full?" (full)":" (partial)")+" issued against invoice INV-"+rec.id+" — "+reason+"."); schoolCNFlyout=false; schoolCNView=true; } } render(); return; }
+  if(e.target.closest("[data-school-cn-save]")){ const rec=schoolById(selSchool); if(rec&&rec.einvoice&&rec.einvoice.generated&&!rec.creditNote){ const c=schoolCompute(rec); const reason=(document.getElementById("schoolCNReason")||{}).value||"Adjustment"; const full=((document.getElementById("schoolCNType")||{}).value||"").indexOf("Full")===0; let amount=full?c.grand:Math.max(0,+((document.getElementById("schoolCNAmt")||{}).value)||0); amount=Math.min(amount,c.grand); const remark=((document.getElementById("schoolCNRemark")||{}).value||"").trim(); if(amount>0){ rec.creditNote={number:"CRN-"+rec.id,on:fmtDMY(new Date()),reason,full,amount,remark}; schoolLog(rec,"Finance","Credit note "+rec.creditNote.number+" for "+money(amount)+(full?" (full)":" (partial)")+" issued against invoice INV-"+rec.id+" — "+reason+".");
+      if(((document.getElementById("schoolCNSettle")||{}).value||"")==="Voucher"){ const exp=((document.getElementById("schoolCNVoucherExp")||{}).value||"").trim(); const code="CN-"+genCode().slice(0,6); VOUCHERS.push({code,amount,expires:exp,status:"Active",issued:fmtDMY(new Date()),source:"Credit note "+rec.creditNote.number+" (school booking)"}); rec.creditNote.voucher={code,expires:exp}; schoolLog(rec,"Finance","Credit note settled as voucher "+code+" for "+money(amount)+", valid until "+(exp||"—")+"."); } else { rec.creditNote.refund=true; } schoolCNFlyout=false; schoolCNView=true; } } render(); return; }
   if(e.target.closest("[data-school-cn-view]")){ schoolCNView=true; render(); return; }
   if(e.target.closest("[data-school-cn-viewclose]")){ schoolCNView=false; render(); return; }
   if(e.target.closest("[data-school-cn-pdf]")){ const rec=schoolById(selSchool); if(rec&&rec.creditNote) careerOpenPdf(schoolProformaPdf(rec,"creditnote"), rec.id+"-credit-note.pdf"); return; }
@@ -9300,6 +9278,8 @@ document.addEventListener("change",e=>{
     rd.readAsText(file); return; }
   // ---- Payment screenshot chosen: update the button label without re-rendering (keeps typed amount/ref) ----
   if(e.target.closest&&e.target.closest("#schoolPayProof")){ const f=e.target.files&&e.target.files[0]; const lbl=document.getElementById("schoolPayProofName"); if(lbl) lbl.textContent=f?f.name:"Attach screenshot…"; return; }
+  // ---- Credit note: settle as refund or voucher (shows the expiry box, no re-render) ----
+  if(e.target.closest&&e.target.closest("[data-school-cn-settle]")){ const row=document.getElementById("schoolCNVoucherRow"); if(row) row.style.display=e.target.value==="Voucher"?"":"none"; return; }
   // ---- Credit note: Full/Partial toggle (no re-render, keeps typed values) ----
   if(e.target.closest&&e.target.closest("[data-school-cn-type]")){ const rec=schoolById(selSchool); const grand=rec?schoolCompute(rec).grand:0; const amtEl=document.getElementById("schoolCNAmt"); const full=(e.target.value||"").indexOf("Full")===0; if(amtEl){ amtEl.disabled=full; if(full) amtEl.value=grand; } const a=full?grand:(+((amtEl||{}).value)||0), t=Math.round(a/1.18), g=a-t, cg=Math.round(g/2), sg=g-cg; const bd=document.getElementById("schoolCNBreakdown"); if(bd) bd.textContent="Of which GST (18%): "+money(g)+" (CGST "+money(cg)+" + SGST "+money(sg)+") · Taxable "+money(t); return; }
   // ---- School bookings ----
