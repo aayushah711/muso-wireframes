@@ -914,10 +914,10 @@ const GROUPS = [
   {name:"8 · People", color:"#0E6B8A"},
   {name:"9 · Bookings", color:"#1E7F3C"}
 ];
-const ORDER = ["categories","pools","tax","hsn","shopcats","progcats","departments","fboptions","schoolslots","entryprices","sponsors","districts","transportvendors","foodvendors","venues","products","programs","blackout","bookings","checkin",
+const ORDER = ["categories","pools","tax","hsn","shopcats","progcats","departments","fboptions","schoolslots","entryprices","sponsors","districts","spprograms","transportvendors","foodvendors","venues","products","programs","blackout","bookings","checkin",
                "discounts","sources","scripts","tiers","members",
                "shopitems","shopsales","shopcoupons","career","school","sponsored"];   // "shopreports", "affiliates", "paymodes" hidden from the rail (code kept)
-const PHASE = {categories:0,pools:0,tax:0,hsn:0,shopcats:0,progcats:0,departments:0,fboptions:0,schoolslots:0,entryprices:0,sponsors:0,districts:0,transportvendors:0,foodvendors:0,venues:0, products:1, programs:1, blackout:2,
+const PHASE = {categories:0,pools:0,tax:0,hsn:0,shopcats:0,progcats:0,departments:0,fboptions:0,schoolslots:0,entryprices:0,sponsors:0,districts:0,spprograms:0,transportvendors:0,foodvendors:0,venues:0, products:1, programs:1, blackout:2,
                discounts:3,affiliates:3,
                paymodes:4,sources:4,scripts:4,bookings:2,checkin:2,
                tiers:5,members:5,
@@ -926,7 +926,7 @@ const PHASE = {categories:0,pools:0,tax:0,hsn:0,shopcats:0,progcats:0,department
                school:8,sponsored:8};
 const PREREQ = {
   career:[], categories:[], pools:[], tax:[], hsn:[], shopcats:[], departments:[], paymodes:[], sources:[], scripts:[], progcats:[], bookings:["Products & add-ons"], checkin:["Products & add-ons"],
-  fboptions:[], schoolslots:["Products & add-ons"], entryprices:[], sponsors:[], districts:[], transportvendors:[], foodvendors:[], venues:[],
+  fboptions:[], schoolslots:["Products & add-ons"], entryprices:[], sponsors:[], districts:[], spprograms:[], transportvendors:[], foodvendors:[], venues:[],
   school:["School F&B options","School time slots"], sponsored:["Sponsored School Donors","School time slots"],
   products:["Visitor categories","Inventory pools","Tax rates","HSN / SAC codes"],
   programs:["Program categories","Visitor categories","Tax rates","HSN / SAC codes"],
@@ -1296,12 +1296,12 @@ const M = {
             ["Child price|child","money","Per-child price for this option."],
             ["Active|is_active","bool","Turn it off to retire this option from new bookings."]]},
   schoolslots:{g:0,n:"School time slots",owner:"Visitor Experience",perm:"master.schoolslot.manage",src:"Scope §8",q:1,
-    d:"The visit windows a school booking chooses from. Each holds the actual start and end time of the visit and the museum-tour slot it maps to, so the visit's headcount is deducted from that retail slot's inventory.",
+    d:"The visit windows a school booking chooses from. Each holds the actual start and end time of the visit and the museum-exploration slot it maps to, so the visit's headcount is deducted from that retail slot's inventory.",
     view:"schoolslots",
     schema:[["Label|name","string","How the window reads, e.g. Morning slot 9:30–14:30."],
             ["Actual start|start","time","When the school group actually arrives."],
             ["Actual end|end","time","When the school group actually leaves."],
-            ["Maps to museum-tour slot|tour_slot","fk","→ Museum tour slots","Inventory for this visit is deducted from this retail slot."],
+            ["Maps to museum-exploration slot|tour_slot","fk","→ Museum exploration slots","Inventory for this visit is deducted from this retail slot."],
             ["Active|is_active","bool","Turn it off to retire this window from new bookings."]]},
   entryprices:{g:0,n:"School Entry price presets",owner:"Shivam · Finance & Accounts",perm:"master.entryprice.manage",src:"Scope §8",q:1,
     d:"Default per-student and per-adult entry prices a school booking can pull in. Prices stay editable per booking once pulled.",
@@ -1324,6 +1324,15 @@ const M = {
     view:"districts",
     schema:[["District|name","string","District name, e.g. Palghar."],
             ["Active|is_active","bool","Turn it off to retire this district."]]},
+  spprograms:{g:0,n:"Sponsored School Programs",owner:"Partnerships & CSR",perm:"master.spprogram.manage",src:"Scope §9",q:1,
+    d:"The multi-visit programs a sponsored school can be enrolled in — e.g. Introduction to AI, Future Maker Program. Each runs across a set number of visits; the sponsored-booking form picks one.",
+    view:"spprograms",
+    schema:[["Program|name","string","As it reads on the booking, e.g. Future Maker Program."],
+            ["Focus area|focus","string","What the program centres on, e.g. AI & machine learning."],
+            ["No. of visits|visits","int","How many visits the program runs across."],
+            ["Description|desc","string","A short line on what the program covers."],
+            ["Show on website|on_web","bool","List this program on the public website."],
+            ["Active|is_active","bool","Turn it off to retire this program."]]},
   transportvendors:{g:0,n:"Transport vendors",owner:"Partnerships & CSR",perm:"master.transportvendor.manage",src:"Scope §9",q:1,
     d:"The bus operators a sponsored school visit can be assigned to. The sponsored-booking form picks one for transport.",
     view:"transportvendors",
@@ -1588,7 +1597,7 @@ const FB_OPTIONS = [
   {name:"Premium thali",  adult:400, child:300, is_active:true},
   {name:"Veg pizza combo",adult:220, child:170, is_active:false}
 ];
-/* ---- School time slots: the visit window + the museum-tour slot it maps to,
+/* ---- School time slots: the visit window + the museum-exploration slot it maps to,
    so the visit's headcount comes off that retail slot's inventory. ---- */
 const SCHOOL_SLOTS = [
   {name:"Morning slot 9:30–14:30",    start:"09:30", end:"14:30", tour_slot:"Five-hour morning",   is_active:true},
@@ -1860,6 +1869,13 @@ const DISTRICTS = [
   {name:"Thane",           is_active:true},
   {name:"Raigad",          is_active:true}
 ];
+/* Sponsored School multi-visit programs — a sponsored booking can be enrolled in one; each spans several visits. */
+const SP_PROGRAMS = [
+  {name:"Introduction to AI",   focus:"AI & machine learning",       visits:3, desc:"Hands-on sessions building intuition for how AI learns and where it's used.", on_web:true,  is_active:true},
+  {name:"Future Maker Program", focus:"STEM & innovation",           visits:6, desc:"A maker curriculum running from ideation to a built prototype across six visits.", on_web:true,  is_active:true},
+  {name:"Young Coders",         focus:"Coding & robotics",           visits:4, desc:"Block-to-text coding paired with simple robotics challenges.", on_web:false, is_active:true},
+  {name:"Design Thinking Lab",  focus:"Creativity & problem-solving",visits:2, desc:"A two-visit sprint framing a real problem and prototyping a solution.", on_web:false, is_active:false}
+];
 /* Transport vendors — the bus operators a sponsored visit can pick from. */
 const TRANSPORT_VENDORS = [
   {name:"Konkan Travels",      gstin:"27AAECK1234M1Z5", pan:"AAECK1234M", workOrder:"WO/TR/2026/011", buses:6, seaters:45, is_active:true},
@@ -1892,14 +1908,14 @@ const VENUES = [
 /* Cross-module venue occupancy (a venue is shared by Events and Experiences, School and Birthdays).
    Sample bookings so the school/sponsored optional's "View availability" time-table has data. */
 const VENUE_BOOKINGS = [
-  {venue:"Art Gallery", date:"15 Oct 2026", start:"09:30", end:"13:00", module:"Events and Experiences",   by:"Zephyr Films",        purpose:"Film shoot",              createdBy:"Rohan Kapoor", status:"Booked"},
-  {venue:"Art Gallery", date:"15 Oct 2026", start:"15:00", end:"18:00", module:"Birthdays",  by:"Mehta family",        purpose:"Regular birthday party",  createdBy:"Sneha Iyer",   status:"Booked"},
-  {venue:"Commons",     date:"15 Oct 2026", start:"10:00", end:"14:00", module:"School",     by:"Delhi Public School", purpose:"Workshop",                createdBy:"Aditi Rao",    status:"Booked"},
-  {venue:"Small MPA",   date:"15 Oct 2026", start:"11:00", end:"12:00", module:"School",     by:"Ryan International",   purpose:"Orientation",             createdBy:"Aditi Rao",    status:"Reserved"},
-  {venue:"MPA",         date:"14 Oct 2026", start:"09:00", end:"17:00", module:"Events and Experiences",    by:"Acme Corp",           purpose:"Corporate offsite",       createdBy:"Rohan Kapoor", status:"Booked"},
-  {venue:"Classroom",   date:"14 Oct 2026", start:"13:00", end:"13:30", module:"Birthdays",  by:"Rao family",          purpose:"Mini birthday party",     createdBy:"Sneha Iyer",   status:"Booked"},
-  {venue:"Art Gallery", date:"14 Oct 2026", start:"14:00", end:"15:00", module:"School",     by:"St. Xavier's",        purpose:"Workshop",                createdBy:"Faiz Khan",    status:"Reserved"},
-  {venue:"Grow Lab",    date:"20 Oct 2026", start:"18:00", end:"22:00", module:"Events and Experiences",    by:"Penguin",             purpose:"Book launch",             createdBy:"Priya Desai",  status:"Booked"}
+  {venue:"Art Gallery", date:"15 Oct 2026", start:"09:30", end:"13:00", module:"Events and Experiences",   by:"Zephyr Films",        purpose:"Film shoot",              createdBy:"Rohan Kapoor", status:"Booked",   children:0},
+  {venue:"Art Gallery", date:"15 Oct 2026", start:"15:00", end:"18:00", module:"Birthdays",  by:"Mehta family",        purpose:"Regular birthday party",  createdBy:"Sneha Iyer",   status:"Booked",   children:25},
+  {venue:"Commons",     date:"15 Oct 2026", start:"10:00", end:"14:00", module:"School",     by:"Delhi Public School", purpose:"Workshop",                createdBy:"Aditi Rao",    status:"Booked",   children:120},
+  {venue:"Small MPA",   date:"15 Oct 2026", start:"11:00", end:"12:00", module:"School",     by:"Ryan International",   purpose:"Orientation",             createdBy:"Aditi Rao",    status:"Reserved", children:60},
+  {venue:"MPA",         date:"14 Oct 2026", start:"09:00", end:"17:00", module:"Events and Experiences",    by:"Acme Corp",           purpose:"Corporate offsite",       createdBy:"Rohan Kapoor", status:"Booked",   children:0},
+  {venue:"Classroom",   date:"14 Oct 2026", start:"13:00", end:"13:30", module:"Birthdays",  by:"Rao family",          purpose:"Mini birthday party",     createdBy:"Sneha Iyer",   status:"Booked",   children:15},
+  {venue:"Art Gallery", date:"14 Oct 2026", start:"14:00", end:"15:00", module:"School",     by:"St. Xavier's",        purpose:"Workshop",                createdBy:"Faiz Khan",    status:"Reserved", children:90},
+  {venue:"Grow Lab",    date:"20 Oct 2026", start:"18:00", end:"22:00", module:"Events and Experiences",    by:"Penguin",             purpose:"Book launch",             createdBy:"Priya Desai",  status:"Booked",   children:0}
 ];
 const timeToMin = t => { const m=/(\d{1,2}):(\d{2})/.exec(t||""); return m?(+m[1]*60 + +m[2]):null; };
 /* Everything blocking a venue on a date: seeded cross-module bookings + the current
@@ -1974,10 +1990,10 @@ function musoDayBookings(date, src, skipVi){
   const d = src==="sponsored"?spDraft:schoolDraft;
   const draftId = d?d.id:null;
   const out=[];
-  VENUE_BOOKINGS.filter(b=>b.date===date&&b.start&&b.end).forEach(b=>out.push({module:b.module,by:b.by,purpose:b.purpose,start:b.start,end:b.end,createdBy:b.createdBy||""}));
-  SCHOOL_BOOKINGS.forEach(r=>{ if(r.id===draftId) return; (r.visits||[]).forEach(v=>{ if(v.date===date){ const s=schoolSlotByName(v.slotId); if(s) out.push({module:"School",by:r.school||r.id,purpose:"School visit",start:s.start,end:s.end,createdBy:r.assignee||""}); } }); });
-  SPONSORED_BOOKINGS.forEach(r=>{ if(r.id===draftId) return; (r.visits||[]).forEach(v=>{ if(v.date===date){ const s=schoolSlotByName(v.slotId); if(s) out.push({module:"Sponsored School",by:r.school||r.id,purpose:"Sponsored visit",start:s.start,end:s.end,createdBy:r.assignee||""}); } }); });
-  if(d && Array.isArray(d.visits)) d.visits.forEach((v,vi)=>{ if(vi===skipVi) return; if(v.date===date){ const s=schoolSlotByName(v.slotId); if(s) out.push({module:"This booking",by:d.school||"This booking",purpose:"This booking",start:s.start,end:s.end,createdBy:d.assignee||""}); } });
+  VENUE_BOOKINGS.filter(b=>b.date===date&&b.start&&b.end).forEach(b=>out.push({module:b.module,by:b.by,purpose:b.purpose,start:b.start,end:b.end,createdBy:b.createdBy||"",children:+b.children||0}));
+  SCHOOL_BOOKINGS.forEach(r=>{ if(r.id===draftId) return; (r.visits||[]).forEach(v=>{ if(v.date===date){ const s=schoolSlotByName(v.slotId); if(s) out.push({module:"School",by:r.school||r.id,purpose:"School visit",start:s.start,end:s.end,createdBy:r.assignee||"",children:+v.students||0}); } }); });
+  SPONSORED_BOOKINGS.forEach(r=>{ if(r.id===draftId) return; (r.visits||[]).forEach(v=>{ if(v.date===date){ const s=schoolSlotByName(v.slotId); if(s) out.push({module:"Sponsored School",by:r.school||r.id,purpose:"Sponsored visit",start:s.start,end:s.end,createdBy:r.assignee||"",children:+v.students||0}); } }); });
+  if(d && Array.isArray(d.visits)) d.visits.forEach((v,vi)=>{ if(vi===skipVi) return; if(v.date===date){ const s=schoolSlotByName(v.slotId); if(s) out.push({module:"This booking",by:d.school||"This booking",purpose:"This booking",start:s.start,end:s.end,createdBy:d.assignee||"",children:+v.students||0}); } });
   return out;
 }
 /* Informational "Check availability" verdict for a main visit (never blocks — the museum hosts several groups at once). */
@@ -1990,7 +2006,8 @@ function runMusoCheck(src,vi){
   const over = musoDayBookings(v.date,src,vi).filter(b=>{const bs=timeToMin(b.start),be=timeToMin(b.end);return bs!=null&&be!=null&&bs<pe&&be>ps;});
   if(!over.length) return {src,vi,status:"ok",msg:`Nothing else is planned for ${s.start}–${s.end} on ${v.date}. The day is clear for this slot.`};
   const list=over.slice(0,3).map(b=>`${b.module} · ${b.by} (${b.start}–${b.end})`).join("; ");
-  return {src,vi,status:"info",msg:`${over.length} ${over.length>1?"activities overlap":"activity overlaps"} ${s.start}–${s.end} on ${v.date}: ${list}${over.length>3?` +${over.length-3} more`:""}. Booking is still allowed.`};
+  const kids=over.reduce((a,b)=>a+(+b.children||0),0);
+  return {src,vi,status:"info",msg:`${over.length} ${over.length>1?"activities overlap":"activity overlaps"} ${s.start}–${s.end} on ${v.date} — ${kids} children in total: ${list}${over.length>3?` +${over.length-3} more`:""}. Booking is still allowed.`};
 }
 /* The inline verdict banner under a visit's date/slot row. */
 function musoCheckBanner(src,i){
@@ -2004,7 +2021,8 @@ function musoCheckBanner(src,i){
 /* ---- Enums (funded-visitor context) ---- */
 const SP_ORG_TYPES = ["Funded (NGO)","School"];
 const SP_TRANSPORT = ["Yes","No","Maybe"];
-const SP_INTEREST  = ["Museum Tour","Workshop","Introduction to AI session","Future Maker Program"];   // + always-shown "Other"
+const SP_INTEREST  = ["Museum Exploration"];   // base interest; the active Sponsored School Programs are appended from the SP_PROGRAMS master, + always-shown "Other"
+const spInterestOptions = () => [...SP_INTEREST, ...SP_PROGRAMS.filter(p=>p.is_active).map(p=>p.name)];
 const SP_BOARDS    = ["SSC","ICSE","CBSE","IGCSE","IB","CIE","State board","Home schooling","Other"];   // "Other" chip → the "Other Board" text field
 
 /* ---- Records ---- */
@@ -2015,7 +2033,7 @@ const SPONSORED_BOOKINGS = [
     email:"visits@aseema.org", phone:"+91 98201 55667",
     orgType:"Funded (NGO)", sponsor:"", donorTicketing:"", donorFood:"", donorTravel:"", district:"Mumbai Suburban",
     transport:{need:"Maybe", vendor:""},
-    interested:["Museum Tour","Introduction to AI session"], interestedOther:"", prefDate:"22 Oct 2026",
+    interested:["Museum Exploration","Introduction to AI"], interestedOther:"", prefDate:"22 Oct 2026",
     expChildren:80, expTeachers:8, note:"Sponsored children; would value the AI session if it fits the budget.",
     proofDoc:"Aseema-12A-registration.pdf",
     visits:[], entryStudent:"", entryAdult:"",
@@ -2030,7 +2048,7 @@ const SPONSORED_BOOKINGS = [
     email:"coordinator@nanhikali.org", phone:"+91 90045 88221",
     orgType:"Funded (NGO)", sponsor:"JSW Foundation", donorTicketing:"JSW Foundation", donorFood:"JSW Foundation", donorTravel:"JSW Foundation", district:"Palghar",
     transport:{need:"Yes", vendor:"Konkan Travels"},
-    interested:["Museum Tour","Future Maker Program"], interestedOther:"", prefDate:"28 Oct 2026",
+    interested:["Museum Exploration","Future Maker Program"], interestedOther:"", prefDate:"28 Oct 2026",
     expChildren:120, expTeachers:10, note:"Donor budget approval in progress.",
     proofDoc:"NanhiKali-80G.pdf",
     visits:[{date:"28 Oct 2026", slotId:"Afternoon slot 12:00–17:00", students:120, adults:10, escorts:4, teachersComp:0,
@@ -2048,7 +2066,7 @@ const SPONSORED_BOOKINGS = [
     email:"mumbai@teachforindia.org", phone:"+91 98330 44556",
     orgType:"Funded (NGO)", sponsor:"JSW Foundation", donorTicketing:"JSW Foundation", donorFood:"Tata Trusts", donorTravel:"JSW Foundation", district:"Mumbai Suburban",
     transport:{need:"Yes", vendor:"Sai Bus Service"},
-    interested:["Museum Tour","Workshop"], interestedOther:"", prefDate:"14 Oct 2026",
+    interested:["Museum Exploration"], interestedOther:"", prefDate:"14 Oct 2026",
     expChildren:150, expTeachers:12, note:"Annual sponsored visit.",
     proofDoc:"TFI-registration.pdf", foodVendor:"Annapurna Caterers",
     visits:[{date:"14 Oct 2026", slotId:"Afternoon slot 12:00–17:00", students:150, adults:12, escorts:5, teachersComp:0,
@@ -2067,7 +2085,7 @@ const SPONSORED_BOOKINGS = [
     email:"raigad@pratham.org", phone:"+91 99201 77883",
     orgType:"Funded (NGO)", sponsor:"Tata Trusts", donorTicketing:"Tata Trusts", donorFood:"Tata Trusts", donorTravel:"Tata Trusts", district:"Raigad",
     transport:{need:"Yes", vendor:"Panvel Roadways"},
-    interested:["Museum Tour"], interestedOther:"", prefDate:"06 Aug 2026",
+    interested:["Museum Exploration"], interestedOther:"", prefDate:"06 Aug 2026",
     expChildren:90, expTeachers:8, note:"",
     proofDoc:"Pratham-80G.pdf", foodVendor:"Tiffin Box Co.",
     visits:[{date:"06 Aug 2026", slotId:"Afternoon slot 12:00–17:00", students:90, adults:8, escorts:2, teachersComp:0,
@@ -2460,8 +2478,8 @@ const BULK_SCHOOL_SAMPLES=[
   {School:"DAV Public School",Location:"Airoli, Navi Mumbai",Boards:"CBSE",Grade:"Grade 8",POC:"Sneha Kulkarni",Designation:"Teacher",Email:"sneha.k@dav.sch.in",Phone:"+91 90040 55667",VisitDate:"03 Apr 2025",Slot:"Morning slot 9:30–14:30",Students:120,Adults:9,Escorts:3,TeachersComp:2,FoodStudents:0,FoodAdults:0,FoodComp:0,FBOption:"",EntryStudent:350,EntryAdult:500,BillName:"DAV Public School",BillAddress:"Sector 6, Airoli, Navi Mumbai 400708",GSTIN:"",PAN:"AAACD5566P",Status:"Ended",AmountPaid:46500,Assignee:"Aditi",Interested:"Museum Tour",Note:"",Comments:"Paid in full on the day."}
 ];
 const BULK_SP_SAMPLES=[
-  {School:"Muktangan — Worli",Location:"Worli, Mumbai",OrgType:"Funded (NGO)",District:"Mumbai Suburban",Boards:"State board",Grade:"Grade 5",POC:"Anjali Rane",Designation:"Coordinator",Email:"visits@muktangan.org",Phone:"+91 98201 33445",VisitDate:"18 Feb 2025",Slot:"Morning slot 9:30–14:30",Students:80,Adults:8,Escorts:3,FoodStudents:80,FoodAdults:8,FoodComp:3,FBOption:"Snack box",EntryStudent:350,EntryAdult:500,TicketingDonor:"JSW Foundation",FoodDonor:"JSW Foundation",TravelDonor:"JSW Foundation",AuthNumber:"JSW/CSR/2025/0112",NgoGstin:"",NgoPan:"AAATM1234N",ProofDoc:"Muktangan-12A.pdf",TransportNeed:"Yes",TransportVendor:"Worli Roadways",FoodVendor:"Annapurna Caterers",SpeciallyAbled:4,Underprivileged:"First-generation learners:60; Below poverty line:20",BillName:"Muktangan",BillAddress:"Worli, Mumbai 400018",GSTIN:"",PAN:"AAATM1234N",Status:"Ended",Assignee:"Neha",Interested:"Museum Tour;Introduction to AI session",Note:"Sponsored by JSW Foundation.",Comments:"Visit completed; e-invoice to JSW."},
-  {School:"Akanksha Foundation — Sewri",Location:"Sewri, Mumbai",OrgType:"Funded (NGO)",District:"Mumbai Suburban",Boards:"State board",Grade:"Grade 6 & 7",POC:"Imtiaz Shaikh",Designation:"Admin",Email:"programs@akanksha.org",Phone:"+91 90045 66778",VisitDate:"09 Mar 2025",Slot:"Afternoon slot 12:00–17:00",Students:110,Adults:10,Escorts:4,FoodStudents:110,FoodAdults:10,FoodComp:4,FBOption:"Standard lunch",EntryStudent:350,EntryAdult:500,TicketingDonor:"Tata Trusts",FoodDonor:"Tata Trusts",TravelDonor:"Tata Trusts",AuthNumber:"TT/GRANT/2025/0339",NgoGstin:"",NgoPan:"AAATA5678K",ProofDoc:"Akanksha-80G.pdf",TransportNeed:"Yes",TransportVendor:"Sewri Transport Co.",FoodVendor:"Tiffin Box Co.",SpeciallyAbled:2,Underprivileged:"First-generation learners:90",BillName:"Akanksha Foundation",BillAddress:"Sewri, Mumbai 400015",GSTIN:"",PAN:"AAATA5678K",Status:"Ended",Assignee:"Neha",Interested:"Museum Tour;Workshop",Note:"",Comments:"Completed."}
+  {School:"Muktangan — Worli",Location:"Worli, Mumbai",OrgType:"Funded (NGO)",District:"Mumbai Suburban",Boards:"State board",Grade:"Grade 5",POC:"Anjali Rane",Designation:"Coordinator",Email:"visits@muktangan.org",Phone:"+91 98201 33445",VisitDate:"18 Feb 2025",Slot:"Morning slot 9:30–14:30",Students:80,Adults:8,Escorts:3,FoodStudents:80,FoodAdults:8,FoodComp:3,FBOption:"Snack box",EntryStudent:350,EntryAdult:500,TicketingDonor:"JSW Foundation",FoodDonor:"JSW Foundation",TravelDonor:"JSW Foundation",AuthNumber:"JSW/CSR/2025/0112",NgoGstin:"",NgoPan:"AAATM1234N",ProofDoc:"Muktangan-12A.pdf",TransportNeed:"Yes",TransportVendor:"Worli Roadways",FoodVendor:"Annapurna Caterers",SpeciallyAbled:4,Underprivileged:"First-generation learners:60; Below poverty line:20",BillName:"Muktangan",BillAddress:"Worli, Mumbai 400018",GSTIN:"",PAN:"AAATM1234N",Status:"Ended",Assignee:"Neha",Interested:"Museum Exploration;Introduction to AI",Note:"Sponsored by JSW Foundation.",Comments:"Visit completed; e-invoice to JSW."},
+  {School:"Akanksha Foundation — Sewri",Location:"Sewri, Mumbai",OrgType:"Funded (NGO)",District:"Mumbai Suburban",Boards:"State board",Grade:"Grade 6 & 7",POC:"Imtiaz Shaikh",Designation:"Admin",Email:"programs@akanksha.org",Phone:"+91 90045 66778",VisitDate:"09 Mar 2025",Slot:"Afternoon slot 12:00–17:00",Students:110,Adults:10,Escorts:4,FoodStudents:110,FoodAdults:10,FoodComp:4,FBOption:"Standard lunch",EntryStudent:350,EntryAdult:500,TicketingDonor:"Tata Trusts",FoodDonor:"Tata Trusts",TravelDonor:"Tata Trusts",AuthNumber:"TT/GRANT/2025/0339",NgoGstin:"",NgoPan:"AAATA5678K",ProofDoc:"Akanksha-80G.pdf",TransportNeed:"Yes",TransportVendor:"Sewri Transport Co.",FoodVendor:"Tiffin Box Co.",SpeciallyAbled:2,Underprivileged:"First-generation learners:90",BillName:"Akanksha Foundation",BillAddress:"Sewri, Mumbai 400015",GSTIN:"",PAN:"AAATA5678K",Status:"Ended",Assignee:"Neha",Interested:"Museum Exploration",Note:"",Comments:"Completed."}
 ];
 function bulkTemplateRows(kind){
   const cols = kind==="sponsored"?SP_BULK_COLS:SCHOOL_BULK_COLS;
@@ -2554,7 +2572,7 @@ const SETTINGS = [
 
 const PRICE_T = {"Adult":1200,"Child 12–17":900,"Child 3–11":700,"Baby":1};
 const P = [
-  {c:"MUSO",n:"MuSo Tour",type:"Product",tag:"t",standalone:true,src:"Scope §4",
+  {c:"MUSO",n:"Museum Exploration",type:"Product",tag:"t",standalone:true,src:"Scope §4",
    cutoff:"12 hours before the slot starts",
    slots:[
      {n:"Summer weekday morning",from:"01 Jul 2026",to:"31 Aug 2026",days:"Tue – Fri",t1:"09:00",t2:"12:00",
@@ -2661,7 +2679,7 @@ const P = [
 ];
 
 const BOOKINGS = [
-  {ref:"BK-1048",customer:"Aarav Mehta",email:"aarav@example.com",phone:"1234567890",location:"Lower Parel, Mumbai",member:{tier:"Gold",passesTotal:10,passesUsed:4,addonDiscountPct:10},product:"MuSo Tour",date:"15 Aug 2026",slot:"Three-hour morning",tickets:"2 Adult · 1 Child 3–11",ticketRows:[["Adult","2","1500"],["Child 3–11","1","900"]],attendees:[{category:"Adult",index:0,name:"Aarav Mehta",dob:""},{category:"Adult",index:1,name:"Riya Mehta",dob:""},{category:"Child 3–11",index:0,name:"Vihaan Mehta",dob:"12/06/2018"}],heads:3,total:3900,status:"Confirmed",payment:"Paid",paymentMode:"Card"},
+  {ref:"BK-1048",customer:"Aarav Mehta",email:"aarav@example.com",phone:"1234567890",location:"Lower Parel, Mumbai",member:{tier:"Gold",passesTotal:10,passesUsed:4,addonDiscountPct:10},product:"Museum Exploration",date:"15 Aug 2026",slot:"Three-hour morning",tickets:"2 Adult · 1 Child 3–11",ticketRows:[["Adult","2","1500"],["Child 3–11","1","900"]],attendees:[{category:"Adult",index:0,name:"Aarav Mehta",dob:""},{category:"Adult",index:1,name:"Riya Mehta",dob:""},{category:"Child 3–11",index:0,name:"Vihaan Mehta",dob:"12/06/2018"}],heads:3,total:3900,status:"Confirmed",payment:"Paid",paymentMode:"Card"},
   {ref:"BK-1049",customer:"Nisha Rao",email:"nisha@example.com",phone:"9876543210",location:"Andheri West, Mumbai",product:"Mini Golf",date:"16 Aug 2026",slot:"Golf midday",tickets:"1 Adult · 2 Child 3–11",ticketRows:[["Adult","1","400"],["Child 3–11","2","250"]],attendees:[{category:"Adult",index:0,name:"Nisha Rao",dob:""},{category:"Child 3–11",index:0,name:"Anya Rao",dob:"03/09/2017"},{category:"Child 3–11",index:1,name:"Neel Rao",dob:""}],heads:3,total:900,status:"Confirmed",payment:"Paid",paymentMode:"Card"},
   {ref:"BK-1050",customer:"Kabir Shah",email:"kabir@example.com",phone:"99302 44556",location:"Thane West, Thane",product:"Lost Code of Play",date:"18 Aug 2026",slot:"LCOP afternoon",tickets:"2 Child 12–17",ticketRows:[["Child 12–17","2","400"]],attendees:[{category:"Child 12–17",index:0,name:"Kabir Shah",dob:"14/02/2012"},{category:"Child 12–17",index:1,name:"Mira Shah",dob:""}],heads:2,total:800,status:"Pending",payment:"Pending",paymentMode:"Cash"}
 ];
@@ -2731,7 +2749,7 @@ const DISC_KINDS = ["Items in the basket","Customer holds a membership","A code 
 const DISCOUNTS = [
   {n:"Add-on bundling — combined total",vt:"Percentage",prods:[],dates:["01 Apr 2026","31 Mar 2027"],maxr:"",codes:null,
    prec:10,status:"Approved",maker:"Hasmukh",checker:"Suryanarayan",apply:"auto",
-   cond:[{k:"Items in the basket",prods:["MuSo Tour"],pm:"any of",cats:[],op:"at least",qty:"1"},
+   cond:[{k:"Items in the basket",prods:["Museum Exploration"],pm:"any of",cats:[],op:"at least",qty:"1"},
          {k:"Items in the basket",prods:["Mini Golf","Lost Code of Play","Vroom"],pm:"any of",cats:[],op:"at least",qty:"1"}],
    target:"Whole cart",value:"Percentage",v:"10%",
    src:"§1.6: “10% off the combined ticket + add-on total”"},
@@ -2739,7 +2757,7 @@ const DISCOUNTS = [
   {n:"Add-on bundling — add-ons only",vt:"Percentage",prods:["Mini Golf","Lost Code of Play","Vroom"],
    dates:["01 Apr 2026","31 Mar 2027"],maxr:"",codes:null,
    prec:20,status:"Approved",maker:"Hasmukh",checker:"Suryanarayan",apply:"auto",
-   cond:[{k:"Items in the basket",prods:["MuSo Tour"],pm:"any of",cats:[],op:"at least",qty:"1"},
+   cond:[{k:"Items in the basket",prods:["Museum Exploration"],pm:"any of",cats:[],op:"at least",qty:"1"},
          {k:"Items in the basket",prods:["Mini Golf","Lost Code of Play","Vroom"],pm:"any of",cats:[],op:"at least",qty:"1"}],
    target:"The add-on lines only",value:"Percentage",v:"10%",
    src:"§1.6: “10% off on add-ons when bundled with a ticket”"},
@@ -2757,9 +2775,9 @@ const DISCOUNTS = [
    target:"The matching lines",value:"Percentage",v:"10% then 20%",
    src:"§1.10: “Buy 3 of the same → Get 20% off”, extended to two tiers"},
 
-  {n:"Prebook — 15 August visit",vt:"Percentage",prods:["MuSo Tour"],dates:["01 Aug 2026","10 Aug 2026"],visit:["15 Aug 2026","15 Aug 2026"],maxr:"",codes:{oncePerUser:true,gen:"1"},
+  {n:"Prebook — 15 August visit",vt:"Percentage",prods:["Museum Exploration"],dates:["01 Aug 2026","10 Aug 2026"],visit:["15 Aug 2026","15 Aug 2026"],maxr:"",codes:{oncePerUser:true,gen:"1"},
    prec:50,status:"Pending approval",maker:"Hasmukh",checker:"—",apply:"auto",
-   cond:[{k:"Items in the basket",prods:["MuSo Tour"],pm:"any of",cats:[],op:"at least",qty:"1"}],
+   cond:[{k:"Items in the basket",prods:["Museum Exploration"],pm:"any of",cats:[],op:"at least",qty:"1"}],
    target:"That product's lines",value:"Percentage",v:"10%",
    src:"prebooking: book 1–10 Aug for a 15 Aug visit"},
 
@@ -2857,9 +2875,10 @@ const OPTIONS = {
   "School F&B options":FB_OPTIONS.map(o=>o.name),
   "School time slots":SCHOOL_SLOTS.map(s=>s.name),
   "School Entry price presets":ENTRY_PRICES.map(p=>p.name),
-  "Museum tour slots":schoolTourSlots(),
+  "Museum exploration slots":schoolTourSlots(),
   "Sponsored School Donors":SPONSORS.map(s=>s.name),
-  "Sponsored School Districts":DISTRICTS.map(d=>d.name)
+  "Sponsored School Districts":DISTRICTS.map(d=>d.name),
+  "Sponsored School Programs":SP_PROGRAMS.map(p=>p.name)
 };
 
 /* ---- create-form schemas ---- */
@@ -3013,8 +3032,8 @@ hsn:[["HSN / SAC codes",[
 products:[
  ["The product itself",[
  ["Short code|code","Short identifier on POS and in reports.","MUSO, MG, LCOP.","Immutable once sold against."],
- ["Name visitors see|name","What the visitor sees.","“MuSo Tour”.","Visitor-facing. Renaming it changes what a resent ticket email would say about a booking already taken."],
- ["Extras offered with this|addons[]","Which add-ons a visitor is offered alongside this.","MuSo Tour offers golf, LCOP and Vroom.","Every product can carry this list — there is no separate add-on type. A product can't list itself; the picker leaves it out."],
+ ["Name visitors see|name","What the visitor sees.","“Museum Exploration”.","Visitor-facing. Renaming it changes what a resent ticket email would say about a booking already taken."],
+ ["Extras offered with this|addons[]","Which add-ons a visitor is offered alongside this.","Museum Exploration offers golf, LCOP and Vroom.","Every product can carry this list — there is no separate add-on type. A product can't list itself; the picker leaves it out."],
  ["Who it can be sold to|visitor_categories[]","Which categories this is sold to.","The tour sells to all four.","Listing a category here does not create a price. A category with no price row for a slot is simply not sold in that slot."],
  ["Bookings close this long before it starts|cutoff_days / cutoff_hours","Two numbers, days then hours, counted back from the moment it begins.","0 and 12 on the tour, so a 10:00 slot stops selling at 22:00 the night before.","The same pair on products, events and camps, so one idea has one shape. It is an <b>offset</b>, not a clock time — “midnight the day before” cannot be expressed exactly, because midnight is 10 hours before a 10:00 slot and 14 before a 14:00 one."],
  ["Invoice code|hsn_sac_id","The code this invoices under.","SAC 999692.","Merchandise would need an HSN instead. Nothing in retail does today, so every product here shares one SAC."],
@@ -3029,7 +3048,7 @@ products:[
  ["Active|is_active","Whether the slot is sold.","Pausing the summer morning slot during a wet week.","Existing bookings in that slot stand. Only new sales stop."]]],
 
  ["Add-on attachment",[
- ["Which extra|addon_product_id","Which add-on is offered with this product.","Mini Golf on MuSo Tour.","The add-on must exist first, and can't be the product itself."],
+ ["Which extra|addon_product_id","Which add-on is offered with this product.","Mini Golf on Museum Exploration.","The add-on must exist first, and can't be the product itself."],
  ["Position in the list|sort_order","Order shown to the visitor.","Mini Golf first, because it is the one most people want.","None mechanically, though a paid add-on placed first reads as a hard sell."]]],
 
  ["Quota block",[
@@ -4154,7 +4173,7 @@ const SUB = {
     </div>
     ${addOpen==="slot"?slotFormCard(a):""}
     <div class="note note-scope"><span class="note-mark">Settled</span><div>
-      ${a.n==="MuSo Tour"
+      ${a.n==="Museum Exploration"
         ? "The five-hour and three-hour patterns <b>do run together</b>. The overlap is accepted rather than avoided — where a busy window needs holding back, that is a quota block on whichever slot needs it, decided at the time and with a reason recorded, rather than a rule that trims capacity every day."
         : "These times run for <b>August 2026 only</b> while they are provisional. Extending them is a change to the two date fields, not a new slot."}
       Slots belong to this record alone; the same window is not expected to repeat across products, so there is nothing to keep in step.
@@ -4286,8 +4305,8 @@ const DASH = {
   schoolsToday:2, schoolsMonth:9,       // school group bookings
   // live "in the building now" list — each active session with booked vs checked-in adult/child counts
   building:[
-    {product:"MuSo Tour", date:"10/9/2026", start:"10:00", end:"15:00", from:"Website", bAdult:1,  bChild:1,   cAdult:0,  cChild:1},
-    {product:"MuSo Tour", date:"10/9/2026", start:"10:00", end:"13:00", from:"Counter", bAdult:1,  bChild:1,   cAdult:1,  cChild:1},
+    {product:"Museum Exploration", date:"10/9/2026", start:"10:00", end:"15:00", from:"Website", bAdult:1,  bChild:1,   cAdult:0,  cChild:1},
+    {product:"Museum Exploration", date:"10/9/2026", start:"10:00", end:"13:00", from:"Counter", bAdult:1,  bChild:1,   cAdult:1,  cChild:1},
     {product:"School",    date:"10/9/2026", start:"9:00",  end:"14:00", from:"NA",      bAdult:10, bChild:100, cAdult:10, cChild:100},
     {product:"Birthday",  date:"10/9/2026", start:"10:00", end:"13:00", from:"NA",      bAdult:3,  bChild:10,  cAdult:4,  cChild:11}
   ]
@@ -5157,12 +5176,12 @@ const VIEWS = {
 
   schoolslots(){
     return `<div class="note note-scope"><span class="note-mark">Structure</span><div>
-      The windows a school visit chooses from. Each holds the <b>actual</b> start and end time of the visit and the <b>museum-tour slot</b> it maps to — so the visit's headcount is deducted from that retail slot's inventory (a 9–2 visit maps to the 10–1 retail slot).
+      The windows a school visit chooses from. Each holds the <b>actual</b> start and end time of the visit and the <b>museum-exploration slot</b> it maps to — so the visit's headcount is deducted from that retail slot's inventory (a 9–2 visit maps to the 10–1 retail slot).
     </div></div>
     <div class="card"><div class="card-head"><span class="card-title">School time slots</span>
       <span class="card-note">${SCHOOL_SLOTS.length} on file</span></div>
       <div class="matrix-wrap"><table><thead><tr>
-        <th>Label</th><th>Actual start</th><th>Actual end</th><th>Maps to museum-tour slot</th><th>Status</th><th>Actions</th></tr></thead>
+        <th>Label</th><th>Actual start</th><th>Actual end</th><th>Maps to museum-exploration slot</th><th>Status</th><th>Actions</th></tr></thead>
       <tbody>${SCHOOL_SLOTS.map((s,i)=>`<tr>
         <td><b style="font-weight:500">${escHtml(s.name)}</b></td>
         <td class="code">${s.start}</td><td class="code">${s.end}</td>
@@ -5272,6 +5291,22 @@ const VIEWS = {
         <td>${d.is_active?'<span class="pill pill-ok"><i class="dot"></i>Active</span>':'<span class="pill pill-off">Inactive</span>'}</td>
         <td><button class="btn" data-medit="${i}">Edit</button></td></tr>`).join("")}
         ${addRowNew("Add district")}</tbody></table></div></div>`;
+  },
+
+  spprograms(){
+    return `<div class="note note-scope"><span class="note-mark">Structure</span><div>
+      The multi-visit programs a sponsored school can be enrolled in. Each runs across a set number of visits — the sponsored-booking form picks one.
+    </div></div>
+    <div class="card"><div class="card-head"><span class="card-title">Sponsored School Programs</span><span class="card-note">${SP_PROGRAMS.length} on file</span></div>
+      <div class="matrix-wrap"><table><thead><tr><th>Program</th><th>Focus area</th><th class="ctr">Visits</th><th>On website</th><th>Status</th><th>Actions</th></tr></thead>
+      <tbody>${SP_PROGRAMS.map((p,i)=>`<tr>
+        <td><b style="font-weight:500">${escHtml(p.name)}</b>${p.desc?`<div class="muted" style="font-size:11.5px;margin-top:2px">${escHtml(p.desc)}</div>`:""}</td>
+        <td>${escHtml(p.focus||"—")}</td>
+        <td class="code" style="text-align:center">${p.visits||"—"}</td>
+        <td>${p.on_web?'<span class="pill pill-ok"><i class="dot"></i>Shown</span>':'<span class="pill pill-off">Hidden</span>'}</td>
+        <td>${p.is_active===false?'<span class="pill pill-off">Inactive</span>':'<span class="pill pill-ok"><i class="dot"></i>Active</span>'}</td>
+        <td><button class="btn" data-medit="${i}">Edit</button></td></tr>`).join("")}
+        ${addRowNew("Add program")}</tbody></table></div></div>`;
   },
 
   venues(){
@@ -5672,12 +5707,12 @@ function bookingForm(editing=false){
   // instead of being free. Programs are untouched — the pass pool doesn't cover camps/workshops/
   // events. ----
   const member=bookingCustomer.member;
-  // A membership visit covers general admission — the MuSo Tour (c:"MUSO") — ONLY. The box is shown
+  // A membership visit covers general admission — the Museum Exploration (c:"MUSO") — ONLY. The box is shown
   // solely for a Tour booking with no add-ons / other products; adding anything else hides it.
   // (Programs are allowed alongside — they get the automatic member discount below, not a visit.)
   const hasTour=membershipVisitApplies();
   const isTour=i=>P[i]&&P[i].c==="MUSO";
-  // Membership visit is per Ticket (combination) of the MuSo Tour — the box sits between the slot picker and Pay for tickets.
+  // Membership visit is per Ticket (combination) of the Museum Exploration — the box sits between the slot picker and Pay for tickets.
   const visitCombos=(member&&hasTour)?[...bookingProducts].flatMap(([i,cfg])=>isTour(i)?combosOf(cfg).map((combo,ci)=>({i,ci,combo})).filter(x=>isVisitSlot(slotFor(P[i].slots,x.combo))):[]):[];
   const redeemVisitCount=visitCombos.filter(x=>x.combo.redeemVisit).length;
   const redeemAdultCount=visitCombos.filter(x=>x.combo.redeemVisit&&x.combo.redeemAdult).length;
@@ -6042,7 +6077,7 @@ const SING={blackout:"blackout date",affiliates:"affiliate link",
   tax:"tax rate",hsn:"code",discounts:"discount",products:"product or add-on",
   programs:"program",progcats:"program category",departments:"department",events:"event",camps:"camp or workshop",bookings:"order",career:"role",
   fboptions:"F&B option",schoolslots:"school time slot",entryprices:"school entry price preset",school:"school booking",
-  sponsors:"sponsor",districts:"district",sponsored:"sponsored booking",venues:"venue"};
+  sponsors:"sponsor",districts:"district",spprograms:"sponsored program",sponsored:"sponsored booking",venues:"venue"};
 const singular=(k,n)=>SING[k]||n.toLowerCase().replace(/s$/,"");
 const TYPE_LABEL={media:"Files",string:"Text",int:"Number",decimal:"Number",money:"Amount",
   date:"Date",datetime:"Date and time",time:"Time",bool:"Yes or no",enum:"Choose one",
@@ -6845,7 +6880,7 @@ function shopSaleDetail(){ const s=SHOP_SALES[selShopSale]; if(!s) return ""; co
    markup and the PDF stack. See §8 of the scope.
    ========================================================================== */
 
-const schoolMapNote = slotName => { const s=schoolSlotByName(slotName); return s&&s.tour_slot?`Maps to museum-tour slot “${escHtml(s.tour_slot)}” — the visit's heads come off that retail slot's inventory.`:""; };
+const schoolMapNote = slotName => { const s=schoolSlotByName(slotName); return s&&s.tour_slot?`Maps to museum-exploration slot “${escHtml(s.tour_slot)}” — the visit's heads come off that retail slot's inventory.`:""; };
 
 /* ---- Module Reports (Scope §8) ---- */
 function schoolReports(){
@@ -7035,7 +7070,7 @@ function schoolForm(editing){
   const numFld=(label,key,val,h)=>fld(label,`<input class="inp mono" type="number" min="0" data-vf="${key}" value="${esc(val)}">`,h);
   const visitCard=(v,i)=>{ const f=v.food||{};
     return `<div class="fld wide" data-vrow="${i}" style="border:1px solid var(--rule2);border-radius:8px;padding:14px;margin:0;gap:0">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px"><b style="font-size:12.5px">Visit ${i+1}</b>${i>0?`<button type="button" class="btn" data-school-del-visit="${i}">Remove</button>`:""}</div>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px"><b style="font-size:12.5px">Visit ${i+1}</b>${i>0?`<div style="display:flex;gap:8px"><button type="button" class="btn" data-school-same="${i}">Same as above</button><button type="button" class="btn" data-school-del-visit="${i}">Remove</button></div>`:""}</div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px 16px;align-items:start">
       ${fld("Date",`<div style="display:flex;gap:8px"><input class="inp" data-vf="date" value="${esc(v.date)}" placeholder="DD Mon YYYY" style="flex:1"><button type="button" class="btn" data-school-musoview="${i}" style="white-space:nowrap">View availability</button></div>`)}
       ${fld("School time slot",`<div style="display:flex;gap:8px"><div class="selwrap" style="flex:1"><select class="inp" data-vf="slotId">${slotNames.map(n=>`<option${n===v.slotId?" selected":""}>${n}</option>`).join("")}</select></div><button type="button" class="btn" data-school-musocheck="${i}" style="white-space:nowrap">Check availability</button></div>`,schoolMapNote(v.slotId))}
@@ -7372,7 +7407,7 @@ function schoolDetail(){
   const tl=(rec.timeline||[]).slice().sort((a,b)=>{const da=parseDMY(a.on),db=parseDMY(b.on);return (db?db.getTime():0)-(da?da.getTime():0);});
   const timeline=`<div class="card"><div class="card-head"><span class="card-title">Timeline &amp; notifications</span><span class="card-note">${tl.length} event${tl.length===1?"":"s"}</span></div>
       <div class="attn">${tl.length?tl.map(e=>`<div class="attn-row attn-info" style="cursor:default">
-        <span class="attn-n">${e.on||""}</span><span class="attn-t"><b>${escHtml(e.who||"")}</b> — ${escHtml(e.what||"")}${e.email?`<div style="margin-top:6px"><button class="btn" data-school-view-email="${rec.timeline.indexOf(e)}">View email</button></div>`:""}</span></div>`).join(""):`<div class="card-body muted">Nothing logged yet.</div>`}</div></div>`;
+        <span class="attn-n">${e.on||""}</span><span class="attn-t"><b>${escHtml(e.who||"")}</b> — ${escHtml(e.what||"")}</span></div>`).join(""):`<div class="card-body muted">Nothing logged yet.</div>`}</div></div>`;
 
   /* Aside actions */
   const aside=`<aside class="disc-summary-col">
@@ -7381,9 +7416,9 @@ function schoolDetail(){
     </tbody></table></div></div>
     <div class="card"><div class="card-head"><span class="card-title">Actions</span></div><div class="card-body" style="display:flex;flex-direction:column;gap:8px">
       <button class="btn btn-primary" data-school-edit="1">Edit details</button>
-      <button class="btn" data-school-sendmail="1">Send email</button>
-      <button class="btn" data-school-proforma-pdf="1">Download proforma</button>
-      ${c.eInv?((rec.einvoice&&rec.einvoice.generated)?`<button class="btn" data-school-einvoice-view="1">View E-invoice</button>`:`<button class="btn" data-school-einvoice-gen="1">Generate E-invoice</button>`):`<div class="muted" style="font-size:11px">Add a GST number (Billing, via Edit) to raise an e-invoice.</div>`}
+      ${(()=>{const inv=rec.einvoice&&rec.einvoice.generated;const t=inv?' disabled title="E-invoice already generated"':'';return `<button class="btn" data-school-proforma-pdf="1"${t}>Download proforma</button>
+      <button class="btn" data-school-send-proforma="1"${t}>Send proforma</button>`;})()}
+      ${c.eInv?((rec.einvoice&&rec.einvoice.generated)?`<button class="btn" data-school-einvoice-view="1">View E-invoice</button><button class="btn" data-school-send-einvoice="1">Send E-invoice</button>`:`<button class="btn" data-school-einvoice-gen="1">Generate E-invoice</button>`):`<div class="muted" style="font-size:11px">Add a GST number (Billing, via Edit) to raise an e-invoice.</div>`}
       ${(rec.einvoice&&rec.einvoice.generated)?(rec.creditNote?`<button class="btn" data-school-cn-view="1">View Credit Note</button>`:`<button class="btn" data-school-cn-gen="1">Generate Credit Note</button>`):(c.eInv?`<button class="btn" disabled title="Raise the e-invoice first">Generate Credit Note</button>`:"")}
       ${(rec.status!=="Ended"&&schoolStatusLocked(rec))?`<button class="btn" data-school-complete="1">Mark completed</button>`:""}
     </div></div></aside>`;
@@ -7547,7 +7582,7 @@ function spForm(editing){
     fld("Phone of POC",t("phone",d.phone,"+91 98765 43210"),"Include country code",true));
 
   const secInterested=section("Interested In",
-    fld("Interested in (choose multiple if needed)",chips("interested",d.interested,SP_INTEREST),"","",true)+
+    fld("Interested in (choose multiple if needed)",chips("interested",d.interested,spInterestOptions()),"","",true)+
     fld("Other Interests",t("interestedOther",d.interestedOther,"Specify special topics, events or sessions of interest"),"","",true));
 
   const secAdditional=section("Additional Information",
@@ -7601,7 +7636,7 @@ function spForm(editing){
     </div>`;};
   const visitCard=(v,i)=>{ const f=v.food||{};
     return `<div class="fld wide" data-spvrow="${i}" style="border:1px solid var(--rule2);border-radius:8px;padding:14px;margin:0;gap:0">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px"><b style="font-size:12.5px">Visit ${i+1}</b>${i>0?`<button type="button" class="btn" data-sp-del-visit="${i}">Remove</button>`:""}</div>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px"><b style="font-size:12.5px">Visit ${i+1}</b>${i>0?`<div style="display:flex;gap:8px"><button type="button" class="btn" data-sp-same="${i}">Same as above</button><button type="button" class="btn" data-sp-del-visit="${i}">Remove</button></div>`:""}</div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px 16px;align-items:start">
       ${fld("Date",`<div style="display:flex;gap:8px"><input class="inp" data-spvf="date" value="${esc(v.date)}" placeholder="DD Mon YYYY" style="flex:1"><button type="button" class="btn" data-sp-musoview="${i}" style="white-space:nowrap">View availability</button></div>`)}
       ${fld("School time slot",`<div style="display:flex;gap:8px"><div class="selwrap" style="flex:1"><select class="inp" data-spvf="slotId">${slotNames.map(n=>`<option${n===v.slotId?" selected":""}>${n}</option>`).join("")}</select></div><button type="button" class="btn" data-sp-musocheck="${i}" style="white-space:nowrap">Check availability</button></div>`,schoolMapNote(v.slotId))}
@@ -7847,7 +7882,7 @@ function spDetail(){
   const tl=(rec.timeline||[]).slice().sort((a,b)=>{const da=parseDMY(a.on),db=parseDMY(b.on);return (db?db.getTime():0)-(da?da.getTime():0);});
   const timeline=`<div class="card"><div class="card-head"><span class="card-title">Timeline &amp; notifications</span><span class="card-note">${tl.length} event${tl.length===1?"":"s"}</span></div>
       <div class="attn">${tl.length?tl.map(e=>`<div class="attn-row attn-info" style="cursor:default">
-        <span class="attn-n">${e.on||""}</span><span class="attn-t"><b>${escHtml(e.who||"")}</b> — ${escHtml(e.what||"")}${e.email?`<div style="margin-top:6px"><button class="btn" data-sp-view-email="${rec.timeline.indexOf(e)}">View email</button></div>`:""}</span></div>`).join(""):`<div class="card-body muted">Nothing logged yet.</div>`}</div></div>`;
+        <span class="attn-n">${e.on||""}</span><span class="attn-t"><b>${escHtml(e.who||"")}</b> — ${escHtml(e.what||"")}</span></div>`).join(""):`<div class="card-body muted">Nothing logged yet.</div>`}</div></div>`;
 
   const aside=`<aside class="disc-summary-col">
     <div class="card"><div class="card-head"><span class="card-title">At a glance</span></div><div class="matrix-wrap"><table class="reclist"><tbody>
@@ -8532,7 +8567,7 @@ function careerApplications(){
 /* Foundations master-row edit: the data array behind each simple master, so a row's
    Edit button can open the create form prefilled from that row (display-only). */
 const masterData = k => ({categories:CATS, tax:TAXRATES, hsn:HSNCODES, shopcats:SHOP_CATEGORIES, progcats:PROGCATS,
-  fboptions:FB_OPTIONS, schoolslots:SCHOOL_SLOTS, entryprices:ENTRY_PRICES, sponsors:SPONSORS, districts:DISTRICTS, transportvendors:TRANSPORT_VENDORS, foodvendors:FOOD_VENDORS, venues:VENUES, pools:[POOLS.shared]}[k]);
+  fboptions:FB_OPTIONS, schoolslots:SCHOOL_SLOTS, entryprices:ENTRY_PRICES, sponsors:SPONSORS, districts:DISTRICTS, spprograms:SP_PROGRAMS, transportvendors:TRANSPORT_VENDORS, foodvendors:FOOD_VENDORS, venues:VENUES, pools:[POOLS.shared]}[k]);
 function masterEditValues(k, i){
   const row=(masterData(k)||[])[i]||{};
   if(k==="tax")  return {code:row.code,name:row.name,percentage:row.pct,is_active:true};
@@ -8796,7 +8831,7 @@ function globalPassesRemaining(){
   let used=0; [...bookingProducts].forEach(([i,cfg])=>{ if(P[i]&&P[i].c==="MUSO") ((cfg&&cfg.combos)||[]).forEach(combo=>{ if(combo.redeemVisit&&isVisitSlot((P[i].slots||[]).find(s=>s.n===combo.slot))) used++; }); });
   return Math.max(0,base-used);
 }
-/* A membership visit is offered only for a plain MuSo Tour booking: the Tour must be in the cart,
+/* A membership visit is offered only for a plain Museum Exploration booking: the Tour must be in the cart,
    with no add-ons and no other products (programs are allowed — they get the auto member discount). */
 function membershipVisitApplies(){
   const member=bookingCustomer.member; if(!member) return false;
@@ -8806,7 +8841,7 @@ function membershipVisitApplies(){
   const addonSelected=[...bookingAddons.values()].some(cf=>((cf&&cf.combos)||[]).some(combo=>Object.values(combo.qty||{}).some(n=>+n>0)));
   return !addonSelected;                                    // any add-on hides it
 }
-/* The membership visit is offered only for the MuSo Tour's 14:00–19:00 slot (the Five-hour afternoon). */
+/* The membership visit is offered only for the Museum Exploration's 14:00–19:00 slot (the Five-hour afternoon). */
 function isVisitSlot(s){ return !!(s && s.t1==="14:00" && s.t2==="19:00"); }
 
 const bookingQtyValue=el=>Math.max(0,+(el.matches("input")?el.value:el.dataset.value)||0);
@@ -9144,6 +9179,8 @@ document.addEventListener("click",e=>{
   if(schAddV){ schoolCaptureForm(); const d=schoolDraft; if(d){ (d.visits=d.visits||[]).push(blankVisit()); } render(); return; }
   const schDelV=e.target.closest("[data-school-del-visit]");
   if(schDelV){ schoolCaptureForm(); const d=schoolDraft; if(d&&d.visits) d.visits.splice(+schDelV.dataset.schoolDelVisit,1); render(); return; }
+  const schSame=e.target.closest("[data-school-same]");
+  if(schSame){ schoolCaptureForm(); const d=schoolDraft; const idx=+schSame.dataset.schoolSame; if(d&&d.visits&&d.visits[idx-1]) d.visits[idx]=JSON.parse(JSON.stringify(d.visits[idx-1])); render(); return; }
   const schAddO=e.target.closest("[data-school-add-optional]");
   if(schAddO){ schoolCaptureForm(); const d=schoolDraft; const vi=+schAddO.dataset.schoolAddOptional; const v=d&&(d.visits||[])[vi]; if(v){ (v.optionals=v.optionals||[]).push({kind:"Workshop",venue:"",date:"",time:""}); } render(); return; }
   const schDelO=e.target.closest("[data-school-del-optional]");
@@ -9171,7 +9208,8 @@ document.addEventListener("click",e=>{
         schoolAdvanceOnPayment(rec); schoolPayFlyout=false; schoolPayEdit=-1;
       } } render(); return; }
   if(e.target.closest("[data-school-onlinepay]")){ const rec=schoolById(selSchool); if(rec){ const c=schoolCompute(rec); const entered=Math.max(0,+((document.getElementById("schoolPayAmt")||{}).value)||0); const amt=entered>0?entered:(c.balance>0?c.balance:0); const ref=((document.getElementById("schoolPayRef")||{}).value||"").trim(); const pf=document.getElementById("schoolPayProof"); const proof=pf&&pf.files&&pf.files[0]?pf.files[0].name:""; if(amt>0){ (rec.payments=rec.payments||[]).push({on:fmtDMY(new Date()),mode:"Online",amount:amt,ref:ref||("PG-"+String(Date.now()).slice(-8)),proof}); schoolLog(rec,"Payment gateway","Online payment "+money(amt)+" received via gateway"+(ref?" (ref "+ref+")":"")+"."); schoolAdvanceOnPayment(rec); schoolPayFlyout=false; schoolPayEdit=-1; } } render(); return; }
-  if(e.target.closest("[data-school-sendmail]")){ const rec=schoolById(selSchool); if(rec){ schoolLogEmail(rec,"System","Email sent to "+(rec.email||"the POC")+" with booking details and the proforma invoice.","booking"); schoolMsg="Email sent to "+(rec.email||"the POC")+". Open it from the Timeline via “View email”. (Wireframe — no email is actually sent.)"; } render(); return; }
+  if(e.target.closest("[data-school-send-proforma]")){ const rec=schoolById(selSchool); if(rec){ schoolLogEmail(rec,"System","Proforma invoice emailed to "+(rec.email||"the POC")+".","booking"); schoolMsg="Proforma sent to "+(rec.email||"the POC")+". (Wireframe — no email is actually sent.)"; } render(); return; }
+  if(e.target.closest("[data-school-send-einvoice]")){ const rec=schoolById(selSchool); if(rec){ schoolLogEmail(rec,"System","E-invoice emailed to "+(rec.email||"the POC")+".","booking"); schoolMsg="E-invoice sent to "+(rec.email||"the POC")+". (Wireframe — no email is actually sent.)"; } render(); return; }
   if(e.target.closest("[data-school-complete]")){ const rec=schoolById(selSchool); if(rec){ rec.status="Ended"; schoolLog(rec,"Admin","Visit marked completed. "+(rec.gstin?"E-invoice":"Tax invoice")+" raised."); } render(); return; }
   const schPdf=e.target.closest("[data-school-proforma-pdf]");
   if(schPdf){ const rec=schoolById(selSchool); if(rec) careerOpenPdf(schoolProformaPdf(rec), rec.id+"-proforma.pdf"); return; }
@@ -9211,6 +9249,8 @@ document.addEventListener("click",e=>{
     venueAvail={venue:o.venue||"",date:o.date||"",start:o.start||p[0]||"",end:o.end||p[1]||"",src:"sponsored",vi,oi}; render(); $(".stage").scrollTop=0; return; }
   const spAddV=e.target.closest("[data-sp-add-visit]");
   if(spAddV){ spCaptureForm(); const d=spDraft; if(d){ (d.visits=d.visits||[]).push(blankVisit()); } render(); return; }
+  const spSame=e.target.closest("[data-sp-same]");
+  if(spSame){ spCaptureForm(); const d=spDraft; const idx=+spSame.dataset.spSame; if(d&&d.visits&&d.visits[idx-1]) d.visits[idx]=JSON.parse(JSON.stringify(d.visits[idx-1])); render(); return; }
   const spDelV=e.target.closest("[data-sp-del-visit]");
   if(spDelV){ spCaptureForm(); const d=spDraft; if(d&&d.visits) d.visits.splice(+spDelV.dataset.spDelVisit,1); render(); return; }
   const spAddO=e.target.closest("[data-sp-add-optional]");
@@ -9228,7 +9268,7 @@ document.addEventListener("click",e=>{
   if(spRangeBtn){ spRange=spRangeBtn.dataset.spRange; render(); return; }
   const spExp=e.target.closest("[data-export]");
   if(spExp && spExp.dataset.export.startsWith("sponsored")){ downloadCSV(SP_EXPORT_NAMES[spExp.dataset.export]||"sponsored.csv", spExportRows(spExp.dataset.export)); return; }
-  if(e.target.closest("[data-sp-sendmail]")){ const rec=spById(selSp); if(rec){ spLogEmail(rec,"CSR","Email sent to "+(rec.email||"the POC")+" with the sponsored-visit details.","confirm"); spMsg="Email sent to "+(rec.email||"the POC")+". Open it from the Timeline via “View email”. (Wireframe — no email is actually sent.)"; } render(); return; }
+  if(e.target.closest("[data-sp-sendmail]")){ const rec=spById(selSp); if(rec){ spLogEmail(rec,"CSR","Email sent to "+(rec.email||"the POC")+" with the sponsored-visit details.","confirm"); spMsg="Email sent to "+(rec.email||"the POC")+". (Wireframe — no email is actually sent.)"; } render(); return; }
   if(e.target.closest("[data-sp-feedback]")){ const rec=spById(selSp); if(rec){ rec.feedback=rec.feedback||{}; rec.feedback.sent=true; spLogEmail(rec,"System","Feedback + acknowledgement form emailed to the POC.","feedback"); spMsg="Feedback + acknowledgement form sent to "+(rec.email||"the POC")+". (Wireframe — no email is actually sent.)"; } render(); return; }
   if(e.target.closest("[data-sp-complete]")){ const rec=spById(selSp); if(rec){ rec.status="Ended"; rec.invoice=rec.invoice||{}; rec.invoice.raised=true; rec.invoice.on=fmtDMY(new Date()); spLogEmail(rec,"Finance","Visit completed; e-invoice raised to "+(rec.sponsor||"the donor")+". Status → Ended.","invoice"); } render(); return; }
   const spPdf=e.target.closest("[data-sp-invoice-pdf]");
