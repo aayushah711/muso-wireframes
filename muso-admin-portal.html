@@ -1831,7 +1831,7 @@ function visitAgg(rec){
     comp:vs.reduce((a,v)=>a+(+v.escorts||0)+(+v.teachersComp||0),0) };
 }
 const bkBoards=r=>(r.boards||[]).concat(r.boardsOther?["Other: "+r.boardsOther]:[]).join("; ");
-const bkInterested=r=>(r.interested||[]).concat(r.interestedOther?["Other: "+r.interestedOther]:[]).join("; ");
+const bkInterested=r=>(r.interested||[]).map(x=>x==="Multi Visit"&&(r.mvPrograms||[]).length?"Multi Visit ("+r.mvPrograms.join(", ")+")":x).concat(r.interestedOther?["Other: "+r.interestedOther]:[]).join("; ");
 const bkDesig=r=>r.designation==="Other"&&r.designationOther?r.designationOther:(r.designation||"");
 const SCHOOL_EXPORT_NAMES={school:"school-report.csv","school-boards":"school-by-board.csv","school-repeat":"school-repeat-visitors.csv"};
 function schoolExportRows(kind){
@@ -2021,8 +2021,8 @@ function musoCheckBanner(src,i){
 /* ---- Enums (funded-visitor context) ---- */
 const SP_ORG_TYPES = ["Funded (NGO)","School"];
 const SP_TRANSPORT = ["Yes","No","Maybe"];
-const SP_INTEREST  = ["Museum Exploration"];   // base interest; the active Sponsored School Programs are appended from the SP_PROGRAMS master, + always-shown "Other"
-const spInterestOptions = () => [...SP_INTEREST, ...SP_PROGRAMS.filter(p=>p.is_active).map(p=>p.name)];
+const SP_INTEREST  = ["Museum Exploration","Multi Visit"];   // "Multi Visit" reveals the programs picker (fed from the SP_PROGRAMS master)
+const spProgramOptions = () => SP_PROGRAMS.filter(p=>p.is_active).map(p=>p.name);
 const SP_BOARDS    = ["SSC","ICSE","CBSE","IGCSE","IB","CIE","State board","Home schooling","Other"];   // "Other" chip → the "Other Board" text field
 
 /* ---- Records ---- */
@@ -2033,7 +2033,7 @@ const SPONSORED_BOOKINGS = [
     email:"visits@aseema.org", phone:"+91 98201 55667",
     orgType:"Funded (NGO)", sponsor:"", donorTicketing:"", donorFood:"", donorTravel:"", district:"Mumbai Suburban",
     transport:{need:"Maybe", vendor:""},
-    interested:["Museum Exploration","Introduction to AI"], interestedOther:"", prefDate:"22 Oct 2026",
+    interested:["Museum Exploration","Multi Visit"], mvPrograms:["Introduction to AI"], interestedOther:"", prefDate:"22 Oct 2026",
     expChildren:80, expTeachers:8, note:"Sponsored children; would value the AI session if it fits the budget.",
     proofDoc:"Aseema-12A-registration.pdf",
     visits:[], entryStudent:"", entryAdult:"",
@@ -2048,7 +2048,7 @@ const SPONSORED_BOOKINGS = [
     email:"coordinator@nanhikali.org", phone:"+91 90045 88221",
     orgType:"Funded (NGO)", sponsor:"JSW Foundation", donorTicketing:"JSW Foundation", donorFood:"JSW Foundation", donorTravel:"JSW Foundation", district:"Palghar",
     transport:{need:"Yes", vendor:"Konkan Travels"},
-    interested:["Museum Exploration","Future Maker Program"], interestedOther:"", prefDate:"28 Oct 2026",
+    interested:["Museum Exploration","Multi Visit"], mvPrograms:["Future Maker Program"], interestedOther:"", prefDate:"28 Oct 2026",
     expChildren:120, expTeachers:10, note:"Donor budget approval in progress.",
     proofDoc:"NanhiKali-80G.pdf",
     visits:[{date:"28 Oct 2026", slotId:"Afternoon slot 12:00–17:00", students:120, adults:10, escorts:4, teachersComp:0,
@@ -2478,7 +2478,7 @@ const BULK_SCHOOL_SAMPLES=[
   {School:"DAV Public School",Location:"Airoli, Navi Mumbai",Boards:"CBSE",Grade:"Grade 8",POC:"Sneha Kulkarni",Designation:"Teacher",Email:"sneha.k@dav.sch.in",Phone:"+91 90040 55667",VisitDate:"03 Apr 2025",Slot:"Morning slot 9:30–14:30",Students:120,Adults:9,Escorts:3,TeachersComp:2,FoodStudents:0,FoodAdults:0,FoodComp:0,FBOption:"",EntryStudent:350,EntryAdult:500,BillName:"DAV Public School",BillAddress:"Sector 6, Airoli, Navi Mumbai 400708",GSTIN:"",PAN:"AAACD5566P",Status:"Ended",AmountPaid:46500,Assignee:"Aditi",Interested:"Museum Tour",Note:"",Comments:"Paid in full on the day."}
 ];
 const BULK_SP_SAMPLES=[
-  {School:"Muktangan — Worli",Location:"Worli, Mumbai",OrgType:"Funded (NGO)",District:"Mumbai Suburban",Boards:"State board",Grade:"Grade 5",POC:"Anjali Rane",Designation:"Coordinator",Email:"visits@muktangan.org",Phone:"+91 98201 33445",VisitDate:"18 Feb 2025",Slot:"Morning slot 9:30–14:30",Students:80,Adults:8,Escorts:3,FoodStudents:80,FoodAdults:8,FoodComp:3,FBOption:"Snack box",EntryStudent:350,EntryAdult:500,TicketingDonor:"JSW Foundation",FoodDonor:"JSW Foundation",TravelDonor:"JSW Foundation",AuthNumber:"JSW/CSR/2025/0112",NgoGstin:"",NgoPan:"AAATM1234N",ProofDoc:"Muktangan-12A.pdf",TransportNeed:"Yes",TransportVendor:"Worli Roadways",FoodVendor:"Annapurna Caterers",SpeciallyAbled:4,Underprivileged:"First-generation learners:60; Below poverty line:20",BillName:"Muktangan",BillAddress:"Worli, Mumbai 400018",GSTIN:"",PAN:"AAATM1234N",Status:"Ended",Assignee:"Neha",Interested:"Museum Exploration;Introduction to AI",Note:"Sponsored by JSW Foundation.",Comments:"Visit completed; e-invoice to JSW."},
+  {School:"Muktangan — Worli",Location:"Worli, Mumbai",OrgType:"Funded (NGO)",District:"Mumbai Suburban",Boards:"State board",Grade:"Grade 5",POC:"Anjali Rane",Designation:"Coordinator",Email:"visits@muktangan.org",Phone:"+91 98201 33445",VisitDate:"18 Feb 2025",Slot:"Morning slot 9:30–14:30",Students:80,Adults:8,Escorts:3,FoodStudents:80,FoodAdults:8,FoodComp:3,FBOption:"Snack box",EntryStudent:350,EntryAdult:500,TicketingDonor:"JSW Foundation",FoodDonor:"JSW Foundation",TravelDonor:"JSW Foundation",AuthNumber:"JSW/CSR/2025/0112",NgoGstin:"",NgoPan:"AAATM1234N",ProofDoc:"Muktangan-12A.pdf",TransportNeed:"Yes",TransportVendor:"Worli Roadways",FoodVendor:"Annapurna Caterers",SpeciallyAbled:4,Underprivileged:"First-generation learners:60; Below poverty line:20",BillName:"Muktangan",BillAddress:"Worli, Mumbai 400018",GSTIN:"",PAN:"AAATM1234N",Status:"Ended",Assignee:"Neha",Interested:"Museum Exploration;Multi Visit",Note:"Sponsored by JSW Foundation.",Comments:"Visit completed; e-invoice to JSW."},
   {School:"Akanksha Foundation — Sewri",Location:"Sewri, Mumbai",OrgType:"Funded (NGO)",District:"Mumbai Suburban",Boards:"State board",Grade:"Grade 6 & 7",POC:"Imtiaz Shaikh",Designation:"Admin",Email:"programs@akanksha.org",Phone:"+91 90045 66778",VisitDate:"09 Mar 2025",Slot:"Afternoon slot 12:00–17:00",Students:110,Adults:10,Escorts:4,FoodStudents:110,FoodAdults:10,FoodComp:4,FBOption:"Standard lunch",EntryStudent:350,EntryAdult:500,TicketingDonor:"Tata Trusts",FoodDonor:"Tata Trusts",TravelDonor:"Tata Trusts",AuthNumber:"TT/GRANT/2025/0339",NgoGstin:"",NgoPan:"AAATA5678K",ProofDoc:"Akanksha-80G.pdf",TransportNeed:"Yes",TransportVendor:"Sewri Transport Co.",FoodVendor:"Tiffin Box Co.",SpeciallyAbled:2,Underprivileged:"First-generation learners:90",BillName:"Akanksha Foundation",BillAddress:"Sewri, Mumbai 400015",GSTIN:"",PAN:"AAATA5678K",Status:"Ended",Assignee:"Neha",Interested:"Museum Exploration",Note:"",Comments:"Completed."}
 ];
 function bulkTemplateRows(kind){
@@ -7015,8 +7015,12 @@ function schoolForm(editing){
   }</div></section>`;
 
   const secBoard=section("Education Board",
-    fld("Education board",chips("boards",d.boards,SCHOOL_BOARDS),"Tick every board that applies.","",true)+
+    fld("Education board",chips("boards",d.boards,SCHOOL_BOARDS),"Tick every board that applies.",true,true)+
     ((d.boards||[]).includes("Other")?fld("Other Board",t("boardsOther",d.boardsOther,"Specify here if other board"),"","",true):""));
+
+  const _pn=(d.poc||"").trim().split(/\s+/);
+  const pocFirst=d.pocFirst!==undefined?d.pocFirst:(_pn[0]||"");
+  const pocLast=d.pocLast!==undefined?d.pocLast:_pn.slice(1).join(" ");
 
   const secVisitDetails=section("Visit Details",
     fld("Grade / Class of Children Visiting",t("grade",d.grade,"e.g., Grade 5 - Grade 8"),"",true)+
@@ -7025,7 +7029,8 @@ function schoolForm(editing){
     fld("Expected Number of Teachers / Staff",num("expTeachers",d.expTeachers,"e.g., 6")));
 
   const secPOC=section("Point of Contact",
-    fld("Name of Point of Contact (POC)",t("poc",d.poc,"Enter full name of coordinating coordinator / teacher"),"",true,true)+
+    fld("POC First Name",t("pocFirst",pocFirst,"First name"),"",true)+
+    fld("POC Last Name",t("pocLast",pocLast,"Last name"),"",true)+
     fld("Designation",sel("designation",d.designation,SCHOOL_DESIGN,"—"))+
     (d.designation==="Other"?fld("Other designation",t("designationOther",d.designationOther,"Specify the designation"),"","",true):"")+
     fld("Email of POC",t("email",d.email,"poc@school.edu"),"",true)+
@@ -7140,7 +7145,8 @@ function schoolForm(editing){
 function schoolCaptureForm(){
   const d=schoolDraft; if(!d) return;
   const g=k=>{const el=document.querySelector(`[data-sf="${k}"]`);return el?el.value:undefined;};
-  ["school","location","boardsOther","grade","poc","designation","designationOther","email","phone","interestedOther","prefDate","note","entryPreset","entryStudent","entryAdult","billName","billAddress","gstin","pan","status","comments","assignee","expChildren","expTeachers"].forEach(k=>{const v=g(k);if(v!==undefined)d[k]=v;});
+  ["school","location","boardsOther","grade","pocFirst","pocLast","designation","designationOther","email","phone","interestedOther","prefDate","note","entryPreset","entryStudent","entryAdult","billName","billAddress","gstin","pan","status","comments","assignee","expChildren","expTeachers"].forEach(k=>{const v=g(k);if(v!==undefined)d[k]=v;});
+  if(document.querySelector('[data-sf="pocFirst"]')) d.poc=[d.pocFirst||"",d.pocLast||""].join(" ").replace(/\s+/g," ").trim();
   if(d.designation!=="Other") d.designationOther="";
   const chipVals=key=>[...document.querySelectorAll(`[data-sfchips="${key}"] .chip-opt[data-on="1"]`)].map(c=>c.dataset.chipval);
   if(document.querySelector('[data-sfchips="boards"]')) d.boards=chipVals("boards");
@@ -7164,6 +7170,7 @@ function schoolCaptureForm(){
       o.time=(o.start||o.end)?[o.start,o.end].filter(Boolean).join("–"):"";});
   });
 }
+function schoolValidate(){ const d=schoolDraft; if(!d) return ""; if(!d.school||!d.school.trim()) return "School name is required."; if(!(d.boards&&d.boards.length)) return "Select at least one education board."; return ""; }
 function schoolCommit(notify, sendFP){
   schoolCaptureForm(); const d=schoolDraft; if(!d) return;
   if(!d.school||!d.school.trim()){ const e=document.getElementById("schoolErr"); if(e)e.textContent="School name is required."; return; }
@@ -7551,8 +7558,8 @@ function spForm(editing){
   const section=(title,body)=>`<section class="form-sec"><div class="form-sec-head"><span class="form-sec-title">${title}</span></div><div class="form-sec-body">${body}</div></section>`;
 
   const secOrg=`<section class="form-sec ta-host"><div class="form-sec-head"><span class="form-sec-title">Organisation</span></div><div class="form-sec-body">${
-    fld("School / NGO name",`<div class="typeahead"><input class="inp" data-spf="school" data-sp-typeahead value="${esc(d.school)}" placeholder="Start typing to search existing organisations…" autocomplete="off"><div class="ta-menu" hidden></div></div>`,"Pick an organisation already on file to auto-fill its details.","",true)+
-    fld("Location",t("location",d.location,"City / area"),"",true)+
+    fld("Name",`<div class="typeahead"><input class="inp" data-spf="school" data-sp-typeahead value="${esc(d.school)}" placeholder="Start typing to search existing organisations…" autocomplete="off"><div class="ta-menu" hidden></div></div>`,"Pick an organisation already on file to auto-fill its details.","",true)+
+    fld("Location",t("location",d.location,"City / area"))+
     fld("District",sel("district",d.district,DISTRICTS.filter(x=>x.is_active).map(x=>x.name),"—"),"From the Districts master.")+
     fld("Type",sel("orgType",d.orgType,SP_ORG_TYPES),"Funded visitors (NGO) or a school.")+
     fld("Authorisation number",t("authNumber",d.authNumber,"The authorisation no."))+
@@ -7562,8 +7569,12 @@ function spForm(editing){
   }</div></section>`;
 
   const secBoard=section("Education Board",
-    fld("Education board",chips("boards",d.boards,SP_BOARDS),"Tick every board that applies.","",true)+
+    fld("Education board",chips("boards",d.boards,SP_BOARDS),"Tick every board that applies.",true,true)+
     ((d.boards||[]).includes("Other")?fld("Other Board",t("boardsOther",d.boardsOther,"Specify here if other board"),"","",true):""));
+
+  const _pn=(d.poc||"").trim().split(/\s+/);
+  const pocFirst=d.pocFirst!==undefined?d.pocFirst:(_pn[0]||"");
+  const pocLast=d.pocLast!==undefined?d.pocLast:_pn.slice(1).join(" ");
 
   const secVisitDetails=section("Visit Details",
     fld("Grade / class of children visiting",t("grade",d.grade,"e.g., Grade 5 - Grade 8"),"",true)+
@@ -7575,14 +7586,16 @@ function spForm(editing){
     fld("Food vendor",sel("foodVendor",d.foodVendor,[...new Set(FOOD_VENDORS.filter(v=>v.is_active).map(v=>v.name).concat(d.foodVendor?[d.foodVendor]:[]))],"— none —"),"From the Food vendors master."));
 
   const secPOC=section("Point of Contact",
-    fld("Name of POC / coordinator",t("poc",d.poc,"Full name of the coordinating teacher / POC"),"",true,true)+
+    fld("POC First Name",t("pocFirst",pocFirst,"First name"),"",true)+
+    fld("POC Last Name",t("pocLast",pocLast,"Last name"),"",true)+
     fld("Designation",sel("designation",d.designation,SCHOOL_DESIGN,"—"))+
     (d.designation==="Other"?fld("Other designation",t("designationOther",d.designationOther,"Specify the designation"),"","",true):"")+
     fld("Email of POC",t("email",d.email,"poc@ngo.org"),"",true)+
     fld("Phone of POC",t("phone",d.phone,"+91 98765 43210"),"Include country code",true));
 
   const secInterested=section("Interested In",
-    fld("Interested in (choose multiple if needed)",chips("interested",d.interested,spInterestOptions()),"","",true)+
+    fld("Interested in (choose multiple if needed)",chips("interested",d.interested,SP_INTEREST),"Pick at least one.",true,true)+
+    ((d.interested||[]).includes("Multi Visit")?fld("Multi-visit programs",chips("mvPrograms",d.mvPrograms,spProgramOptions()),"Select the programs this group is interested in.",true,true):"")+
     fld("Other Interests",t("interestedOther",d.interestedOther,"Specify special topics, events or sessions of interest"),"","",true));
 
   const secAdditional=section("Additional Information",
@@ -7711,7 +7724,8 @@ function spForm(editing){
 function spCaptureForm(){
   const d=spDraft; if(!d) return;
   const g=k=>{const el=document.querySelector(`[data-spf="${k}"]`);return el?el.value:undefined;};
-  ["school","location","orgType","district","boardsOther","grade","prefDate","poc","designation","designationOther","email","phone","interestedOther","note","donorTicketing","donorFood","donorTravel","foodVendor","authNumber","ngoGstin","ngoPan","proofDoc","entryPreset","entryStudent","entryAdult","billName","billAddress","gstin","pan","speciallyAbled","status","comments","assignee","expChildren","expTeachers"].forEach(k=>{const v=g(k);if(v!==undefined)d[k]=v;});
+  ["school","location","orgType","district","boardsOther","grade","prefDate","pocFirst","pocLast","designation","designationOther","email","phone","interestedOther","note","donorTicketing","donorFood","donorTravel","foodVendor","authNumber","ngoGstin","ngoPan","proofDoc","entryPreset","entryStudent","entryAdult","billName","billAddress","gstin","pan","speciallyAbled","status","comments","assignee","expChildren","expTeachers"].forEach(k=>{const v=g(k);if(v!==undefined)d[k]=v;});
+  if(document.querySelector('[data-spf="pocFirst"]')) d.poc=[d.pocFirst||"",d.pocLast||""].join(" ").replace(/\s+/g," ").trim();
   if(d.designation!=="Other") d.designationOther="";
   d.sponsor=spPrimaryDonor(d);   // keep the derived "primary" donor in sync for search / at-a-glance / by-donor
   const upEl=document.querySelector("[data-sp-uprows]");
@@ -7720,6 +7734,7 @@ function spCaptureForm(){
   const chipVals=key=>[...document.querySelectorAll(`[data-spfchips="${key}"] .chip-opt[data-on="1"]`)].map(c=>c.dataset.chipval);
   if(document.querySelector('[data-spfchips="boards"]')) d.boards=chipVals("boards");
   if(document.querySelector('[data-spfchips="interested"]')) d.interested=chipVals("interested");
+  if(document.querySelector('[data-spfchips="mvPrograms"]')) d.mvPrograms=chipVals("mvPrograms");
   document.querySelectorAll("[data-spvrow]").forEach(rowEl=>{const i=+rowEl.dataset.spvrow,v=(d.visits||[])[i];if(!v)return;
     const vg=n=>{const el=rowEl.querySelector(`[data-spvf="${n}"]`);return el?el.value:undefined;};
     ["date","slotId"].forEach(n=>{const x=vg(n);if(x!==undefined)v[n]=x;});
@@ -7735,9 +7750,10 @@ function spCaptureForm(){
       o.time=(o.start||o.end)?[o.start,o.end].filter(Boolean).join("–"):"";});
   });
 }
+function spValidate(){ const d=spDraft; if(!d) return ""; if(!d.school||!d.school.trim()) return "Name is required."; if(!(d.boards&&d.boards.length)) return "Select at least one education board."; if(!(d.interested&&d.interested.length)) return "Select at least one option under Interested in."; if(d.interested.includes("Multi Visit")&&!(d.mvPrograms&&d.mvPrograms.length)) return "Select at least one multi-visit program."; return ""; }
 function spCommit(notify, sendFP){
   spCaptureForm(); const d=spDraft; if(!d) return;
-  if(!d.school||!d.school.trim()){ const e=document.getElementById("spErr"); if(e)e.textContent="School / NGO name is required."; return; }
+  if(!d.school||!d.school.trim()){ const e=document.getElementById("spErr"); if(e)e.textContent="Name is required."; return; }
   const existing=spById(d.id);
   if(existing){ const prev=existing.status; delete d._mode; Object.assign(existing,d); existing._mode&&delete existing._mode;
     const statusChanged=existing.status!==prev;
@@ -7837,7 +7853,7 @@ function spDetail(){
   const overview=`<div class="card"><div class="card-head"><span class="card-title">Organisation &amp; contact</span></div><div class="matrix-wrap"><table class="reclist"><tbody>
       ${row("Organisation",escHtml(rec.school))}${row("Type",escHtml(rec.orgType))}${row("Location",escHtml(rec.location))}${row("District",escHtml(rec.district))}
       ${row("Education board",tags((rec.boards||[]).concat(rec.boardsOther?["Other: "+rec.boardsOther]:[])))}
-      ${row("Grade / class",escHtml(rec.grade))}${row("Interested in",tags((rec.interested||[]).concat(rec.interestedOther?["Other: "+rec.interestedOther]:[])))}
+      ${row("Grade / class",escHtml(rec.grade))}${row("Interested in",tags((rec.interested||[]).concat((rec.mvPrograms||[]).map(p=>"Program: "+p)).concat(rec.interestedOther?["Other: "+rec.interestedOther]:[])))}
       ${row("Point of contact",escHtml(rec.poc)+(rec.designation?` <span class="muted">· ${escHtml(rec.designation==="Other"&&rec.designationOther?rec.designationOther:rec.designation)}</span>`:""))}
       ${row("Email",rec.email?`<span class="code">${escHtml(rec.email)}</span>`:"")}${row("Phone",rec.phone?`<span class="code">${escHtml(rec.phone)}</span>`:"")}
       ${row("Preferred date",rec.prefDate)}${row("Expected",`${rec.expChildren||"—"} children · ${rec.expTeachers||"—"} staff`)}
@@ -9148,8 +9164,8 @@ document.addEventListener("click",e=>{
   if(e.target.closest("[data-school-edit]")){ const rec=schoolById(selSchool); schoolDraft=rec?Object.assign(JSON.parse(JSON.stringify(rec)),{_mode:"booking"}):blankSchool("booking"); tab="edit"; render(); $(".stage").scrollTop=0; return; }
   if(e.target.closest("[data-school-cancel]")){ const editing=schoolById((schoolDraft||{}).id); schoolDraft=null; schoolSaveConfirm=false; tab=editing?"detail":"list"; render(); $(".stage").scrollTop=0; return; }
   const schSuggest=e.target.closest("[data-school-suggest]");
-  if(schSuggest){ schoolCaptureForm(); const src=schoolDirectory().find(m=>m.name===schSuggest.dataset.schoolSuggest); if(src&&schoolDraft){ const r=src.rec; Object.assign(schoolDraft,{school:r.school,location:r.location,boards:(r.boards||[]).slice(),boardsOther:r.boardsOther||"",grade:r.grade,poc:r.poc,designation:r.designation,email:r.email,phone:r.phone,interested:(r.interested||[]).slice(),interestedOther:r.interestedOther||""}); } render(); return; }
-  if(e.target.closest("[data-school-save]")){ schoolCaptureForm(); schoolSaveConfirm=true; render(); return; }
+  if(schSuggest){ schoolCaptureForm(); const src=schoolDirectory().find(m=>m.name===schSuggest.dataset.schoolSuggest); if(src&&schoolDraft){ const r=src.rec; Object.assign(schoolDraft,{school:r.school,location:r.location,boards:(r.boards||[]).slice(),boardsOther:r.boardsOther||"",grade:r.grade,poc:r.poc,pocFirst:undefined,pocLast:undefined,designation:r.designation,email:r.email,phone:r.phone,interested:(r.interested||[]).slice(),interestedOther:r.interestedOther||""}); } render(); return; }
+  if(e.target.closest("[data-school-save]")){ schoolCaptureForm(); const err=schoolValidate(); if(err){ render(); const el=document.getElementById("schoolErr"); if(el) el.textContent=err; return; } schoolSaveConfirm=true; render(); return; }
   if(e.target.closest("[data-school-save-cancel]")){ schoolSaveConfirm=false; render(); return; }
   if(e.target.closest("[data-school-save-confirm]")){ if(bookingClashes("school").length) return; const cb=document.getElementById("schoolNotify"); const notify=cb?cb.checked:true; const fp=document.getElementById("schoolFP"); const sendFP=fp?fp.checked:false; schoolSaveConfirm=false; schoolCommit(notify,sendFP); return; }
   const schVA=e.target.closest("[data-school-viewavail]");
@@ -9239,8 +9255,8 @@ document.addEventListener("click",e=>{
   if(e.target.closest("[data-sp-edit]")){ const rec=spById(selSp); spDraft=rec?Object.assign(JSON.parse(JSON.stringify(rec)),{_mode:"booking"}):blankSp("booking"); tab="edit"; render(); $(".stage").scrollTop=0; return; }
   if(e.target.closest("[data-sp-cancel]")){ const editing=spById((spDraft||{}).id); spDraft=null; spSaveConfirm=false; tab=editing?"detail":"list"; render(); $(".stage").scrollTop=0; return; }
   const spSuggest=e.target.closest("[data-sp-suggest]");
-  if(spSuggest){ spCaptureForm(); const src=spDirectory().find(m=>m.name===spSuggest.dataset.spSuggest); if(src&&spDraft){ const r=src.rec; Object.assign(spDraft,{school:r.school,location:r.location,orgType:r.orgType,district:r.district,boards:(r.boards||[]).slice(),boardsOther:r.boardsOther||"",grade:r.grade,poc:r.poc,designation:r.designation,email:r.email,phone:r.phone,interested:(r.interested||[]).slice(),interestedOther:r.interestedOther||"",sponsor:r.sponsor||"",donorTicketing:r.donorTicketing||"",donorFood:r.donorFood||"",donorTravel:r.donorTravel||"",foodVendor:r.foodVendor||"",transport:{need:(r.transport||{}).need||"No",vendor:(r.transport||{}).vendor||""},ngoGstin:r.ngoGstin||"",ngoPan:r.ngoPan||"",proofDoc:r.proofDoc||""}); } render(); return; }
-  if(e.target.closest("[data-sp-save]")){ spCaptureForm(); spSaveConfirm=true; render(); return; }
+  if(spSuggest){ spCaptureForm(); const src=spDirectory().find(m=>m.name===spSuggest.dataset.spSuggest); if(src&&spDraft){ const r=src.rec; Object.assign(spDraft,{school:r.school,location:r.location,orgType:r.orgType,district:r.district,boards:(r.boards||[]).slice(),boardsOther:r.boardsOther||"",grade:r.grade,poc:r.poc,pocFirst:undefined,pocLast:undefined,designation:r.designation,email:r.email,phone:r.phone,interested:(r.interested||[]).slice(),mvPrograms:(r.mvPrograms||[]).slice(),interestedOther:r.interestedOther||"",sponsor:r.sponsor||"",donorTicketing:r.donorTicketing||"",donorFood:r.donorFood||"",donorTravel:r.donorTravel||"",foodVendor:r.foodVendor||"",transport:{need:(r.transport||{}).need||"No",vendor:(r.transport||{}).vendor||""},ngoGstin:r.ngoGstin||"",ngoPan:r.ngoPan||"",proofDoc:r.proofDoc||""}); } render(); return; }
+  if(e.target.closest("[data-sp-save]")){ spCaptureForm(); const err=spValidate(); if(err){ render(); const el=document.getElementById("spErr"); if(el) el.textContent=err; return; } spSaveConfirm=true; render(); return; }
   if(e.target.closest("[data-sp-save-cancel]")){ spSaveConfirm=false; render(); return; }
   if(e.target.closest("[data-sp-save-confirm]")){ if(bookingClashes("sponsored").length) return; const cb=document.getElementById("spNotify"); const notify=cb?cb.checked:true; const fp=document.getElementById("spFP"); const sendFP=fp?fp.checked:false; spSaveConfirm=false; spCommit(notify,sendFP); return; }
   const spVA=e.target.closest("[data-sp-viewavail]");
@@ -9442,6 +9458,8 @@ document.addEventListener("click",e=>{
   if(boardChip){ schoolCaptureForm(); const d=schoolDraft; d.boards=d.boards||[]; const v=boardChip.dataset.chipval, i=d.boards.indexOf(v); if(i>=0) d.boards.splice(i,1); else d.boards.push(v); if(!d.boards.includes("Other")) d.boardsOther=""; render(); return; }
   const spBoardChip=spDraft && e.target.closest('[data-spfchips="boards"] .chip-opt');
   if(spBoardChip){ spCaptureForm(); const d=spDraft; d.boards=d.boards||[]; const v=spBoardChip.dataset.chipval, i=d.boards.indexOf(v); if(i>=0) d.boards.splice(i,1); else d.boards.push(v); if(!d.boards.includes("Other")) d.boardsOther=""; render(); return; }
+  const spIntChip=spDraft && e.target.closest('[data-spfchips="interested"] .chip-opt');
+  if(spIntChip){ spCaptureForm(); const d=spDraft; d.interested=d.interested||[]; const v=spIntChip.dataset.chipval, i=d.interested.indexOf(v); if(i>=0) d.interested.splice(i,1); else d.interested.push(v); if(!d.interested.includes("Multi Visit")) d.mvPrograms=[]; render(); return; }
   const opt=e.target.closest(".chip-opt");
   if(opt){ opt.dataset.on = opt.dataset.on==="1"?"0":"1"; refreshDiscountSummaries();
     if(opt.closest('.fld[data-df="visitor_categories[]"]')) rebuildRatio();
