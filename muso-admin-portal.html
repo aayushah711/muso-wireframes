@@ -1707,7 +1707,9 @@ function nextSchoolId(){
   return "SCH-"+String(n+1).padStart(3,"0");
 }
 const SCHOOL_PILL = {Open:"pill-blue","In Discussion":"pill-warn",Confirmed:"pill-ok",Live:"pill-ok",Ended:"pill-off",Lost:"pill-off",Rejected:"pill-off"};
-const schoolStatusPill = r => `<span class="pill ${SCHOOL_PILL[r.status]||"pill-draft"}"><i class="dot"></i>${r.status}</span>`;
+/* Display label for a booking status — the internal "Ended" value reads "Completed" to users. */
+const statusLabel = s => s==="Ended" ? "Completed" : s;
+const schoolStatusPill = r => `<span class="pill ${SCHOOL_PILL[r.status]||"pill-draft"}"><i class="dot"></i>${statusLabel(r.status)}</span>`;
 const schoolTourSlots = () => (P.find(p=>p.c==="MUSO")||{slots:[]}).slots.map(s=>s.n);
 const fbByName = n => FB_OPTIONS.find(o=>o.name===n);
 const schoolSlotByName = n => SCHOOL_SLOTS.find(s=>s.name===n);
@@ -1846,7 +1848,7 @@ function schoolExportRows(kind){
   // Full booking report — every booking field, plus visit-array aggregates.
   return [["ID","Status","School Name","School Location","Education board","Grade / Class","Name of POC","Designation","Email of POC","Phone Number of POC","Interested In","Preferred Date of Visit","Expected Number of Children","Expected Number of Teachers / Staff","Message / Note","Entry price preset","Entry price per student","Entry price per adult / teacher","Total Number of Visits","Start Date","Start Time slot","Total Students (all visits)","Total Adults / teachers (all visits)","Total Complementary adults (all visits)","Billing name","Billing address","GST number","PAN","Assignee","Comments","Taxable value","GST (18%)","Grand total (incl. GST)","Amount paid","Balance","Created"]].concat(
     SCHOOL_BOOKINGS.map(r=>{const c=schoolCompute(r),va=visitAgg(r);
-      return [r.id,r.status,r.school,r.location,bkBoards(r),r.grade,r.poc,bkDesig(r),r.email,r.phone,bkInterested(r),r.prefDate,r.expChildren,r.expTeachers,r.note,r.entryPreset||"",r.entryStudent,r.entryAdult,va.count,va.startDate,va.startSlot,va.students,va.adults,va.comp,r.billName,r.billAddress,r.gstin,r.pan,r.assignee||"",r.comments,c.subtotal,c.gst,c.grand,c.paid,c.balance,r.created];}));
+      return [r.id,statusLabel(r.status),r.school,r.location,bkBoards(r),r.grade,r.poc,bkDesig(r),r.email,r.phone,bkInterested(r),r.prefDate,r.expChildren,r.expTeachers,r.note,r.entryPreset||"",r.entryStudent,r.entryAdult,va.count,va.startDate,va.startSlot,va.students,va.adults,va.comp,r.billName,r.billAddress,r.gstin,r.pan,r.assignee||"",r.comments,c.subtotal,c.gst,c.grand,c.paid,c.balance,r.created];}));
 }
 
 /* ============================================================================
@@ -1947,14 +1949,27 @@ function venueClashCheck(venue,date,start,end,src,skip){
   if(ps==null||pe==null) return [];
   return venueDayBookings(venue,date,src,skip).filter(b=>{const bs=timeToMin(b.start),be=timeToMin(b.end);return bs!=null&&be!=null&&bs<pe&&be>ps;});
 }
+/* The visit's School-time-slot window (null when the visit has no recognised slot). */
+function slotWindow(v){ const s=schoolSlotByName((v||{}).slotId); return s?{start:s.start,end:s.end}:null; }
+/* A message when an optional's start–end falls outside the visit's slot window; "" when fine. */
+function optOutsideSlot(v,st,en){
+  const w=slotWindow(v); if(!w) return "";
+  const ps=timeToMin(st),pe=timeToMin(en),ws=timeToMin(w.start),we=timeToMin(w.end);
+  if(ps==null||pe==null||ws==null||we==null) return "";
+  if(ps<ws||pe>we) return `outside the School time slot (${w.start}–${w.end})`;
+  return "";
+}
 /* Compute the "Check availability" verdict for one optional block (from the draft). */
 function runVenueCheck(src,vi,oi){
   const d = src==="sponsored"?spDraft:schoolDraft;
-  const o = (((d||{}).visits||[])[vi]||{}).optionals||[];
+  const vrec = ((d||{}).visits||[])[vi]||{};
+  const o = vrec.optionals||[];
   const opt = o[oi] || {};
   const p=(opt.time||"").split(/[–-]/).map(s=>s.trim());
   const st=opt.start||p[0]||"", en=opt.end||p[1]||"";
   if(!opt.venue||!opt.date||!st||!en) return {src,vi,oi,status:"incomplete",msg:"Fill Venue, Date, Start and End time first."};
+  const outMsg=optOutsideSlot(vrec,st,en);
+  if(outMsg) return {src,vi,oi,status:"clash",msg:`${st}–${en} is ${outMsg}. A venue block must fall within the School time slot.`};
   const cl=venueClashCheck(opt.venue,opt.date,st,en,src,{vi,oi});
   if(!cl.length) return {src,vi,oi,status:"ok",msg:`No clashes — ${opt.venue} is free ${st}–${en} on ${opt.date}.`};
   const f=cl[0];
@@ -1968,6 +1983,8 @@ function bookingClashes(src){
     const p=(o.time||"").split(/[–-]/).map(s=>s.trim());
     const st=o.start||p[0]||"", en=o.end||p[1]||"";
     if(!o.venue||!o.date||!st||!en) return;
+    const outMsg=optOutsideSlot(v,st,en);
+    if(outMsg){ out.push(`${o.venue} ${st}–${en} on ${o.date} — ${outMsg}`); return; }
     const cl=venueClashCheck(o.venue,o.date,st,en,src,{vi,oi});
     if(cl.length){ const f=cl[0]; out.push(`${o.venue} ${st}–${en} on ${o.date} — clashes with ${f.module} · ${f.by} (${f.start}–${f.end})${cl.length>1?` +${cl.length-1} more`:""}`); }
   }));
@@ -2007,12 +2024,18 @@ function runMusoCheck(src,vi){
   if(!over.length) return {src,vi,status:"ok",msg:`Nothing else is planned for ${s.start}–${s.end} on ${v.date}. The day is clear for this slot.`};
   const list=over.slice(0,3).map(b=>`${b.module} · ${b.by} (${b.start}–${b.end})`).join("; ");
   const kids=over.reduce((a,b)=>a+(+b.children||0),0);
-  return {src,vi,status:"info",msg:`${over.length} ${over.length>1?"activities overlap":"activity overlaps"} ${s.start}–${s.end} on ${v.date} — ${kids} children in total: ${list}${over.length>3?` +${over.length-3} more`:""}. Booking is still allowed.`};
+  const cap=childrenPoolCap();
+  const total=cap?`${kids} of ${cap} children`:`${kids} children in total`;
+  const exceed=cap&&kids>cap;
+  return {src,vi,status:exceed?"warn":"info",msg:`${over.length} ${over.length>1?"activities overlap":"activity overlaps"} ${s.start}–${s.end} on ${v.date} — ${total}: ${list}${over.length>3?` +${over.length-3} more`:""}. ${exceed?`Over the Children Building Capacity (${cap}). `:""}Booking is still allowed.`};
 }
+/* The active Children Building Capacity pool's number (0 if none / retired). */
+function childrenPoolCap(){ const p=POOLS.children; return (p&&p.is_active!==false)?(+p.cap||+p.capacity||0):0; }
 /* The inline verdict banner under a visit's date/slot row. */
 function musoCheckBanner(src,i){
   if(!musoCheck || musoCheck.src!==src || musoCheck.vi!==i) return "";
   const c = musoCheck.status==="ok" ? "background:#eaf7ee;border:1px solid #bfe6cb;color:#1e7f3c"
+          : musoCheck.status==="warn" ? "background:#fdecec;border:1px solid #f1b9b9;color:#a3261f"
           : musoCheck.status==="info" ? "background:#fff7e6;border:1px solid #f0d38a;color:#8a6100"
           : "background:#eef2f7;border:1px solid #d4dbe4;color:#4a5568";
   return `<div class="musocheck-result" style="margin-top:10px;padding:8px 11px;border-radius:6px;font-size:12px;${c}">${escHtml(musoCheck.msg)}</div>`;
@@ -2098,7 +2121,7 @@ const SPONSORED_BOOKINGS = [
     comments:"Visit completed; e-invoice raised to Tata Trusts.", invoice:{raised:true, on:"07 Aug 2026"},
     timeline:[{on:"12 Jul 2026", who:"Neha (CSR)", what:"Backend booking created; confirmation emailed to the NGO and Function Process circulated to staff."},
               {on:"06 Aug 2026", who:"Reception", what:"Group checked in — 90 students, 8 teachers."},
-              {on:"07 Aug 2026", who:"Shivam (Finance)", what:"Visit completed; e-invoice raised to Tata Trusts. Status → Ended."},
+              {on:"07 Aug 2026", who:"Shivam (Finance)", what:"Visit completed; e-invoice raised to Tata Trusts. Status → Completed."},
               {on:"07 Aug 2026", who:"System", what:"Feedback + acknowledgement form emailed to the POC."}] }
 ];
 
@@ -2193,7 +2216,7 @@ function spExportRows(kind){
   return [["ID","School / NGO name","Location","District","Type","Authorisation number","GST number of NGO","PAN of NGO","Proof of identity","Education board","Grade / Class","Preferred date of visit","Expected number of children","Expected number of teachers / staff","Transport support","Transport vendor","Food vendor","Name of POC","Designation","Email of POC","Phone of POC","Interested In","Message / Note","Ticketing donor","Food donor","Travel donor","Entry price preset","Entry price per student","Entry price per adult / teacher","Total Number of Visits","Start Date","Start Time slot","Total Students (all visits)","Total Adults / teachers (all visits)","Total Complementary adults (all visits)","Billing name","Billing address","GST number","PAN","Specially-abled children","Sponsored children remarks","Assignee","Status","Comments","Taxable value","GST (18%)","Grand total (incl. GST)","Invoice raised","Created"]].concat(
     SPONSORED_BOOKINGS.map(r=>{const c=schoolCompute(r),va=visitAgg(r),t=r.transport||{};
       const groups=(r.sponsoredGroups||[]).map(g=>`${g.title}: ${g.count}`).join("; ");
-      return [r.id,r.school,r.location,r.district||"",r.orgType||"",r.authNumber||"",r.ngoGstin||"",r.ngoPan||"",r.proofDoc||"",bkBoards(r),r.grade,r.prefDate,r.expChildren,r.expTeachers,t.need||"",t.vendor||"",r.foodVendor||"",r.poc,bkDesig(r),r.email,r.phone,bkInterested(r),r.note,r.donorTicketing||"",r.donorFood||"",r.donorTravel||"",r.entryPreset||"",r.entryStudent,r.entryAdult,va.count,va.startDate,va.startSlot,va.students,va.adults,va.comp,r.billName,r.billAddress,r.gstin,r.pan,r.speciallyAbled||0,groups,r.assignee||"",r.status,r.comments,c.subtotal,c.gst,c.grand,(r.invoice&&r.invoice.raised?"Yes":"No"),r.created];}));
+      return [r.id,r.school,r.location,r.district||"",r.orgType||"",r.authNumber||"",r.ngoGstin||"",r.ngoPan||"",r.proofDoc||"",bkBoards(r),r.grade,r.prefDate,r.expChildren,r.expTeachers,t.need||"",t.vendor||"",r.foodVendor||"",r.poc,bkDesig(r),r.email,r.phone,bkInterested(r),r.note,r.donorTicketing||"",r.donorFood||"",r.donorTravel||"",r.entryPreset||"",r.entryStudent,r.entryAdult,va.count,va.startDate,va.startSlot,va.students,va.adults,va.comp,r.billName,r.billAddress,r.gstin,r.pan,r.speciallyAbled||0,groups,r.assignee||"",statusLabel(r.status),r.comments,c.subtotal,c.gst,c.grand,(r.invoice&&r.invoice.raised?"Yes":"No"),r.created];}));
 }
 
 /* ---- Careers queries: the "ask us something" form on the careers page. Name,
@@ -2403,7 +2426,7 @@ function bulkValidateRow(o){
   return errs;
 }
 const BULK_STATUSES=["Open","In Discussion","Confirmed","Live","Ended","Lost","Rejected"];
-const bulkStatus = s => { const t=String(s||"").trim(); return BULK_STATUSES.find(x=>x.toLowerCase()===t.toLowerCase())||"Ended"; };
+const bulkStatus = s => { const t=String(s||"").trim(); if(t.toLowerCase()==="completed") return "Ended"; return BULK_STATUSES.find(x=>x.toLowerCase()===t.toLowerCase())||"Ended"; };
 const bulkSlot   = s => { const t=String(s||"").trim(); return (SCHOOL_SLOTS.find(x=>x.name.toLowerCase()===t.toLowerCase())||{}).name || t || (SCHOOL_SLOTS[0]||{}).name; };
 
 /* Parse raw CSV text into { records:[{line,obj,errs,ok}], okCount, errCount }.
@@ -2518,7 +2541,7 @@ function bulkPanel(kind){
           <button class="btn btn-primary" data-bulk-close="${kind}">Done</button></div></div></div>`;
   }
   const res = st.result;
-  const intro = `<div style="font-size:12.5px;color:var(--ink2);line-height:1.55;margin-bottom:4px">Upload a CSV of past ${nice} bookings — one row per booking (a single visit). <b>Required columns:</b> School, Location, Boards, Grade, POC, Email, Phone, VisitDate, Interested. Multi-value cells (Boards, Interested) use <code>;</code> to separate. Blank or unknown Status becomes <b>Ended</b>. Entry &amp; F&amp;B prices are read as <b>inclusive of 18% GST</b> — the same as the form. Download the template for the full column list with sample rows.</div>`;
+  const intro = `<div style="font-size:12.5px;color:var(--ink2);line-height:1.55;margin-bottom:4px">Upload a CSV of past ${nice} bookings — one row per booking (a single visit). <b>Required columns:</b> School, Location, Boards, Grade, POC, Email, Phone, VisitDate, Interested. Multi-value cells (Boards, Interested) use <code>;</code> to separate. Blank or unknown Status becomes <b>Completed</b>. Entry &amp; F&amp;B prices are read as <b>inclusive of 18% GST</b> — the same as the form. Download the template for the full column list with sample rows.</div>`;
   const picker = `<div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin:16px 0">
       <label class="btn btn-primary" style="cursor:pointer;position:relative;overflow:hidden">Choose CSV file…
         <input type="file" accept=".csv,text/csv" data-bulk-file="${kind}" style="position:absolute;inset:0;opacity:0;cursor:pointer"></label>
@@ -2559,9 +2582,11 @@ const SOURCES = ["Instagram","Google search","Friend or family","Child's school"
                  "Event or fair","Newspaper or magazine","Other"];
 
 const POOLS = {
-  shared:{code:"BUILDING",name:"Building capacity",cap:"400",unit:"concurrent heads",
+  shared:{code:"BUILDING",name:"Building capacity",cap:"400",capacity:"400",unit:"concurrent heads",
     d:"Shared between museum tours, birthday parties and school visits. Rentals, events and workshops are explicitly excluded.",
     inn:["Museum tours","Birthday parties","School visits"],out:["Rentals","Events","Workshops"]},
+  children:{code:"CHBUILDING",name:"Children Building Capacity",cap:"300",capacity:"300",unit:"children",is_active:true,
+    d:"How many children may be inside the building at once across school and sponsored visits. The Visits-box availability check totals the children overlapping a slot against this number."},
   sub:[]
 };
 
@@ -4399,10 +4424,10 @@ function deptDeleteLayer(){
    An enquiry with no scheduled visits falls back to its preferred date. */
 function upcomingSchoolVisits(){
   const ref = parseDMY(DASH.todayDate) || new Date();
-  const excluded = new Set(["Ended","Lost","Rejected","Cancelled"]);
+  const confirmed = new Set(["Confirmed","Live"]);   // dashboard shows only confirmed schools, not open enquiries
   const out=[];
   const add=(rec,kind,idx)=>{
-    if(excluded.has(rec.status)) return;
+    if(!confirmed.has(rec.status)) return;
     const vs=(rec.visits||[]).filter(v=>v.date && parseDMY(v.date));
     if(vs.length){
       vs.forEach(v=>{ const d=parseDMY(v.date); if(d && d>=ref)
@@ -4656,7 +4681,7 @@ const VIEWS = {
         <td class="code ctr">${r.adults||"—"}</td></tr>`).join("")
       :'<tr><td colspan="4" class="muted" style="text-align:center;padding:22px">No upcoming school visits.</td></tr>';
     const schoolsPanel=`<div class="card">
-      <div class="card-head"><span class="card-title">Upcoming schools</span><span class="card-note" style="margin-left:auto">for Reception</span></div>
+      <div class="card-head"><span class="card-title">Upcoming schools</span><span class="card-note" style="margin-left:auto">confirmed · for Reception</span></div>
       <div style="display:flex;gap:22px;padding:11px 16px;border-bottom:1px solid var(--rule);font-size:12.5px">
         <span><b style="font-size:15px">${upV.length}</b> upcoming visit${upV.length===1?"":"s"}</span>
         <span><b style="font-size:15px">${upStu}</b> students</span>
@@ -4767,7 +4792,7 @@ const VIEWS = {
   },
 
   pools(){
-    const rows=[POOLS.shared].concat(POOLS.sub||[]);
+    const rows=[POOLS.shared,POOLS.children].concat(POOLS.sub||[]);
     const ownCap=P.filter(x=>x.pool!=="BUILDING").length;
     return `<div class="note note-scope"><span class="note-mark">Structure</span><div>
       One shared <b>building pool</b> caps how many people are inside at once. Each product either draws on it or carries its own per-slot capacity (a toggle on the product) — so there's no separate pool to create per activity.
@@ -5249,7 +5274,7 @@ const VIEWS = {
     }).join("");
     const statusPick=`<div class="selwrap tool-sel"><select class="inp" data-school-filter>
       <option value="">All statuses</option>
-      ${SCHOOL_STATUSES.map(s=>`<option${s===schoolFStatus?" selected":""}>${s}</option>`).join("")}</select></div>`;
+      ${SCHOOL_STATUSES.map(s=>`<option value="${escAttr(s)}"${s===schoolFStatus?" selected":""}>${escHtml(statusLabel(s))}</option>`).join("")}</select></div>`;
     const toolbar=`<div class="toolbar">
       <label class="search"><span>&#8981;</span><input data-school-search value="${escAttr(schoolQ)}" autocomplete="off"
         placeholder="Search by ID, school, POC or location" aria-label="Search school records"></label>
@@ -5395,7 +5420,7 @@ const VIEWS = {
     }).join("");
     const statusPick=`<div class="selwrap tool-sel"><select class="inp" data-sp-filter>
       <option value="">All statuses</option>
-      ${SCHOOL_STATUSES.map(s=>`<option${s===spFStatus?" selected":""}>${s}</option>`).join("")}</select></div>`;
+      ${SCHOOL_STATUSES.map(s=>`<option value="${escAttr(s)}"${s===spFStatus?" selected":""}>${escHtml(statusLabel(s))}</option>`).join("")}</select></div>`;
     const toolbar=`<div class="toolbar">
       <label class="search"><span>&#8981;</span><input data-sp-search value="${escAttr(spQ)}" autocomplete="off"
         placeholder="Search by ID, organisation, donor or district" aria-label="Search sponsored records"></label>
@@ -6998,6 +7023,7 @@ function musoAvailCard(){
 function schoolForm(editing){
   if(!schoolDraft) schoolDraft = editing ? Object.assign(JSON.parse(JSON.stringify(schoolById(selSchool)||blankSchool("booking"))),{_mode:"booking"}) : blankSchool(schoolNewMode);
   const d=schoolDraft;
+  const priceLocked = d.status==="Ended";   // completed bookings are locked from price changes
   const esc=v=>escAttr(v==null?"":v);
   const t=(k,v,ph)=>`<input class="inp" data-sf="${k}" value="${esc(v)}" placeholder="${ph||""}" autocomplete="off">`;
   const num=(k,v,ph)=>`<input class="inp mono" type="number" min="0" data-sf="${k}" value="${esc(v)}" placeholder="${ph||""}">`;
@@ -7093,15 +7119,17 @@ function schoolForm(editing){
       ${numFld("F&B — adults / teachers","foodAdults",f.adults)}
       ${numFld("F&B — complementary","foodComp",f.comp,"Charged ₹0.")}
     </div>
-    <div style="margin-top:12px">${fld("F&B option",`<div class="selwrap"><select class="inp" data-vfsel="foodopt|${i}"><option value="">— none —</option>${fbActive.map(o=>`<option${(f.optionIds||[])[0]===o?" selected":""}>${escHtml(o)}</option>`).join("")}</select></div>`,"Adult & child pricing from the F&B options master — inclusive of 18% GST.")}</div>
+    <div style="margin-top:12px">${fld("F&B option",`<div class="selwrap"><select class="inp" data-vfsel="foodopt|${i}"${priceLocked?" disabled":""}><option value="">— none —</option>${fbActive.map(o=>`<option${(f.optionIds||[])[0]===o?" selected":""}>${escHtml(o)}</option>`).join("")}</select></div>`,priceLocked?"🔒 Locked — booking completed.":"Adult & child pricing from the F&B options master — inclusive of 18% GST.")}</div>
     ${subHead("Optionals (venue blocks)")}
     <div style="display:flex;flex-direction:column;gap:10px">${(v.optionals||[]).map((o,oi)=>optCard(i,o,oi)).join("")}
       <button type="button" class="rep-add" data-school-add-optional="${i}" style="border-radius:4px;align-self:flex-start">+ Add optional</button></div>
   </div>`; };
+  const pdis = priceLocked?" disabled":"";
+  const priceNum=(k,v)=>`<input class="inp mono" type="number" min="0" data-sf="${k}" value="${esc(v)}"${pdis}>`;
   const secPricing=section("Entry pricing",
-    fld("Entry price preset",`<div class="selwrap"><select class="inp" data-school-preset data-sf="entryPreset"><option value="">— pick a preset —</option>${ENTRY_PRICES.map(p=>`<option${d.entryPreset===p.name?" selected":""}>${escHtml(p.name)}</option>`).join("")}</select></div>`,"Fills the per-head prices below; they stay editable. Prices are inclusive of 18% GST.")+
-    fld("Entry price · per student",num("entryStudent",d.entryStudent),"Inclusive of 18% GST.")+
-    fld("Entry price · per adult / teacher",num("entryAdult",d.entryAdult),"Inclusive of 18% GST."));
+    fld("Entry price preset",`<div class="selwrap"><select class="inp" data-school-preset data-sf="entryPreset"${pdis}><option value="">— pick a preset —</option>${ENTRY_PRICES.map(p=>`<option${d.entryPreset===p.name?" selected":""}>${escHtml(p.name)}</option>`).join("")}</select></div>`,priceLocked?"🔒 Locked — this booking is completed, so its prices can't be changed.":"Fills the per-head prices below; they stay editable. Prices are inclusive of 18% GST.")+
+    fld("Entry price · per student",priceNum("entryStudent",d.entryStudent),"Inclusive of 18% GST.")+
+    fld("Entry price · per adult / teacher",priceNum("entryAdult",d.entryAdult),"Inclusive of 18% GST."));
   const secVisits=section("Visits",
     `<div class="fld" style="grid-column:1/-1;gap:14px">${(d.visits||[]).map(visitCard).join("")}
       <button type="button" class="rep-add" data-school-add-visit="1" style="border-radius:4px;align-self:flex-start">+ Add visit</button></div>`);
@@ -7114,10 +7142,10 @@ function schoolForm(editing){
 
   const statusLocked = schoolStatusLocked(d);
   const statusOpts = SCHOOL_MANUAL_STATUSES.includes(d.status) ? SCHOOL_MANUAL_STATUSES : SCHOOL_MANUAL_STATUSES.concat([d.status]);
-  const statusCtl = statusLocked ? schoolStatusPill(d) : sel("status",d.status,statusOpts);
+  const statusCtl = statusLocked ? schoolStatusPill(d) : `<div class="selwrap"><select class="inp" data-sf="status">${statusOpts.map(o=>`<option value="${escAttr(o)}"${o===d.status?" selected":""}>${escHtml(statusLabel(o))}</option>`).join("")}</select></div>`;
   const secStatus=section("Status & comments",
     fld("Assignee",t("assignee",d.assignee,"e.g. Faiz Khan"),"Optional — the MuSo staff member handling this booking.")+
-    fld("Status",statusCtl, statusLocked?"":"Confirmed, Live and Ended are set automatically from payment and the visit date.")+
+    fld("Status",statusCtl, statusLocked?"":"Confirmed, Live and Completed are set automatically from payment and the visit date.")+
     fld("Comments",ta("comments",d.comments),"","",true));
 
   const body = secSchoolInfo+secBoard+secVisitDetails+secPOC+secInterested+secAdditional
@@ -7125,7 +7153,7 @@ function schoolForm(editing){
   const title = editing ? "Edit school booking" : "New school booking";
   const saveLbl = editing ? "Save changes" : "Create booking";
   const schClashes = schoolSaveConfirm ? bookingClashes("school") : [];
-  const clashBlock = cs => cs.length?`<div style="margin-top:12px;padding:8px 11px;border-radius:6px;font-size:12px;background:#fdeceb;border:1px solid #f2b8b5;color:#9b2c2c"><b>Venue ${cs.length>1?"clashes":"clash"} detected</b><ul style="margin:6px 0 4px;padding-left:18px">${cs.map(c=>`<li>${escHtml(c)}</li>`).join("")}</ul><b>Change the venue, date or time to continue — a clashing booking can't be created.</b></div>`:"";
+  const clashBlock = cs => cs.length?`<div style="margin-top:12px;padding:8px 11px;border-radius:6px;font-size:12px;background:#fdeceb;border:1px solid #f2b8b5;color:#9b2c2c"><b>Venue ${cs.length>1?"issues":"issue"} detected</b><ul style="margin:6px 0 4px;padding-left:18px">${cs.map(c=>`<li>${escHtml(c)}</li>`).join("")}</ul><b>Change the venue, date or time to continue — the booking can't be created until these are fixed.</b></div>`:"";
   const saveConfirm = schoolSaveConfirm?`<div class="confirm-layer"><button class="confirm-backdrop" data-school-save-cancel="1" aria-label="Cancel"></button>
     <div class="confirm-box" role="dialog" aria-modal="true"><div class="confirm-title">${editing?"Save changes?":"Create booking?"}</div>
     <div class="confirm-body">${editing?"Apply your edits to this booking and refresh its proforma invoice.":"This creates the school booking — its visits, headcounts, food and venue blocks — and generates the proforma invoice. It opens as a new booking and moves to confirmed once a payment is received."}
@@ -7547,6 +7575,7 @@ function blankSp(mode){
 function spForm(editing){
   if(!spDraft) spDraft = editing ? Object.assign(JSON.parse(JSON.stringify(spById(selSp)||blankSp("booking"))),{_mode:"booking"}) : blankSp(spNewMode);
   const d=spDraft;
+  const priceLocked = d.status==="Ended";   // completed bookings are locked from price changes
   const esc=v=>escAttr(v==null?"":v);
   const t=(k,v,ph)=>`<input class="inp" data-spf="${k}" value="${esc(v)}" placeholder="${ph||""}" autocomplete="off">`;
   const num=(k,v,ph)=>`<input class="inp mono" type="number" min="0" data-spf="${k}" value="${esc(v)}" placeholder="${ph||""}">`;
@@ -7613,10 +7642,12 @@ function spForm(editing){
       <div class="muted" style="font-size:11px;margin-top:6px">Each is optional and the same donor may cover more than one. The e-invoice reflects the split — the school pays nothing.</div></div>`);
 
   // Entry pricing
+  const pdis = priceLocked?" disabled":"";
+  const priceNum=(k,v)=>`<input class="inp mono" type="number" min="0" data-spf="${k}" value="${esc(v)}"${pdis}>`;
   const secPricing=section("Entry pricing",
-    fld("Entry price preset",`<div class="selwrap"><select class="inp" data-sp-preset data-spf="entryPreset"><option value="">— pick a preset —</option>${ENTRY_PRICES.map(p=>`<option${d.entryPreset===p.name?" selected":""}>${escHtml(p.name)}</option>`).join("")}</select></div>`,"Fills the per-head prices below; they stay editable. Prices are inclusive of 18% GST. Billed to the donor, not the school.")+
-    fld("Entry price · per student",num("entryStudent",d.entryStudent),"Inclusive of 18% GST.")+
-    fld("Entry price · per adult / teacher",num("entryAdult",d.entryAdult),"Inclusive of 18% GST."));
+    fld("Entry price preset",`<div class="selwrap"><select class="inp" data-sp-preset data-spf="entryPreset"${pdis}><option value="">— pick a preset —</option>${ENTRY_PRICES.map(p=>`<option${d.entryPreset===p.name?" selected":""}>${escHtml(p.name)}</option>`).join("")}</select></div>`,priceLocked?"🔒 Locked — this booking is completed, so its prices can't be changed.":"Fills the per-head prices below; they stay editable. Prices are inclusive of 18% GST. Billed to the donor, not the school.")+
+    fld("Entry price · per student",priceNum("entryStudent",d.entryStudent),"Inclusive of 18% GST.")+
+    fld("Entry price · per adult / teacher",priceNum("entryAdult",d.entryAdult),"Inclusive of 18% GST."));
 
   // Visits (own section; each visit carries schedule, headcounts, food, optionals)
   if(!Array.isArray(d.visits) || d.visits.length===0) d.visits=[blankVisit()];
@@ -7666,7 +7697,7 @@ function spForm(editing){
       ${numV("F&B — adults / teachers","foodAdults",f.adults)}
       ${numV("F&B — complementary","foodComp",f.comp,"Charged ₹0.")}
     </div>
-    <div style="margin-top:12px">${fld("F&B option",`<div class="selwrap"><select class="inp" data-spvfsel="foodopt|${i}"><option value="">— none —</option>${fbActive.map(o=>`<option${(f.optionIds||[])[0]===o?" selected":""}>${escHtml(o)}</option>`).join("")}</select></div>`,"Adult & child pricing from the F&B options master — inclusive of 18% GST.")}</div>
+    <div style="margin-top:12px">${fld("F&B option",`<div class="selwrap"><select class="inp" data-spvfsel="foodopt|${i}"${priceLocked?" disabled":""}><option value="">— none —</option>${fbActive.map(o=>`<option${(f.optionIds||[])[0]===o?" selected":""}>${escHtml(o)}</option>`).join("")}</select></div>`,priceLocked?"🔒 Locked — booking completed.":"Adult & child pricing from the F&B options master — inclusive of 18% GST.")}</div>
     ${subHead("Optionals (venue blocks)")}
     <div style="display:flex;flex-direction:column;gap:10px">${(v.optionals||[]).map((o,oi)=>optCard(i,o,oi)).join("")}
       <button type="button" class="rep-add" data-sp-add-optional="${i}" style="border-radius:4px;align-self:flex-start">+ Add optional</button></div>
@@ -7698,14 +7729,14 @@ function spForm(editing){
   const statusOpts = SP_MANUAL_STATUSES.includes(d.status) ? SP_MANUAL_STATUSES : SP_MANUAL_STATUSES.concat([d.status]);
   const secStatus=section("Status & comments",
     fld("Assignee",t("assignee",d.assignee,"e.g. Faiz Khan"),"Optional — the MuSo staff member handling this booking.")+
-    fld("Status",sel("status",d.status,statusOpts),"No payment on sponsored visits — set Confirmed here. Live / Ended follow the visit date and completion.")+
+    fld("Status",`<div class="selwrap"><select class="inp" data-spf="status">${statusOpts.map(o=>`<option value="${escAttr(o)}"${o===d.status?" selected":""}>${escHtml(statusLabel(o))}</option>`).join("")}</select></div>`,"No payment on sponsored visits — set Confirmed here. Live / Completed follow the visit date and completion.")+
     fld("Comments",ta("comments",d.comments),"","",true));
 
   const body = secOrg+secBoard+secVisitDetails+secPOC+secInterested+secAdditional+secSponsor+secPricing+secVisits+secBill+secImpact+secStatus;
   const title = editing ? "Edit sponsored booking" : "New sponsored booking";
   const saveLbl = editing ? "Save changes" : "Create booking";
   const spClashes = spSaveConfirm ? bookingClashes("sponsored") : [];
-  const spClashBlock = cs => cs.length?`<div style="margin-top:12px;padding:8px 11px;border-radius:6px;font-size:12px;background:#fdeceb;border:1px solid #f2b8b5;color:#9b2c2c"><b>Venue ${cs.length>1?"clashes":"clash"} detected</b><ul style="margin:6px 0 4px;padding-left:18px">${cs.map(c=>`<li>${escHtml(c)}</li>`).join("")}</ul><b>Change the venue, date or time to continue — a clashing booking can't be created.</b></div>`:"";
+  const spClashBlock = cs => cs.length?`<div style="margin-top:12px;padding:8px 11px;border-radius:6px;font-size:12px;background:#fdeceb;border:1px solid #f2b8b5;color:#9b2c2c"><b>Venue ${cs.length>1?"issues":"issue"} detected</b><ul style="margin:6px 0 4px;padding-left:18px">${cs.map(c=>`<li>${escHtml(c)}</li>`).join("")}</ul><b>Change the venue, date or time to continue — the booking can't be created until these are fixed.</b></div>`:"";
   const saveConfirm = spSaveConfirm?`<div class="confirm-layer"><button class="confirm-backdrop" data-sp-save-cancel="1" aria-label="Cancel"></button>
     <div class="confirm-box" role="dialog" aria-modal="true"><div class="confirm-title">${editing?"Save changes?":"Create booking?"}</div>
     <div class="confirm-body">${editing?"Apply your edits to this booking and refresh its invoice.":"This creates the sponsored booking — its visits, headcounts and venue blocks — billed to the sponsor. It opens as a new booking, and the sponsor invoice is raised on completion."}
@@ -8583,7 +8614,7 @@ function careerApplications(){
 /* Foundations master-row edit: the data array behind each simple master, so a row's
    Edit button can open the create form prefilled from that row (display-only). */
 const masterData = k => ({categories:CATS, tax:TAXRATES, hsn:HSNCODES, shopcats:SHOP_CATEGORIES, progcats:PROGCATS,
-  fboptions:FB_OPTIONS, schoolslots:SCHOOL_SLOTS, entryprices:ENTRY_PRICES, sponsors:SPONSORS, districts:DISTRICTS, spprograms:SP_PROGRAMS, transportvendors:TRANSPORT_VENDORS, foodvendors:FOOD_VENDORS, venues:VENUES, pools:[POOLS.shared]}[k]);
+  fboptions:FB_OPTIONS, schoolslots:SCHOOL_SLOTS, entryprices:ENTRY_PRICES, sponsors:SPONSORS, districts:DISTRICTS, spprograms:SP_PROGRAMS, transportvendors:TRANSPORT_VENDORS, foodvendors:FOOD_VENDORS, venues:VENUES, pools:[POOLS.shared,POOLS.children]}[k]);
 function masterEditValues(k, i){
   const row=(masterData(k)||[])[i]||{};
   if(k==="tax")  return {code:row.code,name:row.name,percentage:row.pct,is_active:true};
@@ -9286,7 +9317,7 @@ document.addEventListener("click",e=>{
   if(spExp && spExp.dataset.export.startsWith("sponsored")){ downloadCSV(SP_EXPORT_NAMES[spExp.dataset.export]||"sponsored.csv", spExportRows(spExp.dataset.export)); return; }
   if(e.target.closest("[data-sp-sendmail]")){ const rec=spById(selSp); if(rec){ spLogEmail(rec,"CSR","Email sent to "+(rec.email||"the POC")+" with the sponsored-visit details.","confirm"); spMsg="Email sent to "+(rec.email||"the POC")+". (Wireframe — no email is actually sent.)"; } render(); return; }
   if(e.target.closest("[data-sp-feedback]")){ const rec=spById(selSp); if(rec){ rec.feedback=rec.feedback||{}; rec.feedback.sent=true; spLogEmail(rec,"System","Feedback + acknowledgement form emailed to the POC.","feedback"); spMsg="Feedback + acknowledgement form sent to "+(rec.email||"the POC")+". (Wireframe — no email is actually sent.)"; } render(); return; }
-  if(e.target.closest("[data-sp-complete]")){ const rec=spById(selSp); if(rec){ rec.status="Ended"; rec.invoice=rec.invoice||{}; rec.invoice.raised=true; rec.invoice.on=fmtDMY(new Date()); spLogEmail(rec,"Finance","Visit completed; e-invoice raised to "+(rec.sponsor||"the donor")+". Status → Ended.","invoice"); } render(); return; }
+  if(e.target.closest("[data-sp-complete]")){ const rec=spById(selSp); if(rec){ rec.status="Ended"; rec.invoice=rec.invoice||{}; rec.invoice.raised=true; rec.invoice.on=fmtDMY(new Date()); spLogEmail(rec,"Finance","Visit completed; e-invoice raised to "+(rec.sponsor||"the donor")+". Status → Completed.","invoice"); } render(); return; }
   const spPdf=e.target.closest("[data-sp-invoice-pdf]");
   if(spPdf){ const rec=spById(selSp); if(rec) careerOpenPdf(spInvoicePdf(rec), rec.id+"-invoice.pdf"); return; }
   if(e.target.closest("[data-sp-student-template]")){ downloadCSV("sponsored-student-info-format.csv", [["Student name","Gender","Age","Grade / Class","Guardian name","Guardian contact"],["Aarav Sharma","Boy","10","Grade 5","Meena Sharma","+91 98200 00001"],["Diya Patel","Girl","11","Grade 6","Ramesh Patel","+91 98200 00002"]]); return; }
