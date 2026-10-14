@@ -619,11 +619,11 @@ tbody tr[aria-selected="true"] td:first-child{box-shadow:inset 2px 0 0 var(--blu
 /* ---- payment docked in the order summary — final step, revealed once the cart has items ---- */
 .summary-pay{flex:0 0 auto;padding:12px;border-top:1px solid var(--rule);background:#fff}
 .summary-pay-lbl{font-size:10.5px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--ink3);margin-bottom:8px}
-.summary-pay-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:7px;margin-bottom:10px}
-.summary-pay-btn{border:1.5px solid var(--rule2);background:#fff;border-radius:7px;padding:8px 6px;font-size:11.5px;font-weight:500;text-align:center}
+.summary-pay-grid{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px}
+.summary-pay-btn{flex:0 0 132px;border:1.5px solid var(--rule2);background:#fff;border-radius:7px;padding:12px 10px;font-size:12.5px;font-weight:500;text-align:center}
 .summary-pay-btn:hover{border-color:var(--ink3)}
 .summary-pay-btn[aria-pressed="true"]{border-color:var(--blue);background:var(--blue-wash);color:var(--blue);font-weight:600}
-.summary-pay-cta{width:100%;text-align:center;padding:10px}
+.summary-pay-cta{text-align:center}
 
 /* ---- POS mode: New/Edit Order gets the full screen, admin chrome hidden ---- */
 .app.pos-mode .stage-head{display:none}
@@ -4073,12 +4073,12 @@ let current = "dashboard", selP = 0, tab = "list", sub = "details",
     selW = 0, selB = 0, selE = 0, esub = "details", eventCats = new Set(), selBooking = 0, bookingProduct = 0, bookingSlot = "", bookingDiscountCode = "", bookingDiscountCodes = [], bookingDiscountError = "", bookingVoucher = null, bookingVoucherCode = "", bookingVoucherError = "", bookingPay2 = "Cash", csub = "details", copyFrom = 0, copyTo = new Set(), copyWhat = new Set(["price","seats"]), editD = -1,
     progKind = "event", progCat = "Event", prodBuildingPool = false,
     bookingProducts = new Map(), bookingAddons = new Map(), bookingPrograms = new Map(), bookingPay = "Cash", bookingTab = "products",
-    bookingCustomer = {name:"",phone:"",email:"",member:null,location:"",pincode:"",gstin:""}, bookingCustomerLinked = -1, bookingStep = 1, bookingOpenItem = null, bookingCalMonth = null, bookingCancelConfirm = false, bookingDiscountTried = false, bookingStep1Tried = false, bookingRedeemVisit = false, bookingRedeemAdult = false,
+    bookingCustomer = {first:"",last:"",phone:"",email:"",member:null,location:"",pincode:"",gstin:""}, bookingCustomerLinked = -1, bookingStep = 1, bookingOpenItem = null, bookingCalMonth = null, bookingCancelConfirm = false, bookingDiscountTried = false, bookingStep1Tried = false, bookingRedeemVisit = false, bookingRedeemAdult = false,
     selD = 0, dsub = "summary", editCond = -1, condDraft = null, draftDiscount = null, condStep = 0, condItemsOpen = false,
     selMember = 0, selTier = 0, msub = "summary", redeemStep = 1, redeemVisits = 1,
     tierDraft = null, tierItemsOpen = false, tierSaveTried = false,   // membership tier: products + per-product time slots (flyout draft)
     checkinRef = null,   // reception: booking ref currently on the scanner (null = waiting for a scan)
-    shopCart = [{pd:"",bc:""}], shopPay = "Cash", shopCustomer = {phone:"",name:"",email:"",gstin:"",member:null}, shopConsent = false, shopMarketing = false,
+    shopCart = [{pd:"",bc:""}], shopPay = "Cash", shopCustomer = {phone:"",first:"",last:"",email:"",gstin:"",member:null}, shopConsent = false, shopMarketing = false,
     shopCouponCode = "", shopCouponTried = false,
     moveScans = [], moveMsg = "",   // Moving-to-Store: barcodes scanned this session + last-action note
     // instant discount — manager-authorised via OTP (demo code shown on screen)
@@ -4649,7 +4649,7 @@ const VIEWS = {
         ${kv("Booking ref",`<span class="mono">${b.ref}</span>`)}${kv("Phone",`<span class="mono">${b.phone||"—"}</span>`)}
         ${kv("Email",b.email||"")}${kv("Location",b.location||"")}
       </div>`;
-    const att = (b.attendees||[]).map(a=>`<div class="ci-att-row"><span>${a.name||'<span class="muted">Unnamed</span>'}</span><span class="ci-att-cat">${a.category}${a.dob?" · DOB "+a.dob:""}</span></div>`).join("");
+    const att = (b.attendees||[]).map(a=>`<div class="ci-att-row"><span>${a.name||'<span class="muted">Unnamed</span>'}</span><span class="ci-att-cat">${a.category}</span></div>`).join("");
 
     let action;
     if(phase==="ready"){
@@ -6148,8 +6148,7 @@ function bookingForm(editing=false){
   // Tours, add-ons and membership visits are counts only, no per-person rows (owner, 2026-09-23 / 2026-09-24).
   [...bookingPrograms].forEach(([key,cfg])=>{const nm=progRec(key).n;combosOf(cfg).forEach(combo=>{const b=batchFor(key,combo);PCATS.forEach(c=>{const total=(combo.qty&&combo.qty[c])||0;for(let n=0;n<total;n++)heads.push({label:nm+(b.n?" · "+b.n:"")+" · "+c+" "+(n+1), cat:c});});});});
   const attendeesTab = heads.length ? `<div class="pos-lbl">Attendee details <small>one per seat · programs only</small></div>
-    <div class="fld" style="max-width:320px;margin-bottom:12px"><div class="lab"><span class="lab-n">Parent's WhatsApp number</span>${tip("Goes on the instructor's register and gets the day-before reminders.")}</div><input class="inp mono" id="bookWhatsapp" inputmode="tel" placeholder="Same as phone if blank"></div>
-    <div class="attendee-list">${heads.map((h,idx)=>`<div class="attendee-row"><div class="attendee-kind">${h.label}</div><div class="fld"><div class="lab"><span class="lab-n">Name</span><span class="lab-req">Required</span></div><input class="inp" required aria-required="true" placeholder="Full name"></div><div class="fld"><div class="lab"><span class="lab-n">Date of birth</span><span class="lab-req">Optional</span></div><input class="inp mono" data-dob="${idx}" placeholder="DD/MM/YYYY"></div><div class="fld"><div class="lab"><span class="lab-n">Age</span><span class="lab-req">Optional</span></div><input class="inp mono" id="age_${idx}" placeholder="Years" aria-live="polite"></div></div>`).join("")}</div>`
+    <div class="attendee-list">${heads.map((h,idx)=>`<div class="attendee-row"><div class="attendee-kind">${h.label}</div><div class="fld"><div class="lab"><span class="lab-n">First name</span><span class="lab-req">Required</span></div><input class="inp" required aria-required="true" placeholder="First name"></div><div class="fld"><div class="lab"><span class="lab-n">Last name</span><span class="lab-req">Required</span></div><input class="inp" required aria-required="true" placeholder="Last name"></div></div>`).join("")}</div>`
     : hasItems ? `<div class="pos-empty">No names needed for this order.<br>Tours, add-ons and membership visits are sold by count — names are only asked for camps, workshops and events.</div>`
     : `<div class="pos-empty">Add tickets first — program attendees appear here.</div>`;
 
@@ -6164,12 +6163,12 @@ function bookingForm(editing=false){
     ${tabBar}<div class="form-sec-body pos-body">${tabContent}</div></section>`;
   const attendeesStepBody=`<section class="form-sec"><div class="form-sec-head"><span class="form-sec-title">Attendee details</span></div><div class="form-sec-body pos-body">${attendeesTab}</div></section>`;
 
-  // ---- order summary — grouped by product/slot, running total, inline qty edit + removal on every line, payment docked at the bottom ----
-  const cartCatLine=(pfx,cat,qty,price,amount,note,useRedeemControl)=>{ amount=amount==null?qty*price:amount; const attr=useRedeemControl?"data-book-redeem":"data-book-qty"; return `<div class="cart-line${useRedeemControl?" cart-line-redeemed":""}">
+  // ---- order summary — grouped by product/slot, read-only; payment is the last step ----
+  // read-only line (owner, 2026-10-14): quantities are changed in the Booking step, not here
+  const cartCatLine=(pfx,cat,qty,price,amount,note,useRedeemControl)=>{ amount=amount==null?qty*price:amount; return `<div class="cart-line${useRedeemControl?" cart-line-redeemed":""}">
     <div class="cart-line-cat">${cat}${note?` <span class="cart-line-note">${note}</span>`:""}</div>
-    <span class="cart-step"><button ${attr}="${pfx}|${escAttr(cat)}|-1" aria-label="Fewer ${cat}">−</button><span>${qty}</span><button ${attr}="${pfx}|${escAttr(cat)}|1" aria-label="More ${cat}">+</button></span>
+    <span class="cart-line-amt" style="min-width:auto;color:var(--ink3)">×${qty}</span>
     <span class="cart-line-amt">${money(amount)}</span>
-    <button class="cart-line-x" ${attr}="${pfx}|${escAttr(cat)}|-${qty}" aria-label="Remove ${cat}">✕</button>
   </div>`; };
   const cartGroup=(name,sub,linesHtml)=>`<div class="cart-group">
     <div class="cart-group-head"><span class="cart-group-name">${name}</span><span class="cart-group-sub">${sub}</span></div>
@@ -6224,23 +6223,30 @@ function bookingForm(editing=false){
     </div>`;
   const voucherPending=bookingPay==="Voucher"&&!vch&&grand>0;
   const ctaLabel=grand<=0?"Confirm free booking":voucherPending?"Verify the voucher to continue":vch?(toPay>0?"Take payment · "+money(toPay)+" "+bookingPay2+" + voucher "+money(vchApplied):"Confirm booking · paid by voucher"):"Take payment · "+money(grand);
+  const discountBox=`<div class="pos-lbl">Discount code</div>
+    <div class="booking-discount"><input class="inp mono" id="bookingDiscountCode" placeholder="Discount code" value="${escAttr(bookingDiscountCode)}"><button class="btn" data-apply-book-discount="1">Apply</button></div>
+    ${bookingDiscountError?`<div role="alert" style="color:var(--stop);font-size:12px;margin:4px 0 2px">${escHtml(bookingDiscountError)}</div>`:""}
+    ${codeHits.length?`<div class="chips" style="margin:6px 0">${codeHits.map((x,i)=>`<span class="msel-tag" style="${x.d?"":"background:var(--stop-wash,#fdecec);color:var(--stop)"}">${escHtml(x.code)}${x.d?"":" · not recognised"}<button type="button" data-remove-book-code="${i}" aria-label="Remove ${escAttr(x.code)}">&times;</button></span>`).join("")}</div>`:""}`;
   const summaryPay=hasItems?`<div class="summary-pay">
     ${grand>0?`<div class="summary-pay-lbl">Payment method</div>
     <div class="summary-pay-grid">${["Cash","Card","UPI","Voucher"].map(m=>`<button class="summary-pay-btn" data-book-pay="${escAttr(m)}" aria-pressed="${bookingPay===m}">${m}</button>`).join("")}</div>${voucherBox}`:`<div class="summary-pay-lbl">Nothing to pay</div>`}
-    ${editing?"":`<button class="btn btn-primary summary-pay-cta"${voucherPending?" disabled":""}>${ctaLabel}</button>`}
   </div>`:"";
+  // sidebar = read-only: who the booking is for, what is in it, and the totals. Inputs live in the steps.
+  const bc=bookingCustomer, custName=[bc.first,bc.last].join(" ").trim();
+  const custRow=(l,v)=>v?`<div class="booking-summary-row" style="font-size:12px"><span style="color:var(--ink3)">${l}</span><span>${escHtml(v)}</span></div>`:"";
+  const custCard=(custName||bc.phone)?`<div class="cart-group"><div class="cart-group-head"><span class="cart-group-name">Customer</span>${bc.member?`<span class="cart-group-sub">${escHtml(bc.member.tier)} member</span>`:""}</div>
+    ${custRow("Name",custName)}${custRow("Phone",bc.phone)}${custRow("Email",bc.email)}${custRow("Location",[bc.location,bc.pincode].filter(Boolean).join(" · "))}${custRow("GSTIN",bc.gstin)}${custRow("State",bc.state)}</div>`:"";
   const summary=`<aside class="booking-summary"><div class="booking-summary-head">Order summary${cartRows.length?` <span class="booking-summary-count">${cartRows.length} item${cartRows.length===1?"":"s"}</span>`:""}</div><div class="booking-summary-body">
+    ${custCard}
     ${cartRows.length?cartRows.join(""):`<div class="pos-empty">Nothing added yet.<br>Pick a product or program to begin.</div>`}
-    <div class="booking-discount"><input class="inp mono" id="bookingDiscountCode" placeholder="Discount code" value="${escAttr(bookingDiscountCode)}"><button class="btn" data-apply-book-discount="1">Apply</button></div>
-    ${bookingDiscountError?`<div role="alert" style="color:var(--stop);font-size:12px;margin:4px 0 2px">${escHtml(bookingDiscountError)}</div>`:""}
-    ${codeHits.length?`<div class="chips" style="margin:6px 0">${codeHits.map((x,i)=>`<span class="msel-tag" style="${x.d?"":"background:var(--stop-wash,#fdecec);color:var(--stop)"}">${escHtml(x.code)}${x.d?"":" · not recognised"}<button type="button" data-remove-book-code="${i}" aria-label="Remove ${escAttr(x.code)}">&times;</button></span>`).join("")}</div>`:""}
     <div class="booking-summary-row"><span>Subtotal</span><span>${money(subtotal)}</span></div>
     ${appliedDiscs.map(x=>`<div class="booking-summary-row" style="color:var(--ok)"><span>${x.label}${x.kind==="auto"?' <span class="q" style="margin-left:2px">auto</span>':""} · ${x.v}</span><span>− ${money(x.applied)}</span></div>`).join("")}
     ${skippedDiscs.map(x=>`<div class="booking-summary-row" style="color:var(--ink3);font-size:11.5px"><span>${x.label} · ${x.v} — not applied, ${x.why}</span><span style="text-decoration:line-through">− ${money(x.amount)}</span></div>`).join("")}
     ${discAmt?`<div class="booking-summary-row" style="font-weight:600"><span>Net amount</span><span>${money(Math.max(0,subtotal-discAmt))}</span></div>`:""}
     <div class="booking-summary-row"><span>GST 18%</span><span>${money(gst)}</span></div>
     <div class="booking-summary-total"><span>Total due</span><span>${money(grand)}</span></div>
-  </div>${summaryPay}</aside>`;
+  </div></aside>`;
+  const paymentStepBody=`<section class="form-sec"><div class="form-sec-head"><span class="form-sec-title">Payment</span></div><div class="form-sec-body pos-body">${discountBox}${summaryPay||`<div class="pos-empty">Add tickets first.</div>`}</div></section>`;
 
   // ---- customer — phone-first lookup against past orders, not just blank entry — step 1 ----
   const custMatch=bookingCustomerLinked>=0?CUSTOMERS[bookingCustomerLinked]:null;
@@ -6252,27 +6258,33 @@ function bookingForm(editing=false){
   const reqLoc=`<span class="lab-req"${missLoc?' style="color:var(--stop)"':''}>Optional</span>`;
   const customerSection=section("Customer",`
     <div class="fld${miss("phone")?" fld-miss":""}"><div class="lab"><span class="lab-n">Phone</span>${reqMark("phone")}</div><div class="inp-wrap"><input class="inp mono${custMatch?" inp-matched":""}" id="bookCustPhone" type="tel" inputmode="tel" autocomplete="off" placeholder="10-digit mobile number" value="${escAttr(bookingCustomer.phone)}">${custMatch?`<button type="button" class="cust-match-tab${bookingCustomer.member?" cust-match-tab-member":""}" data-unlink-customer="1" title="Matched ${escAttr(custMatch.name)}${bookingCustomer.member?` — ${escAttr(bookingCustomer.member.tier)} member, ${Math.max(0,bookingCustomer.member.passesTotal-bookingCustomer.member.passesUsed)} passes remaining`:""} — click to remove">${bookingCustomer.member?bookingCustomer.member.tier:"Existing"}</button>`:""}<div class="cust-suggest" id="custSuggest"></div></div></div>
-    <div class="fld${miss("name")?" fld-miss":""}"><div class="lab"><span class="lab-n">Name</span>${reqMark("name")}</div><input class="inp" id="bookCustName" placeholder="Full name" value="${escAttr(bookingCustomer.name)}"></div>
+    <div class="fld${miss("first")?" fld-miss":""}"><div class="lab"><span class="lab-n">First name</span>${reqMark("first")}</div><input class="inp" id="bookCustFirst" placeholder="First name" value="${escAttr(bookingCustomer.first)}"></div>
+    <div class="fld${miss("last")?" fld-miss":""}"><div class="lab"><span class="lab-n">Last name</span>${reqMark("last")}</div><input class="inp" id="bookCustLast" placeholder="Last name" value="${escAttr(bookingCustomer.last)}"></div>
     <div class="fld"><div class="lab"><span class="lab-n">Email</span><span class="lab-req">Optional</span></div><input class="inp" id="bookCustEmail" type="email" placeholder="name@example.com" value="${escAttr(bookingCustomer.email)}"></div>
     <div class="fld"><div class="lab"><span class="lab-n">GSTIN</span><span class="lab-req">Optional</span></div><input class="inp mono" id="bookCustGstin" placeholder="For a business / e-invoice" value="${escAttr(bookingCustomer.gstin||"")}"></div>
     <div class="fld${missLoc?" fld-miss":""}"><div class="lab"><span class="lab-n">Location</span>${reqLoc}</div><input class="inp" id="bookCustLocation" placeholder="Customer's city or area" value="${escAttr(bookingCustomer.location||"")}"></div>
     <div class="fld${missLoc?" fld-miss":""}"><div class="lab"><span class="lab-n">PIN code</span>${reqLoc}</div><input class="inp mono" id="bookCustPincode" inputmode="numeric" placeholder="e.g. 400058" value="${escAttr(bookingCustomer.pincode||"")}"></div>
     <div class="fld"><div class="lab"><span class="lab-n">State</span>${tip("Place of supply. Maharashtra charges CGST + SGST; any other state charges IGST. A GSTIN's first two digits override this.")}</div><select class="inp" id="bookCustState">${IN_STATES.map(st=>`<option${(bookingCustomer.state||"Maharashtra")===st?" selected":""}>${st}</option>`).join("")}</select></div>
     ${consentBlock("bookMarketing","bookConsent",bookingCustomer.marketingOptIn,bookingCustomer.dpdpConsent,bookingStep1Tried&&!bookingCustomer.dpdpConsent)}
-    ${bookingStep1Tried&&(miss("phone")||miss("name")||missLoc)?`<div class="fld" style="grid-column:1/-1;color:var(--stop);font-size:12px">Fill the required fields to continue — PIN code or Location is required.</div>`:""}
+    ${bookingStep1Tried&&(miss("phone")||miss("first")||miss("last")||missLoc)?`<div class="fld" style="grid-column:1/-1;color:var(--stop);font-size:12px">Fill the required fields to continue — PIN code or Location is required.</div>`:""}
   `);
 
-  // ---- 3-step wizard: Customer → Booking → Attendees. Payment lives in the summary, not a step. ----
-  const STEP_DEFS=[[1,"Customer"],[2,"Booking"],[3,"Attendees"]];
+  // ---- wizard: Customer → Booking → Attendees → Payment for programs; products skip Attendees (owner, 2026-10-14) ----
+  const STEP_KEYS=["customer","booking"].concat(heads.length?["attendees"]:[],["payment"]);
+  const STEP_LABEL={customer:"Customer",booking:"Booking",attendees:"Attendees",payment:"Payment"};
+  if(bookingStep>STEP_KEYS.length) bookingStep=STEP_KEYS.length;
+  const STEP_DEFS=STEP_KEYS.map((k,i)=>[i+1,STEP_LABEL[k]]);
+  const stepKey=STEP_KEYS[bookingStep-1], nextKey=STEP_KEYS[bookingStep];
   const wizardBar=`<div class="wizard-steps">${STEP_DEFS.map(([n,l],idx)=>{
     const state=n===bookingStep?"current":n<bookingStep?"done":"todo";
     return `${idx>0?'<span class="wizard-step-line"></span>':""}<button class="wizard-step wizard-step-${state}" data-book-step="${n}" ${n>bookingStep?"disabled":""}><span class="wizard-step-n">${state==="done"?"✓":n}</span><span class="wizard-step-l">${l}</span></button>`;
   }).join("")}</div>`;
-  const stepBody = bookingStep===1?customerSection:bookingStep===2?bookingStepBody:attendeesStepBody;
-  const hint = (bookingStep===3 && !editing) ? `<span class="wizard-hint">Pick a payment method in the order summary to finish →</span>` : "";
+  const stepBody = {customer:customerSection,booking:bookingStepBody,attendees:attendeesStepBody,payment:paymentStepBody}[stepKey];
+  const hint = "";
   const back = bookingStep>1?`<button class="btn" data-book-back="1">← Back</button>`:"";
-  const navBtn = bookingStep<3
-    ? `<button class="btn btn-primary" data-book-next="1" ${bookingStep===2&&!hasItems?"disabled":""}>${bookingStep===1?"Next: Booking →":hasItems?"Next: Attendees →":"Add tickets to continue"}</button>`
+  const payCta = stepKey==="payment"&&!editing&&hasItems ? `<button class="btn btn-primary summary-pay-cta"${voucherPending?" disabled":""}>${ctaLabel}</button>` : "";
+  const navBtn = nextKey
+    ? `<button class="btn btn-primary" data-book-next="1" ${stepKey==="booking"&&!hasItems?"disabled":""}>${stepKey==="booking"&&!hasItems?"Add tickets to continue":"Next: "+STEP_LABEL[nextKey]+" →"}</button>`
     : editing ? `<button class="btn btn-primary">Save changes</button>` : "";
 
   const cancelConfirm = bookingCancelConfirm ? `<div class="confirm-layer">
@@ -6290,7 +6302,7 @@ function bookingForm(editing=false){
       <div class="form-body product-form">
         ${stepBody}
       </div>
-      <div class="form-foot">${hint}<button class="btn" data-book-cancel="1">Cancel</button>${back}${navBtn}</div>
+      <div class="form-foot">${hint}<button class="btn" data-book-cancel="1">Cancel</button>${back}${navBtn}${payCta}</div>
     </div></div>
     <aside class="booking-cart-col">${summary}</aside>
   </div>${cancelConfirm}`;
@@ -6690,11 +6702,13 @@ function memberForm(editing){
     <div class="form-body product-form">
       ${sec("Membership",fld("Plan",`<div class="selwrap"><select class="inp">${MEMBERSHIP_TIERS.map(x=>`<option${m.tier===x.name?" selected":""}>${x.name}</option>`).join("")}</select></div>`,"The plan being purchased.",true,true))}
       ${sec("Registered adult",
-        fld("Adult name",`<input class="inp" value="${escAttr(m.adult||"")}" placeholder="Full name">`,"The registered adult — only this adult may redeem the membership.",true)
+        fld("Adult first name",`<input class="inp" value="${escAttr(splitName(m.adult).first)}" placeholder="First name">`,"The registered adult — only this adult may redeem the membership.",true)
+        +fld("Adult last name",`<input class="inp" value="${escAttr(splitName(m.adult).last)}" placeholder="Last name">`,"",true)
         +fld("Date of birth",`<input class="inp mono" data-dob="madult" value="${escAttr(m.adultDob||"")}" placeholder="DD/MM/YYYY">`,"Optional — used to auto-fill the age.",false)
         +fld("Age",`<input class="inp mono" id="age_madult" value="${escAttr(m.adultDob?ageLabel(m.adultDob):(m.adultAge||""))}" placeholder="Years" aria-live="polite">`,"Auto-filled from date of birth; you can also type it. Optional for the adult.",false))}
       ${sec("Registered child",
-        fld("Child name",`<input class="inp" value="${escAttr(m.child||"")}" placeholder="Full name">`,"The registered child — only this child may redeem the membership.",true)
+        fld("Child first name",`<input class="inp" value="${escAttr(splitName(m.child).first)}" placeholder="First name">`,"The registered child — only this child may redeem the membership.",true)
+        +fld("Child last name",`<input class="inp" value="${escAttr(splitName(m.child).last)}" placeholder="Last name">`,"",true)
         +fld("Date of birth",`<input class="inp mono" data-dob="mchild" value="${escAttr(m.childDob||"")}" placeholder="DD/MM/YYYY">`,"Optional — used to auto-fill the age.",false)
         +fld("Age",`<input class="inp mono" id="age_mchild" required aria-required="true" value="${escAttr(m.childDob?ageLabel(m.childDob):(m.childAge||""))}" placeholder="Years" aria-live="polite">`,"Required. Auto-filled from date of birth; you can also type it.",true))}
       ${sec("Contact",
@@ -6864,7 +6878,7 @@ function consentBlock(mktId, consentId, mkt, consent, showErr){
     ${box(consentId,consent,`I consent to the collection of my personal information as described in the ${link} and I am above 18 years old.`)}
     ${showErr?'<div class="muted" style="font-size:11px;color:var(--stop)">Consent is required.</div>':""}</div>`;
 }
-function resetShopSale(){ shopCart=[{pd:"",bc:""}]; shopPay="Cash"; shopCustomer={phone:"",name:"",email:"",gstin:"",member:null}; shopConsent=false; shopMarketing=false; shopCouponCode=""; shopCouponTried=false; shopInstantLines={}; shopInstantFlyout=false; shopInstantDesc=""; shopInstantMgr=""; shopInstantSent=false; shopInstantCode=""; shopInstantOtp=""; shopInstantApplied=false; shopInstantErr=false; shopStep1Tried=false; }
+function resetShopSale(){ shopCart=[{pd:"",bc:""}]; shopPay="Cash"; shopCustomer={phone:"",first:"",last:"",email:"",gstin:"",member:null}; shopConsent=false; shopMarketing=false; shopCouponCode=""; shopCouponTried=false; shopInstantLines={}; shopInstantFlyout=false; shopInstantDesc=""; shopInstantMgr=""; shopInstantSent=false; shopInstantCode=""; shopInstantOtp=""; shopInstantApplied=false; shopInstantErr=false; shopStep1Tried=false; }
 /* Total instant discount (flat ₹, on Base) from the per-product per-unit entries against the current cart. */
 function shopInstantTotal(){ let t=0; shopCartLines().forEach(l=>{ const it=shopItemByPd(l.pd)||{}; const ub=shopBaseOf(it); const cfg=shopInstantLines[l.pd]; if(!cfg||!(+cfg.amt>0)) return; const perUnit=cfg.type==="pct"?Math.min(ub,ub*(+cfg.amt||0)/100):Math.min(ub,+cfg.amt||0); t+=perUnit*(+l.qty||0); }); return Math.round(t); }
 /* Live-update the flyout's per-row "= ₹" and the Total Discount without a full re-render (keeps focus). */
@@ -7041,7 +7055,8 @@ function shopSaleForm(){
   const nItems=shopCart.filter(r=>r.pd).length;
   const header=`<section class="form-sec"><div class="form-sec-head"><span class="form-sec-title">Sale</span><span class="card-note" style="margin-left:auto">Txn 4950 · 27 Feb 2026</span></div><div class="form-sec-body">
     <div class="fld${miss("phone")?" fld-miss":""}"><div class="lab"><span class="lab-n">Customer phone</span>${reqMark("phone")}</div><input class="inp mono" id="shopPhone" type="tel" value="${escAttr(shopCustomer.phone)}" placeholder="9876543210"></div>
-    <div class="fld"><div class="lab"><span class="lab-n">Customer name</span><span class="lab-req">Optional</span></div><input class="inp" id="shopName" value="${escAttr(shopCustomer.name)}" placeholder="Name"></div>
+    <div class="fld"><div class="lab"><span class="lab-n">Customer first name</span><span class="lab-req">Optional</span></div><input class="inp" id="shopFirst" value="${escAttr(shopCustomer.first)}" placeholder="First name"></div>
+    <div class="fld"><div class="lab"><span class="lab-n">Customer last name</span><span class="lab-req">Optional</span></div><input class="inp" id="shopLast" value="${escAttr(shopCustomer.last)}" placeholder="Last name"></div>
     <div class="fld"><div class="lab"><span class="lab-n">Customer email</span><span class="lab-req">Optional</span></div><input class="inp" id="shopEmail" type="email" value="${escAttr(shopCustomer.email)}" placeholder="name@example.com"></div>
     <div class="fld wide"><div class="lab"><span class="lab-n">Customer GSTIN</span><span class="lab-req">Optional</span></div><input class="inp mono" id="shopGstin" value="${escAttr(shopCustomer.gstin)}" placeholder="For a business / e-invoice — leave blank for a B2C sale"></div>
     ${consentBlock("shopMarketing","shopConsent",shopMarketing,shopConsent,shopStep1Tried&&!shopConsent)}
@@ -9039,7 +9054,8 @@ function addSubmit(){
   addOpen=null; render(); $(".stage").scrollTop=0;
 }
 
-function resetBooking(){ bookingProducts=new Map(); bookingAddons=new Map(); bookingPrograms=new Map(); bookingPay="Cash"; bookingDiscountCode=""; bookingDiscountCodes=[]; bookingDiscountError=""; bookingVoucher=null; bookingVoucherCode=""; bookingVoucherError=""; bookingPay2="Cash"; bookingDiscountTried=false; bookingStep1Tried=false; bookingTab="products"; bookingCustomer={name:"",phone:"",email:"",member:null,location:"",pincode:"",gstin:"",state:"Maharashtra"}; bookingCustomerLinked=-1; bookingStep=1; bookingOpenItem=null; bookingCalMonth=null; bookingCancelConfirm=false; bookingRedeemVisit=false; bookingRedeemAdult=false; }
+function splitName(n){ const t=String(n||"").trim(), i=t.indexOf(" "); return i<0?{first:t,last:""}:{first:t.slice(0,i),last:t.slice(i+1).trim()}; }
+function resetBooking(){ bookingProducts=new Map(); bookingAddons=new Map(); bookingPrograms=new Map(); bookingPay="Cash"; bookingDiscountCode=""; bookingDiscountCodes=[]; bookingDiscountError=""; bookingVoucher=null; bookingVoucherCode=""; bookingVoucherError=""; bookingPay2="Cash"; bookingDiscountTried=false; bookingStep1Tried=false; bookingTab="products"; bookingCustomer={first:"",last:"",phone:"",email:"",member:null,location:"",pincode:"",gstin:"",state:"Maharashtra"}; bookingCustomerLinked=-1; bookingStep=1; bookingOpenItem=null; bookingCalMonth=null; bookingCancelConfirm=false; bookingRedeemVisit=false; bookingRedeemAdult=false; }
 
 /* Products a membership tier can grant access to — those that carry time slots. */
 function tierProductPool(){ return P.filter(p=>p.slots&&p.slots.length); }
@@ -9357,7 +9373,7 @@ document.addEventListener("click",e=>{
   const editbooking=e.target.closest("[data-editbooking]");
   if(editbooking){ selBooking=+editbooking.dataset.editbooking; const b=BOOKINGS[selBooking];
     resetBooking();
-    bookingCustomer={name:b.customer||"",phone:b.phone||"",email:b.email||"",member:b.member||null,location:b.location||"",state:b.state||"Maharashtra"};
+    bookingCustomer={...splitName(b.customer),phone:b.phone||"",email:b.email||"",member:b.member||null,location:b.location||"",state:b.state||"Maharashtra"};
     bookingCustomerLinked=CUSTOMERS.findIndex(c=>c.phone===b.phone);
     const pi=P.findIndex(p=>p.n===b.product);
     if(pi>=0){ const qty={}; (b.ticketRows||[]).forEach(r=>{ qty[r[0]]=+r[1]||0; }); const sn=b.slot||P[pi].slots[0].n; bookingProducts.set(pi,{combos:[{date:b.date||defaultDateFor(P[pi].slots),slot:sn,qty,redeem:{}}]}); }
@@ -9367,7 +9383,7 @@ document.addEventListener("click",e=>{
   const stepBtn=e.target.closest("[data-book-step]");
   if(stepBtn){ const n=+stepBtn.dataset.bookStep; if(n<=bookingStep) bookingStep=n; render(); $(".stage").scrollTop=0; return; }
   const nextBtn=e.target.closest("[data-book-next]");
-  if(nextBtn){ if(bookingStep===1){ const c=bookingCustomer; if(!String(c.phone||"").trim()||!String(c.name||"").trim()||(!String(c.location||"").trim()&&!String(c.pincode||"").trim())||!c.dpdpConsent){ bookingStep1Tried=true; render(); return; } bookingStep1Tried=false; bookingStep=2; } else if(bookingStep===2 && hasBookingItems()) bookingStep=3; render(); $(".stage").scrollTop=0; return; }
+  if(nextBtn){ if(bookingStep===1){ const c=bookingCustomer; if(!String(c.phone||"").trim()||!String(c.first||"").trim()||!String(c.last||"").trim()||(!String(c.location||"").trim()&&!String(c.pincode||"").trim())||!c.dpdpConsent){ bookingStep1Tried=true; render(); return; } bookingStep1Tried=false; bookingStep=2; } else if(bookingStep>=2 && hasBookingItems()) bookingStep++; render(); $(".stage").scrollTop=0; return; }
   const backBtn=e.target.closest("[data-book-back]");
   if(backBtn){ bookingStep=Math.max(1,bookingStep-1); render(); $(".stage").scrollTop=0; return; }
   const bkTab=e.target.closest("[data-book-tab]");
@@ -9431,7 +9447,7 @@ document.addEventListener("click",e=>{
   const bkCancelConfirm=e.target.closest("[data-book-cancel-confirm]");
   if(bkCancelConfirm){ tab="list"; resetBooking(); render(); $(".stage").scrollTop=0; return; }
   const pickCust=e.target.closest("[data-pick-customer]");
-  if(pickCust){ const c=CUSTOMERS.find(x=>x.phone===pickCust.dataset.pickCustomer); if(c){ bookingCustomer={name:c.name,phone:c.phone,email:c.email,member:c.member||null,location:c.location||bookingCustomer.location||""}; bookingCustomerLinked=CUSTOMERS.indexOf(c); } render(); return; }
+  if(pickCust){ const c=CUSTOMERS.find(x=>x.phone===pickCust.dataset.pickCustomer); if(c){ bookingCustomer={...splitName(c.name),phone:c.phone,email:c.email,member:c.member||null,location:c.location||bookingCustomer.location||""}; bookingCustomerLinked=CUSTOMERS.indexOf(c); } render(); return; }
   const unlinkCust=e.target.closest("[data-unlink-customer]");
   if(unlinkCust){ bookingCustomerLinked=-1; bookingCustomer.member=null; render(); return; }
   // ---- open a record's detail page ----
@@ -9714,7 +9730,7 @@ document.addEventListener("click",e=>{
     const merged=shopCartLines(); if(!merged.length){ render(); return; }
     merged.forEach(l=>{ const it=shopItemByPd(l.pd); if(it) it.stock=Math.max(0,it.stock-l.qty); (l.bcs||[]).forEach(bc=>setUnitStatus(bc,"Sold")); });   // sold units → Sold; decrement stock
     const lines=merged.map(l=>({pd:l.pd,qty:l.qty,bcs:l.bcs}));
-    SHOP_SALES.unshift({txn:"4950",inv:"MUSO/25-26/0143",date:"27 Feb 2026",phone:shopCustomer.phone,name:shopCustomer.name,email:shopCustomer.email,gstin:shopCustomer.gstin,lines,coupon:shopCouponTried?shopCouponCode:"",instantFlat:shopInstantApplied?shopInstantTotal():0,instantLines:shopInstantApplied?JSON.parse(JSON.stringify(shopInstantLines)):null,instantMgr:shopInstantApplied?shopInstantMgr:"",instantDesc:shopInstantApplied?shopInstantDesc:"",pay:shopPay});
+    SHOP_SALES.unshift({txn:"4950",inv:"MUSO/25-26/0143",date:"27 Feb 2026",phone:shopCustomer.phone,name:[shopCustomer.first,shopCustomer.last].join(" ").trim(),email:shopCustomer.email,gstin:shopCustomer.gstin,lines,coupon:shopCouponTried?shopCouponCode:"",instantFlat:shopInstantApplied?shopInstantTotal():0,instantLines:shopInstantApplied?JSON.parse(JSON.stringify(shopInstantLines)):null,instantMgr:shopInstantApplied?shopInstantMgr:"",instantDesc:shopInstantApplied?shopInstantDesc:"",pay:shopPay});
     selShopSale=0; tab="detail"; render(); $(".stage").scrollTop=0; return;
   }
   // ---- inline add forms (open / cancel / submit) ----
@@ -9987,7 +10003,8 @@ document.addEventListener("input",e=>{
   if(e.target.id==="shopSelling"){ shopRecalcForm(); return; }   // new-product form: recompute GST + Base as Selling price is typed
   if(e.target.id==="shopCost"){ shopCostTouched=true; return; }   // Cost price manually overridden — stop following Base
   if(e.target.id==="shopPhone"){ shopCustomer.phone=e.target.value; return; }
-  if(e.target.id==="shopName"){ shopCustomer.name=e.target.value; return; }
+  if(e.target.id==="shopFirst"){ shopCustomer.first=e.target.value; return; }
+  if(e.target.id==="shopLast"){ shopCustomer.last=e.target.value; return; }
   if(e.target.id==="shopEmail"){ shopCustomer.email=e.target.value; return; }
   if(e.target.id==="shopGstin"){ shopCustomer.gstin=e.target.value; return; }
   if(e.target.id==="shopCouponCode"){ shopCouponCode=e.target.value; return; }
@@ -10025,7 +10042,8 @@ document.addEventListener("input",e=>{
   renderBookingAttendees();
 });
 document.addEventListener("input",e=>{
-  if(e.target.id==="bookCustName"){ bookingCustomer.name=e.target.value; return; }
+  if(e.target.id==="bookCustFirst"){ bookingCustomer.first=e.target.value; return; }
+  if(e.target.id==="bookCustLast"){ bookingCustomer.last=e.target.value; return; }
   if(e.target.id==="bookCustLocation"){ bookingCustomer.location=e.target.value; return; }
   if(e.target.id==="bookCustPincode"){ bookingCustomer.pincode=e.target.value; return; }
   if(e.target.id==="bookCustGstin"){ bookingCustomer.gstin=e.target.value; return; }
