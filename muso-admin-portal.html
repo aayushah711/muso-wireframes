@@ -1349,7 +1349,7 @@ const M = {
             ["GSTIN|gstin","string","For the vendor's tax records."],
             ["PAN|pan","string","Vendor's PAN."],
             ["Work order no.|workOrder","string","The MuSo work order / PO number for this vendor."],
-            ["Cost|cost","int","Vendor's charge (₹), shown on the booking when this vendor is picked. No. of buses & seater capacity are set per booking."],
+            ["Bus types|busTypes","rows","Bus type · Seater capacity · Cost (incl. GST)","Each bus type's seater capacity and cost (inclusive of GST). On a sponsored booking, each visit picks one or more bus types and the number of buses per type."],
             ["Active|is_active","bool","Turn it off to retire this vendor."]]},
   foodvendors:{g:0,n:"Food vendors",owner:"Partnerships & CSR",perm:"master.foodvendor.manage",src:"Scope §9",q:1,
     d:"The caterers a sponsored school visit's food is sourced from. The sponsored-booking form picks one as the food vendor.",
@@ -1727,7 +1727,7 @@ const SCHOOL_BOOKINGS = [
     school:"Horizon International", location:"Bandra West, Mumbai", boards:["IB"],
     grade:"Grade 7 to 9", poc:"Karan Malhotra", designation:"Teacher",
     email:"karan@horizon.edu.in", phone:"+91 99300 11223",
-    interested:["Museum Tour","Workshop"], prefDate:"12 Oct 2026", expChildren:180, expTeachers:12,
+    interested:["Museum Tour","Workshop"], mvPrograms:["Introduction to AI"], prefDate:"12 Oct 2026", expChildren:180, expTeachers:12,
     note:"Three-session programme across October.",
     visits:[{date:"12 Oct 2026", slotId:"Morning slot", students:60, adults:4, escorts:1, teachersComp:1,
              food:{students:60,adults:4,comp:1,optionIds:["Standard lunch"]}, optionals:[]},
@@ -1881,17 +1881,19 @@ function schoolCompute(rec){
     foodStudents+=+f.students||0; foodAdults+=+f.adults||0; foodComp+=+f.comp||0;
     const rate=(f.optionIds||[]).reduce((acc,nm)=>{const o=fbByName(nm);return o?{adult:acc.adult+(+o.adult||0),child:acc.child+(+o.child||0)}:acc;},{adult:0,child:0});
     foodTotal+=(+f.students||0)*rate.child+(+f.adults||0)*rate.adult; });
-  // Entry & F&B prices are entered GST-INCLUSIVE (same in the form and in bulk upload):
+  // Transport (sponsored) — each visit's buses × bus-type cost (all inclusive of GST).
+  const transportTotal=visits.reduce((a,v)=>a+visitTransportCost(v),0);
+  // Entry, F&B & transport are all GST-INCLUSIVE (same in the form and in bulk upload):
   // the rate already contains 18% GST. The grand total is the sum of those inclusive
   // amounts; the tax is extracted out of it rather than added on top.
-  const gross=visitTotal+foodTotal;                    // inclusive of GST
+  const gross=visitTotal+foodTotal+transportTotal;     // inclusive of GST
   const gstPct=18;
   const subtotal=Math.round(gross/(1+gstPct/100));     // taxable value (GST removed)
   const gst=gross-subtotal, cgst=Math.round(gst/2), sgst=gst-cgst;
   const grand=gross;                                   // total = inclusive amount
   const paid=(rec.payments||[]).reduce((a,p)=>a+(+p.amount||0),0);
   const balance=Math.max(0,grand-paid);
-  return {students,adults,escorts,teachersComp,visitTotal,foodTotal,foodStudents,foodAdults,foodComp,subtotal,gstPct,gst,cgst,sgst,grand,paid,balance,
+  return {students,adults,escorts,teachersComp,visitTotal,foodTotal,transportTotal,foodStudents,foodAdults,foodComp,subtotal,gstPct,gst,cgst,sgst,grand,paid,balance,
           eInv:!!(rec.gstin&&rec.gstin.trim())};
 }
 /* ---- CSV exports (Scope §8 Reports "Download") ---- */
@@ -1955,12 +1957,18 @@ const SP_PROGRAMS = [
 ];
 /* Transport vendors — the bus operators a sponsored visit can pick from. */
 const TRANSPORT_VENDORS = [
-  {name:"Konkan Travels",      gstin:"27AAECK1234M1Z5", pan:"AAECK1234M", workOrder:"WO/TR/2026/011", cost:18000, is_active:true},
-  {name:"Sai Bus Service",     gstin:"27AAFCS5678N1Z9", pan:"AAFCS5678N", workOrder:"WO/TR/2026/014", cost:22000, is_active:true},
-  {name:"Panvel Roadways",     gstin:"27AAGCP9012Q1Z3", pan:"AAGCP9012Q", workOrder:"WO/TR/2026/019", cost:15000, is_active:true},
-  {name:"Sewri Transport Co.", gstin:"27AAHCS3456R1Z7", pan:"AAHCS3456R", workOrder:"WO/TR/2026/021", cost:20000, is_active:true},
-  {name:"Worli Roadways",      gstin:"",                pan:"AAHCW3456R", workOrder:"WO/TR/2026/022", cost:12000, is_active:false}
+  {name:"Konkan Travels",      gstin:"27AAECK1234M1Z5", pan:"AAECK1234M", workOrder:"WO/TR/2026/011", busTypes:[{name:"32-seater",seater:32,cost:12000},{name:"45-seater",seater:45,cost:18000}], is_active:true},
+  {name:"Sai Bus Service",     gstin:"27AAFCS5678N1Z9", pan:"AAFCS5678N", workOrder:"WO/TR/2026/014", busTypes:[{name:"40-seater",seater:40,cost:16000},{name:"50-seater",seater:50,cost:22000}], is_active:true},
+  {name:"Panvel Roadways",     gstin:"27AAGCP9012Q1Z3", pan:"AAGCP9012Q", workOrder:"WO/TR/2026/019", busTypes:[{name:"35-seater",seater:35,cost:15000}], is_active:true},
+  {name:"Sewri Transport Co.", gstin:"27AAHCS3456R1Z7", pan:"AAHCS3456R", workOrder:"WO/TR/2026/021", busTypes:[{name:"45-seater",seater:45,cost:20000},{name:"20-seater (mini)",seater:20,cost:9000}], is_active:true},
+  {name:"Worli Roadways",      gstin:"",                pan:"AAHCW3456R", workOrder:"WO/TR/2026/022", busTypes:[{name:"30-seater",seater:30,cost:12000}], is_active:false}
 ];
+const transportVendorByName = n => TRANSPORT_VENDORS.find(v=>v.name===n);
+const busTypesOf = n => (transportVendorByName(n)||{}).busTypes||[];
+const busTypeOf = (vendor,typeName) => busTypesOf(vendor).find(b=>b.name===typeName);
+const busTypeCost = (vendor,typeName) => (busTypeOf(vendor,typeName)||{}).cost||0;
+/* Transport cost for one visit — Σ (number of buses × that bus type's cost, incl. GST). */
+const visitTransportCost = v => { const t=(v&&v.transport)||{}; return (t.buses||[]).reduce((a,b)=>a+(+b.count||0)*busTypeCost(t.vendor,b.type),0); };
 /* Food vendors — the caterers a sponsored visit's F&B is sourced from. */
 const FOOD_VENDORS = [
   {name:"Annapurna Caterers", gstin:"27AABCA1234F1Z8", pan:"AABCA1234F", workOrder:"WO/FD/2026/007", cost:28000, is_active:true},
@@ -2179,6 +2187,7 @@ const SPONSORED_BOOKINGS = [
     proofDoc:"TFI-registration.pdf", foodVendor:"Annapurna Caterers",
     visits:[{date:"14 Oct 2026", slotId:"Afternoon slot", students:150, adults:12, escorts:5, teachersComp:0,
              food:{students:150,adults:12,comp:5,optionIds:["Snack box"]},
+             transport:{vendor:"Sai Bus Service", buses:[{type:"50-seater",count:3}]},
              optionals:[{kind:"Orientation", venue:"Auditorium", date:"14 Oct 2026", time:"14:15–14:45"}]}],
     entryStudent:350, entryAdult:500,
     ngoGstin:"", ngoPan:"AAATT9012Q", authNumber:"JSW/CSR/2026/0417", speciallyAbled:6, sponsoredGroups:[{title:"First-generation learners",count:"120"},{title:"Below poverty line",count:"45"}],
@@ -2197,7 +2206,8 @@ const SPONSORED_BOOKINGS = [
     expChildren:90, expTeachers:8, note:"",
     proofDoc:"Pratham-80G.pdf", foodVendor:"Tiffin Box Co.",
     visits:[{date:"06 Aug 2026", slotId:"Afternoon slot", students:90, adults:8, escorts:2, teachersComp:0,
-             food:{students:90,adults:8,comp:2,optionIds:["Standard lunch"]}, optionals:[]}],
+             food:{students:90,adults:8,comp:2,optionIds:["Standard lunch"]},
+             transport:{vendor:"Panvel Roadways", buses:[{type:"35-seater",count:3}]}, optionals:[]}],
     entryStudent:350, entryAdult:500,
     ngoGstin:"", ngoPan:"AAATP3456R", authNumber:"TT/CSR/2026/1180", speciallyAbled:4, sponsoredGroups:[{title:"First-generation learners",count:"80"}],
     postVisit:{remark:"Wonderful, curious group — the light gallery was a hit. Two buses arrived 20 min late; noted for next time.",
@@ -2217,8 +2227,25 @@ const spById = id => SPONSORED_BOOKINGS.find(r=>r.id===id);
 const SP_DONOR_TYPES = [["donorTicketing","Ticketing (entry fees)"],["donorFood","Food (F&B)"],["donorTravel","Travel (transport)"]];
 function spFunding(rec){
   const c=schoolCompute(rec);
-  const amt={donorTicketing:c.visitTotal, donorFood:c.foodTotal, donorTravel:0};
+  const amt={donorTicketing:c.visitTotal, donorFood:c.foodTotal, donorTravel:c.transportTotal};
   return SP_DONOR_TYPES.map(([k,label])=>({key:k, label, donor:(rec[k]||"").trim(), amount:amt[k]}));
+}
+/* Transport across a booking's visits — distinct vendors, total buses and total cost (incl. GST). */
+function spTransportSummary(rec){
+  const vendors=new Set(); let buses=0;
+  (rec.visits||[]).forEach(v=>{ const t=v.transport||{}; if(t.vendor) vendors.add(t.vendor); buses+=(t.buses||[]).reduce((a,b)=>a+(+b.count||0),0); });
+  return {vendors:[...vendors], buses, cost:(rec.visits||[]).reduce((a,v)=>a+visitTransportCost(v),0)};
+}
+/* One-line transport description for detail rows / emails. */
+function spTransportLine(rec){
+  const need=(rec.transport&&rec.transport.need)||"—";
+  if(need!=="Yes") return need;
+  const s=spTransportSummary(rec);
+  const bits=[];
+  if(s.buses) bits.push(`${s.buses} bus${s.buses===1?"":"es"}`);
+  if(s.cost) bits.push(money(s.cost));
+  if(s.vendors.length) bits.push(s.vendors.join(", "));
+  return bits.length?("Yes · "+bits.join(" · ")):"Yes";
 }
 const spPrimaryDonor = rec => (rec.donorTicketing||rec.donorFood||rec.donorTravel||rec.sponsor||"").trim();
 /* Distinct organisations already on file — powers the Organisation typeahead. */
@@ -2263,7 +2290,7 @@ function spComposeEmail(rec, kind){
   ] : [
     ["Booking ID", rec.id],["Organisation", rec.school||"—"],["Donor", rec.sponsor||"—"],
     ["Visit date", v.date||rec.prefDate||"—"],["Time slot", v.slotId||"—"],["Students · Adults", `${c.students} · ${c.adults}`],
-    ["Transport", rec.transport&&rec.transport.need==="Yes"?("Yes"+(rec.transport.vendor?" · "+rec.transport.vendor:"")):((rec.transport&&rec.transport.need)||"—")]
+    ["Transport", spTransportLine(rec)]
   ];
   const fb = kind==="feedback" ? `<div style="margin-top:12px;border:1px solid var(--rule);border-radius:8px;padding:12px">
       <div style="font-weight:600;font-size:12.5px;margin-bottom:6px">Quick feedback</div>
@@ -2407,10 +2434,9 @@ const shopPreset = code => SHOP_PRESETS.find(p=>p.code===String(code||"").trim()
 /* Shop coupons — a Shop-only master, approval-gated (only Approved coupons apply on a sale). */
 const SHOP_COUPONS = [
   {code:"STAFF20",type:"Percentage",v:20,desc:"Staff discount",products:[],preparedBy:"Sawood",proposedBy:"Ashish",approvedBy:"Chandresh",status:"Approved",is_active:true,from:"01 Apr 2026",to:"31 Mar 2027"},
-  {code:"FLAT75",type:"Flat amount",v:75,desc:"₹75 off any purchase",products:[],preparedBy:"Sawood",proposedBy:"Ashish",approvedBy:"Chandresh",status:"Approved",is_active:true,from:"01 Apr 2026",to:"31 Mar 2027"},
   {code:"TOYS25",type:"Percentage",v:25,desc:"25% off toys",products:["PD_204","PD_623"],preparedBy:"Sawood",proposedBy:"Ashish",approvedBy:"Chandresh",status:"Approved",is_active:true,from:"01 Apr 2026",to:"31 Mar 2027"},
   {code:"BOOK100",type:"Flat amount",v:100,desc:"₹100 off the First Aid deck",products:["PD_116"],preparedBy:"Sawood",proposedBy:"Ashish",approvedBy:"Chandresh",status:"Approved",is_active:true,from:"01 Apr 2026",to:"31 Mar 2027"},
-  {code:"MUSO50",type:"Flat amount",v:50,desc:"Flat ₹50 off",products:[],preparedBy:"Sawood",proposedBy:"Ashish",approvedBy:"",status:"Pending approval",is_active:true,from:"01 Sep 2026",to:"30 Sep 2026"},
+  {code:"TEE150",type:"Flat amount",v:150,desc:"₹150 off the Kids Explorer Tee",products:["PD_318"],preparedBy:"Sawood",proposedBy:"Ashish",approvedBy:"",status:"Pending approval",is_active:true,from:"01 Sep 2026",to:"30 Sep 2026"},
   {code:"DIWALI10",type:"Percentage",v:10,desc:"Festive 10%",products:[],preparedBy:"Sawood",proposedBy:"",approvedBy:"",status:"Draft",is_active:true,from:"",to:""}
 ];
 // resolve a code to a real coupon, or to a synthetic Approved coupon for the Employee preset
@@ -3059,7 +3085,7 @@ const SCHEMAS = {
     ["Description|desc","string","What the coupon is for, e.g. Staff discount."],
     ["Discount type|type","enum","Percentage · Flat amount","Percentage takes a % off; flat amount takes a fixed ₹ off."],
     ["Value|v","int","20 for 20% off, or a rupee amount for flat, e.g. 20."],
-    ["Applicable products|products[]","fk[]","→ Shop products. Leave empty to apply to all products. A flat ₹ then comes off each matching item (capped at its Base); a % comes off the matching items only."],
+    ["Applicable products|products[]","fk[]","→ Shop products. Required for a flat-amount coupon — the ₹ comes off each matching item (capped at its Base). A % coupon can be left empty to apply to all products, or limited to specific ones."],
     ["Valid|valid_from / valid_to","date","When the coupon can be used."],
     ["Proposed by|proposedBy","string","Who proposed it to management, e.g. Ashish."],
     ["Active|is_active","bool","Turn it off to keep the coupon inactive. New coupons start as Draft and go through review from the coupon's detail page before they apply at the counter."]],
@@ -4570,7 +4596,7 @@ function upcomingSchoolVisits(){
     }
     if(!visits.length) return;
     out.push({d:visits[0].d, school:rec.school||"—", location:rec.location||"", kind, idx, status:rec.status,
-      multi:(rec.visits||[]).length>1, visits,
+      multi:(rec.visits||[]).length>1, visits, program:(rec.mvPrograms&&rec.mvPrograms[0])||"",
       students:visits.reduce((a,v)=>a+v.students,0), adults:visits.reduce((a,v)=>a+v.adults,0)});
   };
   (typeof SCHOOL_BOOKINGS!=="undefined"?SCHOOL_BOOKINGS:[]).forEach((r,i)=>add(r,"School",i));
@@ -4693,7 +4719,7 @@ const VIEWS = {
         <td class="code ctr occ-grp">${r.cAdult}</td><td class="code ctr">${r.cChild}</td>
       </tr>`).join("");
     const occupancy=`<div class="card occ-card">
-      <div class="card-head"><span class="card-title"><span class="dot-live"></span> In the building now</span><span class="card-note" style="margin-left:auto">${ciTot} currently inside</span></div>
+      <div class="card-head"><span class="card-title"><span class="dot-live"></span> Live Footfall</span><span class="card-note" style="margin-left:auto">${ciTot} currently inside</span></div>
       <div class="matrix-wrap"><table class="reclist occ-table">
         <thead>
           <tr><th colspan="4"></th><th colspan="2" class="ctr occ-grp">Booked</th><th colspan="2" class="ctr occ-grp">Checked-in</th></tr>
@@ -4813,7 +4839,7 @@ const VIEWS = {
     const upRows=upV.length?upV.map(r=>`<tr>
         <td class="code" style="white-space:nowrap;vertical-align:top">${r.visits.map((v,vi)=>`<div${vi<r.visits.length-1?' style="margin-bottom:10px;padding-bottom:10px;border-bottom:1px dashed var(--rule2)"':''}>${visitTime(v)}</div>`).join("")}</td>
         <td style="vertical-align:middle"><b style="font-weight:500">${escHtml(r.school)}</b> ${kindTag(r.kind)}${r.location?`<div class="sub">${escHtml(r.location)}</div>`:""}</td>
-        <td style="vertical-align:top">${r.multi?'<span class="tag tag-a">Multi visit</span>':'<span class="tag tag-single">Single visit</span>'}</td>
+        <td style="vertical-align:top">${r.multi?`<span class="tag tag-a">Multi visit</span>${r.program?`<div class="sub" style="text-transform:none;margin-top:4px">${escHtml(r.program)}</div>`:""}`:'<span class="tag tag-single">Single visit</span>'}</td>
         <td class="code ctr" style="vertical-align:top">${r.students||"—"}</td>
         <td class="code ctr" style="vertical-align:top">${r.adults||"—"}</td></tr>`).join("")
       :'<tr><td colspan="5" class="muted" style="text-align:center;padding:22px">No upcoming school visits.</td></tr>';
@@ -5308,7 +5334,7 @@ const VIEWS = {
       ${kpi(S('<path d="M3 3v18h18"/><path d="M7 14l3-3 3 3 5-6"/>'),"blue","Avg basket",money(avg),"per sale")}
     </div>`;
     const rows=SHOP_SALES.map((s,i)=>{ const c=shopSaleCompute(s); const nItems=(s.lines||[]).reduce((a,l)=>a+(+l.qty||0),0);
-      return `<tr data-open="shopsale:${i}"><td class="code">${s.txn}</td><td class="code">${s.inv}</td><td>${s.date}</td><td><b style="font-weight:500">${s.name||"Walk-in"}</b><div class="sub code">${s.phone}</div></td><td class="code">${nItems}</td><td>${s.pay}</td><td class="code">${c.discAmt?`<span style="color:var(--ok)">− ${money(Math.round(c.discAmt))}</span>${c.discPct?` <span class="q">${c.discPct}%</span>`:""}`:"—"}</td><td class="code">${money(c.grand)}</td><td><button class="btn" data-open="shopsale:${i}">View details</button></td></tr>`;
+      return `<tr data-open="shopsale:${i}"><td class="code">${s.txn}</td><td class="code">${s.inv}</td><td>${s.date}</td><td><b style="font-weight:500">${s.name||"Walk-in"}</b><div class="sub code">${s.phone}</div></td><td class="code">${nItems}</td><td>${s.pay}</td><td class="code">${c.discAmt?`<span style="color:var(--ok)">− ${money(Math.round(c.discAmt))}</span>`:"—"}</td><td class="code">${money(c.grand)}</td><td><button class="btn" data-open="shopsale:${i}">View details</button></td></tr>`;
     }).join("");
     const bar=`<div class="toolbar"><span></span><span class="tool-note">${SHOP_SALES.length} sales</span><button class="btn" data-export="shopsales">Export CSV</button></div>`;
     return tiles+bar+`<div class="card"><div class="matrix-wrap"><table class="reclist"><thead><tr><th>Txn</th><th>Invoice</th><th>Date</th><th>Customer</th><th>Items</th><th>Payment</th><th>Discount</th><th>Grand total</th><th></th></tr></thead><tbody>${rows}
@@ -5316,7 +5342,7 @@ const VIEWS = {
   },
   shopcoupons(){
     const rows=SHOP_COUPONS.map((c,i)=>{ const pill=c.status==="Approved"?'<span class="pill pill-ok"><i class="dot"></i>Approved</span>':'<span class="pill pill-draft"><i class="dot"></i>'+c.status+'</span>';
-      return `<tr data-open="shopcoupon:${i}"><td class="code">${c.code}</td><td>${c.desc||""}</td><td class="code">${c.type==="Percentage"?c.v+"%":money(c.v)}</td><td class="sub">${c.proposedBy||"—"}</td><td>${pill}</td><td><button class="btn" data-open="shopcoupon:${i}">View</button></td></tr>`;
+      return `<tr data-open="shopcoupon:${i}"><td class="code">${c.code}</td><td>${c.desc||""}</td><td class="code">${c.type==="Percentage"?c.v+"%":money(c.v)}</td><td class="sub">${c.proposedBy||"—"}</td><td>${pill}</td><td style="white-space:nowrap"><button class="btn" data-copy-code="${escAttr(c.code)}"><span>Copy code</span></button> <button class="btn" data-open="shopcoupon:${i}">View</button></td></tr>`;
     }).join("");
     const bar=`<div class="toolbar"><label class="search"><span>&#8981;</span><input placeholder="Search shop coupons" aria-label="Search shop coupons"></label><span class="tool-note">${SHOP_COUPONS.length} coupons</span><button class="btn" data-export="shopcoupons">Export CSV</button></div>`;
     return bar+`<div class="card"><div class="matrix-wrap"><table class="reclist"><thead><tr><th>Code</th><th>Description</th><th>Value</th><th>Proposed by</th><th>Status</th><th></th></tr></thead><tbody>${rows}
@@ -5519,12 +5545,12 @@ const VIEWS = {
       The bus operators a sponsored school visit can be assigned to — the sponsored-booking form picks one for transport.
     </div></div>
     <div class="card"><div class="card-head"><span class="card-title">Transport vendors</span><span class="card-note">${TRANSPORT_VENDORS.length} on file</span></div>
-      <div class="matrix-wrap"><table><thead><tr><th>Vendor</th><th>GSTIN</th><th>PAN</th><th>Work order no.</th><th class="ctr">Cost</th><th>Status</th><th>Actions</th></tr></thead>
+      <div class="matrix-wrap"><table><thead><tr><th>Vendor</th><th>GSTIN</th><th>PAN</th><th>Work order no.</th><th>Bus types (seater · cost incl. GST)</th><th>Status</th><th>Actions</th></tr></thead>
       <tbody>${TRANSPORT_VENDORS.map((v,i)=>`<tr>
         <td><b style="font-weight:500">${escHtml(v.name)}</b></td>
         <td class="code">${escHtml(v.gstin||"—")}</td><td class="code">${escHtml(v.pan||"—")}</td>
         <td class="code">${escHtml(v.workOrder||"—")}</td>
-        <td class="code" style="text-align:right">${v.cost?money(v.cost):"—"}</td>
+        <td>${(v.busTypes||[]).length?(v.busTypes||[]).map(b=>`<div style="white-space:nowrap">${escHtml(b.name)} <span class="muted code">· ${b.seater||"—"} seats · ${money(b.cost||0)}</span></div>`).join(""):'<span class="muted">—</span>'}</td>
         <td>${v.is_active===false?'<span class="pill pill-off">Inactive</span>':'<span class="pill pill-ok"><i class="dot"></i>Active</span>'}</td>
         <td><button class="btn" data-medit="${i}">Edit</button></td></tr>`).join("")}
         ${addRowNew("Add transport vendor")}</tbody></table></div></div>`;
@@ -5854,6 +5880,10 @@ function createForm(schema,label,footNote,values={},editing=false){
   } else if(current==="schoolslots"){   // School time slot — everything (incl. Active) in one section
     const byName=names=>names.map(n=>schema.find(f=>(f[0].split("|")[1]||f[0])===n)).filter(Boolean);
     const secs=[["Basic information",["name","start","end","is_active"]]];
+    headings=secs.map(s=>s[0]); groups=secs.map(s=>byName(s[1]));
+  } else if(current==="transportvendors"){   // Transport vendor — basics, then the bus types it runs
+    const byName=names=>names.map(n=>schema.find(f=>(f[0].split("|")[1]||f[0])===n)).filter(Boolean);
+    const secs=[["Basics",["name","gstin","pan","workOrder"]],["Bus types",["busTypes"]],["Status",["is_active"]]];
     headings=secs.map(s=>s[0]); groups=secs.map(s=>byName(s[1]));
   } else {
     for(let i=0;i<schema.length;i+=3) groups.push(schema.slice(i,i+3));
@@ -7010,7 +7040,7 @@ function shopSaleForm(){
   }).join("");
   const nItems=shopCart.filter(r=>r.pd).length;
   const header=`<section class="form-sec"><div class="form-sec-head"><span class="form-sec-title">Sale</span><span class="card-note" style="margin-left:auto">Txn 4950 · 27 Feb 2026</span></div><div class="form-sec-body">
-    <div class="fld${miss("phone")?" fld-miss":""}"><div class="lab"><span class="lab-n">Customer phone</span>${reqMark("phone")}</div><input class="inp mono" id="shopPhone" type="tel" value="${escAttr(shopCustomer.phone)}" placeholder="+91 81234 56789"></div>
+    <div class="fld${miss("phone")?" fld-miss":""}"><div class="lab"><span class="lab-n">Customer phone</span>${reqMark("phone")}</div><input class="inp mono" id="shopPhone" type="tel" value="${escAttr(shopCustomer.phone)}" placeholder="9876543210"></div>
     <div class="fld"><div class="lab"><span class="lab-n">Customer name</span><span class="lab-req">Optional</span></div><input class="inp" id="shopName" value="${escAttr(shopCustomer.name)}" placeholder="Name"></div>
     <div class="fld"><div class="lab"><span class="lab-n">Customer email</span><span class="lab-req">Optional</span></div><input class="inp" id="shopEmail" type="email" value="${escAttr(shopCustomer.email)}" placeholder="name@example.com"></div>
     <div class="fld wide"><div class="lab"><span class="lab-n">Customer GSTIN</span><span class="lab-req">Optional</span></div><input class="inp mono" id="shopGstin" value="${escAttr(shopCustomer.gstin)}" placeholder="For a business / e-invoice — leave blank for a B2C sale"></div>
@@ -7029,7 +7059,9 @@ function shopSaleForm(){
           : `<div class="booking-discount-msg bad">This coupon only applies to specific products — none are in the cart.<button data-shop-coupon-clear aria-label="Remove coupon" style="border:0;background:none;color:var(--stop);font-size:11px;font-weight:600;text-decoration:underline;cursor:pointer;padding:0;margin-left:8px">Remove</button></div>`)
       : `<div class="booking-discount-msg bad">${shopCoupon(shopCouponCode)?"Coupon not approved yet.":"Code not recognised."}</div>`):"";
   // ---- helper preset pills (fill the coupon field; Apply then applies) ----
-  const presetPills=`<div class="shop-pills">${SHOP_PRESETS.map(p=>`<button class="shop-pill" data-shop-preset="${p.code}">${p.label} · ${p.pct}%</button>`).join("")}</div>`;
+  const presetCodes=new Set(SHOP_PRESETS.map(p=>String(p.code).toUpperCase()));
+  const apprCoupons=SHOP_COUPONS.filter(c=>c.status==="Approved"&&!presetCodes.has(String(c.code).toUpperCase()));
+  const presetPills=`<div class="shop-pills">${SHOP_PRESETS.map(p=>`<button class="shop-pill" data-shop-preset="${p.code}">${p.label} · ${p.pct}%</button>`).join("")}${apprCoupons.map(c=>`<button class="shop-pill" data-shop-preset="${escAttr(c.code)}" title="${escAttr(c.desc||"")}">${escHtml(c.code)} · ${c.type==="Percentage"?c.v+"%":money(c.v)}</button>`).join("")}</div>`;
   // ---- instant discount — manager-authorised via OTP (demo code shown; wireframe) ----
   const mgr=mgrByName(shopInstantMgr);
   const instTotal=shopInstantTotal();
@@ -7058,7 +7090,7 @@ function shopSaleForm(){
     <div class="fld"><div class="lab"><span class="lab-n">Instant discount</span><span class="lab-req">Optional</span></div>${instantBlock}</div>
     <div class="shop-total-rows">
       <div class="booking-summary-row"><span>Total</span><span>${money(comp.total)}</span></div>
-      ${comp.discAmt?`<div class="booking-summary-row" style="color:var(--ok)"><span>Discount${comp.discPct?` <span class="q">${comp.discPct}%</span>`:""}</span><span>− ${money(Math.round(comp.discAmt))}</span></div>`:""}
+      ${comp.discAmt?`<div class="booking-summary-row" style="color:var(--ok)"><span>Discount</span><span>− ${money(Math.round(comp.discAmt))}</span></div>`:""}
       <div class="booking-summary-row"><span>Sub total</span><span>${money(Math.round(comp.subtotal))}</span></div>
       ${comp.gst?`<div class="booking-summary-row"><span>CGST${comp.uniformHalf!=null?` <span class="q">${comp.uniformHalf}%</span>`:""}</span><span>${money(Math.round(comp.cgst))}</span></div>
       <div class="booking-summary-row"><span>SGST${comp.uniformHalf!=null?` <span class="q">${comp.uniformHalf}%</span>`:""}</span><span>${money(Math.round(comp.sgst))}</span></div>`:""}
@@ -7177,7 +7209,7 @@ function schoolReports(){
 /* Each visit carries its own headcounts, Food & F&B and Optionals (venue blocks). */
 function blankVisit(){
   return {date:"", slotId:(SCHOOL_SLOTS[0]||{}).name||"", students:0, adults:0, escorts:0, teachersComp:0,
-    food:{students:0,adults:0,comp:0,optionIds:[]}, optionals:[]};
+    food:{students:0,adults:0,comp:0,optionIds:[]}, transport:{vendor:"",buses:[]}, optionals:[]};
 }
 function blankSchool(mode){
   return {id:nextSchoolId(), status:"Open", origin:mode==="booking"?"backend":"enquiry", created:fmtDMY(new Date()),
@@ -7842,16 +7874,12 @@ function spForm(editing){
   const pocFirst=d.pocFirst!==undefined?d.pocFirst:(_pn[0]||"");
   const pocLast=d.pocLast!==undefined?d.pocLast:_pn.slice(1).join(" ");
 
-  const tv = TRANSPORT_VENDORS.find(v=>v.name===(d.transport||{}).vendor);
-  const fv = FOOD_VENDORS.find(v=>v.name===d.foodVendor);
   const secVisitDetails=section("Visit Details",
     fld("Grade / class of children visiting",t("grade",d.grade,"e.g., Grade 5 - Grade 8"),"",true)+
     fld("Preferred date of visit",t("prefDate",d.prefDate,"DD Mon YYYY"),"Validated against MuSo blackout days.",true)+
     fld("Expected number of children",num("expChildren",d.expChildren,"e.g., 120"))+
     fld("Expected number of teachers / staff",num("expTeachers",d.expTeachers,"e.g., 10"))+
-    fld("Transport support",sel("transport_need",(d.transport||{}).need,SP_TRANSPORT),"Does the group need transport?")+
-    fld("Transport vendor",`<div class="selwrap"><select class="inp" data-spf="transport_vendor">${vendorOptionTags(TRANSPORT_VENDORS,(d.transport||{}).vendor)}</select></div>`,"Cost shown next to each vendor. From the Transport vendors master.")+
-    (tv?fld("No. of buses",num("transport_buses",(d.transport||{}).buses,"e.g. 3"),"Set per booking.")+fld("Seater capacity",num("transport_seaters",(d.transport||{}).seaters,"e.g. 45"),"Seats per bus, per booking."):"")+
+    fld("Transport support",sel("transport_need",(d.transport||{}).need,SP_TRANSPORT),"Does the group need transport? The vendor, bus types & number of buses are set per visit below.")+
     fld("Food vendor",`<div class="selwrap"><select class="inp" data-spf="foodVendor">${vendorOptionTags(FOOD_VENDORS,d.foodVendor)}</select></div>`,"Cost shown next to each vendor. From the Food vendors master."));
 
   const secPOC=section("Point of Contact",
@@ -7916,7 +7944,11 @@ function spForm(editing){
       </div>
       ${optCheckBanner(chk)}
     </div>`;};
-  const visitCard=(v,i)=>{ const f=v.food||{};
+  const visitCard=(v,i)=>{ const f=v.food||{}; const tp=v.transport||{vendor:"",buses:[]};
+    const busRow=(b,bi)=>`<div data-spvbrow="${i}|${bi}" style="display:grid;grid-template-columns:1fr 150px 30px;gap:8px;align-items:center">
+      <div class="selwrap"><select class="inp" data-spvbf="type"><option value=""${!b.type?" selected":""}>Select bus type…</option>${busTypesOf(tp.vendor).map(bt=>`<option value="${escAttr(bt.name)}"${b.type===bt.name?" selected":""}>${escHtml(bt.name)} · ${bt.seater} seats · ${money(bt.cost)}</option>`).join("")}${b.type&&!busTypeOf(tp.vendor,b.type)?`<option selected>${escAttr(b.type)}</option>`:""}</select></div>
+      <div class="inp-suffix"><input class="inp mono" type="number" min="0" data-spvbf="count" value="${esc(b.count)}" placeholder="0"><span>buses</span></div>
+      <button type="button" class="btn" data-sp-del-bus="${i}|${bi}" aria-label="Remove bus type" style="padding:5px 9px">&times;</button></div>`;
     return `<div class="fld wide" data-spvrow="${i}" style="border:1px solid var(--rule2);border-radius:8px;padding:14px;margin:0;gap:0">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px"><b style="font-size:12.5px">Visit ${i+1}</b>${i>0?`<div style="display:flex;gap:8px"><button type="button" class="btn" data-sp-same="${i}">Same as above</button><button type="button" class="btn" data-sp-del-visit="${i}">Remove</button></div>`:""}</div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px 16px;align-items:start">
@@ -7937,6 +7969,13 @@ function spForm(editing){
     </div>
     <div style="margin-top:12px">${fld("F&B option",`<div class="selwrap"><select class="inp" data-spvfsel="foodopt|${i}"${priceLocked?" disabled":""}>${fbOptionTags((f.optionIds||[])[0]||"")}</select></div>`,priceLocked?"🔒 Locked — booking completed.":"Adult & child pricing from the F&B options master — inclusive of 18% GST.")}
       <div data-fbtot="${i}" style="margin-top:8px;padding:7px 11px;border-radius:6px;background:#f6f8f5;border:1px solid var(--rule2);font-size:12px">${fbTotHtml(+f.students||0,+f.adults||0,(f.optionIds||[])[0])}</div></div>
+    ${subHead("Transport")}
+    <div style="display:flex;flex-direction:column;gap:10px">
+      ${fld("Transport vendor",`<div class="selwrap"><select class="inp" data-spvf="transportVendor"><option value=""${!tp.vendor?" selected":""}>Select vendor…</option>${TRANSPORT_VENDORS.filter(tv2=>tv2.is_active!==false||tv2.name===tp.vendor).map(tv2=>`<option value="${escAttr(tv2.name)}"${tp.vendor===tv2.name?" selected":""}>${escHtml(tv2.name)}</option>`).join("")}${tp.vendor&&!transportVendorByName(tp.vendor)?`<option selected>${escAttr(tp.vendor)}</option>`:""}</select></div>`,"From the Transport vendors master. Add one or more bus types and the number of buses per type.")}
+      ${tp.vendor?`<div style="display:flex;flex-direction:column;gap:8px">${(tp.buses||[]).length?(tp.buses||[]).map(busRow).join(""):'<div class="muted" style="font-size:11.5px">No bus types added yet.</div>'}
+        <button type="button" class="rep-add" data-sp-add-bus="${i}" style="border-radius:4px;align-self:flex-start">+ Add bus type</button>
+        <div style="padding:7px 11px;border-radius:6px;background:#f6f8f5;border:1px solid var(--rule2);font-size:12px">Transport cost (incl. GST): <b>${money(visitTransportCost(v))}</b></div></div>`:""}
+    </div>
     ${subHead("Optionals (venue blocks)")}
     <div style="display:flex;flex-direction:column;gap:10px">${(v.optionals||[]).map((o,oi)=>optCard(i,o,oi)).join("")}
       <button type="button" class="rep-add" data-sp-add-optional="${i}" style="border-radius:4px;align-self:flex-start">+ Add optional</button></div>
@@ -8000,8 +8039,7 @@ function spCaptureForm(){
   d.sponsor=spPrimaryDonor(d);   // keep the derived "primary" donor in sync for search / at-a-glance / by-donor
   const upEl=document.querySelector("[data-sp-uprows]");
   if(upEl) d.sponsoredGroups=[...upEl.querySelectorAll("[data-sp-uprow]")].map(r=>({title:(r.querySelector('[data-spf-up="title"]')||{}).value||"",count:(r.querySelector('[data-spf-up="count"]')||{}).value||""})).filter(x=>x.title||x.count);
-  const tn=g("transport_need"), tv=g("transport_vendor"); d.transport=d.transport||{}; if(tn!==undefined)d.transport.need=tn; if(tv!==undefined)d.transport.vendor=tv;
-  const tb=g("transport_buses"), ts=g("transport_seaters"); if(tb!==undefined)d.transport.buses=tb; if(ts!==undefined)d.transport.seaters=ts;
+  const tn=g("transport_need"); d.transport=d.transport||{}; if(tn!==undefined)d.transport.need=tn;   // vendor, bus types & buses are now per-visit (see below)
   const chipVals=key=>[...document.querySelectorAll(`[data-spfchips="${key}"] .chip-opt[data-on="1"]`)].map(c=>c.dataset.chipval);
   if(document.querySelector('[data-spfchips="boards"]')) d.boards=chipVals("boards");
   if(document.querySelector('[data-spfchips="interested"]')) d.interested=chipVals("interested");
@@ -8014,6 +8052,10 @@ function spCaptureForm(){
     if(fs!==undefined)f.students=+fs||0; if(fa!==undefined)f.adults=+fa||0; if(fc!==undefined)f.comp=+fc||0;
     const fsel=rowEl.querySelector(`[data-spvfsel="foodopt|${i}"]`);
     if(fsel) f.optionIds=fsel.value?[fsel.value]:[];
+    // Per-visit transport — vendor + one or more bus types, each with a number of buses.
+    v.transport=v.transport||{vendor:"",buses:[]};
+    const tvSel=rowEl.querySelector('[data-spvf="transportVendor"]'); if(tvSel) v.transport.vendor=tvSel.value;
+    v.transport.buses=[...rowEl.querySelectorAll("[data-spvbrow]")].map(br=>({type:(br.querySelector('[data-spvbf="type"]')||{}).value||"",count:(br.querySelector('[data-spvbf="count"]')||{}).value||""})).filter(b=>b.type||b.count);
     v.optionals=v.optionals||[];
     rowEl.querySelectorAll("[data-spvorow]").forEach(orowEl=>{const oi=+orowEl.dataset.spvorow.split("|")[1],o=v.optionals[oi];if(!o)return;
       const og=n=>{const el=orowEl.querySelector(`[data-spvof="${n}"]`);return el?el.value:undefined;};
@@ -8071,7 +8113,7 @@ function spInvoice(rec){
       <div class="inv-words">Amount Chargeable (in words): <b>INR ${amountInWords(c.grand).replace(/^Rupees /,"")}</b></div>
       ${lines.length?`<div class="matrix-wrap"><table class="reclist inv-hsn"><thead><tr><th>HSN/SAC</th><th>Taxable Value</th><th>CGST Rate</th><th>CGST Amt</th><th>SGST Rate</th><th>SGST Amt</th><th>Total Tax</th></tr></thead><tbody>${hsnRows}</tbody></table></div>`:""}
       <div style="font-size:11px;font-weight:600;color:var(--ink2);margin:12px 0 6px">Funding split</div>
-      <div class="matrix-wrap"><table class="reclist"><thead><tr><th>Covers</th><th>Donor</th><th class="ctr">Amount (incl. GST)</th></tr></thead><tbody>${spFunding(rec).map(f=>`<tr><td>${escHtml(f.label)}</td><td>${f.donor?escHtml(f.donor):'<span class="muted">Not sponsored</span>'}</td><td class="code" style="text-align:right">${f.key==="donorTravel"?'<span class="muted">In kind</span>':money(f.amount)}</td></tr>`).join("")}</tbody></table></div>
+      <div class="matrix-wrap"><table class="reclist"><thead><tr><th>Covers</th><th>Donor</th><th class="ctr">Amount (incl. GST)</th></tr></thead><tbody>${spFunding(rec).map(f=>`<tr><td>${escHtml(f.label)}</td><td>${f.donor?escHtml(f.donor):'<span class="muted">Not sponsored</span>'}</td><td class="code" style="text-align:right">${f.amount?money(f.amount):'<span class="muted">—</span>'}</td></tr>`).join("")}</tbody></table></div>
       <div class="inv-foot"><div><b>Company's Bank Details</b><div>Bank: ${MUSO_SELLER.bank.name}</div><div>A/c No.: <span class="code">${MUSO_SELLER.bank.ac}</span></div><div>IFSC: ${MUSO_SELLER.bank.ifsc}</div></div><div class="inv-sign"><div>for <b>${MUSO_SELLER.name}</b></div><div class="inv-sign-line"></div><div class="muted">Authorised Signatory</div></div></div>
       <div class="inv-note muted">The visit cost is borne by the donors per the funding split above; the school pays nothing. Computer-generated invoice.</div>
     </div>`;
@@ -8102,7 +8144,7 @@ function spInvoicePdf(rec){
   rt("Grand total (incl. GST): "+money(c.grand),W-MR,11,true,INK);y-=18;
   line("Amount in words: "+amountInWords(c.grand),ML,9,false,INK2);y-=18;
   line("Funding split",ML,9,true,INK2);y-=14;
-  spFunding(rec).forEach(f=>{line(f.label+":  "+(f.donor||"Not sponsored"),ML,9,false,INK2);rt(f.key==="donorTravel"?"In kind":money(f.amount),W-MR,9,false,INK2);y-=13;});y-=6;
+  spFunding(rec).forEach(f=>{line(f.label+":  "+(f.donor||"Not sponsored"),ML,9,false,INK2);rt(f.amount?money(f.amount):"—",W-MR,9,false,INK2);y-=13;});y-=6;
   line("Cost borne by the donors per the funding split; the school pays nothing. Computer-generated invoice.",ML,8,false,INK3);
   ops.push("BT /F1 8 Tf "+INK3+" rg 1 0 0 1 "+ML+" 40 Tm ("+pdfEsc(A("Museum of Solutions  -  "+rec.id+"  -  Donor invoice"))+") Tj ET");
   return pdfAssemble([ops.join("\n")], rec.id+"-invoice.pdf");
@@ -8128,12 +8170,12 @@ function spDetail(){
       ${row("Point of contact",escHtml(rec.poc)+(rec.designation?` <span class="muted">· ${escHtml(rec.designation==="Other"&&rec.designationOther?rec.designationOther:rec.designation)}</span>`:""))}
       ${row("Email",rec.email?`<span class="code">${escHtml(rec.email)}</span>`:"")}${row("Phone",rec.phone?`<span class="code">${escHtml(rec.phone)}</span>`:"")}
       ${row("Preferred date",rec.prefDate)}${row("Expected",`${rec.expChildren||"—"} children · ${rec.expTeachers||"—"} staff`)}
-      ${row("Transport",rec.transport&&rec.transport.need==="Yes"?("Yes"+(rec.transport.vendor?" · "+escHtml(rec.transport.vendor):"")):((rec.transport&&rec.transport.need)||"—"))}
+      ${row("Transport",escHtml(spTransportLine(rec)))}
       ${row("Food vendor",escHtml(rec.foodVendor))}
       ${row("Proof of identity",escHtml(rec.proofDoc))}${rec.assignee?row("Assignee",escHtml(rec.assignee)):""}${row("Note",escHtml(rec.note))}
     </tbody></table></div></div>
     <div class="card"><div class="card-head"><span class="card-title">Donor &amp; funding</span></div><div class="matrix-wrap"><table class="reclist"><tbody>
-      ${spFunding(rec).map(f=>row(f.label, f.donor?`${escHtml(f.donor)} <span class="muted">· ${f.key==="donorTravel"?"in kind":money(f.amount)}</span>`:'<span class="muted">Not sponsored</span>')).join("")}
+      ${spFunding(rec).map(f=>row(f.label, f.donor?`${escHtml(f.donor)} <span class="muted">· ${f.amount?money(f.amount):"—"}</span>`:'<span class="muted">Not sponsored</span>')).join("")}
       ${row("Authorisation number",escHtml(rec.authNumber))}
       ${row("GST number",rec.ngoGstin?`<span class="code">${escHtml(rec.ngoGstin)}</span>`:"")}${row("PAN",rec.ngoPan?`<span class="code">${escHtml(rec.ngoPan)}</span>`:"")}
       ${row("Funding",'<span class="muted">Split across donors — the school pays nothing.</span>')}
@@ -8144,6 +8186,7 @@ function spDetail(){
       ${row("Entry · per student",rec.entryStudent!==""&&rec.entryStudent!=null?money(rec.entryStudent):"")}
       ${row("Entry · per adult",rec.entryAdult!==""&&rec.entryAdult!=null?money(rec.entryAdult):"")}
       ${row("Visit total (incl. GST)",c.visitTotal?money(c.visitTotal):"")}${row("Food total",c.foodTotal?money(c.foodTotal):"")}
+      ${c.transportTotal?row("Transport total (incl. GST)",money(c.transportTotal)):""}
       ${row("Taxable value",money(c.subtotal))}${row("GST 18% (incl.)",money(c.gst))}${row("Grand total (incl. GST)",`<b>${money(c.grand)}</b>`)}
     </tbody></table></div></div>
     <div class="card"><div class="card-head"><span class="card-title">Impact &amp; comments</span></div><div class="matrix-wrap"><table class="reclist"><tbody>
@@ -8162,7 +8205,7 @@ function spDetail(){
     <div class="card"><div class="card-head"><span class="card-title">Vendor invoices</span><span class="card-note">upload + summary — wireframe</span></div>
       <div class="matrix-wrap"><table class="reclist"><thead><tr><th>Type</th><th>Vendor</th><th>Detail</th><th>Amount</th><th></th></tr></thead><tbody>
         <tr><td>Food</td><td>${escHtml((rec.visits&&rec.visits[0]&&(rec.visits[0].food&&rec.visits[0].food.optionIds||[]).length)?"Caterer":"—")}</td><td class="sub">Qty / menu summary</td><td class="code">—</td><td style="text-align:right"><button class="btn" data-sp-upload="food">Upload</button></td></tr>
-        <tr><td>Travel</td><td>${escHtml((rec.transport&&rec.transport.vendor)||"—")}</td><td class="sub">No. of buses</td><td class="code">—</td><td style="text-align:right"><button class="btn" data-sp-upload="travel">Upload</button></td></tr>
+        ${(()=>{const s=spTransportSummary(rec);return `<tr><td>Travel</td><td>${s.vendors.length?escHtml(s.vendors.join(", ")):"—"}</td><td class="sub">${s.buses?`${s.buses} bus${s.buses===1?"":"es"}`:"No. of buses"}</td><td class="code">${s.cost?money(s.cost):"—"}</td><td style="text-align:right"><button class="btn" data-sp-upload="travel">Upload</button></td></tr>`;})()}
       </tbody></table></div></div>`;
 
   /* Timeline */
@@ -8864,6 +8907,7 @@ function masterEditValues(k, i){
     return {code:row.code,name:row.name,is_adult:row.code==="ADULT",from_age:b?+b[1]:(over?+over[1]:0),to_age:b?+b[2]:"",is_active:true}; }
   if(k==="progcats") return {name:row.name,format:row.format==="multi"?"multi-day batches":"single session",note:row.note,is_active:true};
   if(k==="shopcats") return {name:row.name,code:row.code,is_active:true};
+  if(k==="transportvendors") return {...row, busTypes:(row.busTypes||[]).map(b=>[b.name,String(b.seater||""),String(b.cost||"")])};   // objects → rows for the generic "rows" editor
   return row;   // school masters (fboptions/schoolslots/entryprices/sponsors/districts) — keys line up with the schema
 }
 
@@ -9401,6 +9445,11 @@ document.addEventListener("click",e=>{
   if(memEditRow){ selMember=+memEditRow.dataset.memberEdit; current="members"; tab="edit"; render(); $(".stage").scrollTop=0; return; }
   const memRenewRow=e.target.closest("[data-open-renew]");
   if(memRenewRow){ selMember=+memRenewRow.dataset.openRenew; current="members"; tab="detail"; addOpen="renew"; render(); $(".stage").scrollTop=0; return; }
+  const ccopy=e.target.closest("[data-copy-code]");
+  if(ccopy){ const code=ccopy.dataset.copyCode||""; const label=ccopy.querySelector("span")||ccopy;
+    const orig=label.textContent, done=()=>{ label.textContent="Copied!"; setTimeout(()=>{label.textContent=orig;},1500); };
+    if(navigator.clipboard&&navigator.clipboard.writeText){ navigator.clipboard.writeText(code).then(done).catch(done); } else done();
+    return; }
   const od=e.target.closest("[data-open]");
   if(od){ const [kind,i]=od.dataset.open.split(":"); const idx=+i;
     if(kind==="prod") selP=idx; else if(kind==="camp"){ selW=idx; selB=0; progKind="camp"; } else if(kind==="event"){ selE=idx; progKind="event"; } else if(kind==="disc"){ selD=idx; dsub="summary"; } else if(kind==="member"){ selMember=idx; msub="summary"; } else if(kind==="tier"){ selTier=idx; } else if(kind==="shopitem"){ selShopItem=idx; sitab="details"; } else if(kind==="shopsale"){ selShopSale=idx; ssub="details"; } else if(kind==="shopcoupon"){ selShopCoupon=idx; } else if(kind==="school"){ selSchool=(SCHOOL_BOOKINGS[idx]||{}).id||""; schsub="overview"; schoolEmailView=null; schoolMsg=""; schoolEInvView=false; schoolEInvConfirm=false; schoolPayFlyout=false; schoolPayEdit=-1; schoolPayDel=-1; schoolCNFlyout=false; schoolCNView=false; } else if(kind==="sponsored"){ selSp=(SPONSORED_BOOKINGS[idx]||{}).id||""; spsub="overview"; spEmailView=null; spMsg=""; }
@@ -9546,6 +9595,10 @@ document.addEventListener("click",e=>{
   if(spAddO){ spCaptureForm(); const d=spDraft; const vi=+spAddO.dataset.spAddOptional; const v=d&&(d.visits||[])[vi]; if(v){ (v.optionals=v.optionals||[]).push({kind:"Workshop",venue:"",date:"",time:""}); } render(); return; }
   const spDelO=e.target.closest("[data-sp-del-optional]");
   if(spDelO){ spCaptureForm(); const d=spDraft; const [vi,oi]=spDelO.dataset.spDelOptional.split("|").map(Number); const v=d&&(d.visits||[])[vi]; if(v&&v.optionals) v.optionals.splice(oi,1); render(); return; }
+  const spAddB=e.target.closest("[data-sp-add-bus]");
+  if(spAddB){ spCaptureForm(); const d=spDraft; const vi=+spAddB.dataset.spAddBus; const v=d&&(d.visits||[])[vi]; if(v){ v.transport=v.transport||{vendor:"",buses:[]}; v.transport.buses.push({type:"",count:""}); } render(); return; }
+  const spDelB=e.target.closest("[data-sp-del-bus]");
+  if(spDelB){ spCaptureForm(); const d=spDraft; const [vi,bi]=spDelB.dataset.spDelBus.split("|").map(Number); const v=d&&(d.visits||[])[vi]; if(v&&v.transport&&v.transport.buses) v.transport.buses.splice(bi,1); render(); return; }
   if(e.target.closest("[data-sp-add-uprow]")){ spCaptureForm(); const d=spDraft; if(d){ if(!Array.isArray(d.sponsoredGroups)) d.sponsoredGroups=[]; d.sponsoredGroups.push({title:"",count:""}); } render(); return; }
   const spDelUp=e.target.closest("[data-sp-del-uprow]");
   if(spDelUp){ spCaptureForm(); const d=spDraft; if(d&&Array.isArray(d.sponsoredGroups)) d.sponsoredGroups.splice(+spDelUp.dataset.spDelUprow,1); render(); return; }
@@ -9631,6 +9684,7 @@ document.addEventListener("click",e=>{
     const type=(f.type&&!/^Select/.test(f.type))?f.type:"Percentage";
     const v=Math.max(0,+f.v||0);
     const prods=(couponProds||[]).slice();
+    if(type==="Flat amount" && !prods.length){ if(errEl) errEl.textContent="A flat-amount coupon must have at least one applicable product selected."; return; }
     if(type==="Flat amount" && prods.length){   // flat ₹ per item can't exceed a selected product's Base
       const bases=prods.map(pd=>shopBaseOf(shopItemByPd(pd))).filter(b=>b>0);
       const minBase=bases.length?Math.min(...bases):0;
@@ -9829,7 +9883,7 @@ document.addEventListener("change",e=>{
   // ---- Sponsored School ----
   if(e.target.closest&&e.target.closest("[data-sp-filter]")){ spFStatus=e.target.value; render(); return; }
   if(e.target.closest&&e.target.closest("[data-sp-preset]")){ spCaptureForm(); const p=ENTRY_PRICES.find(x=>x.name===e.target.value); if(p&&spDraft){ spDraft.entryStudent=p.student; spDraft.entryAdult=p.adult; } render(); return; }
-  if(spDraft && e.target.matches && e.target.matches('[data-spf="transport_vendor"],[data-spf="foodVendor"]')){ spCaptureForm(); render(); return; }   // reveal vendor cost + (transport) buses/seater on selection
+  if(spDraft && e.target.matches && e.target.matches('[data-spf="foodVendor"],[data-spvf="transportVendor"],[data-spvbf="type"],[data-spvbf="count"]')){ spCaptureForm(); render(); return; }   // vendor → repopulate bus types; bus type / count → refresh the per-visit transport cost
   const meth=e.target.closest&&e.target.closest("[data-method]");
   if(meth){ syncDiscountForm(); curDiscount().auto = e.target.value==="auto"; render(); return; }
   const applies=e.target.closest&&e.target.closest("[data-applies-to]");
