@@ -137,6 +137,8 @@ tbody tr[aria-selected="true"] td:first-child{box-shadow:inset 2px 0 0 var(--blu
 .tag-a{background:var(--teal-wash);border-color:var(--teal-line);color:var(--teal)}
 .tag-morning{background:#fff4e0;border-color:#f0d38a;color:#8a6100}
 .tag-afternoon{background:#eceefb;border-color:#c3c8f0;color:#4448b0}
+.tag-single{background:#f3eef7;border-color:#d8c8ea;color:#6b4fa0}
+.up-schools tbody tr:hover td{background:#eef4ef}
 .q{display:inline-flex;align-items:center;font-family:var(--mono);font-size:9.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--amber);border:1px solid var(--amber-line);background:var(--amber-wash);border-radius:3px;padding:1px 6px}
 
 .two{display:grid;grid-template-columns:minmax(0,1fr) 312px;gap:18px;align-items:start}
@@ -4807,22 +4809,22 @@ const VIEWS = {
     const upVisits=upV.reduce((a,r)=>a+r.visits.length,0);
     const kindTag=k=>`<span class="tag tag-${k==="Sponsored"?"a":"t"}">${k}</span>`;
     const slotTag=s=>/morning/i.test(s)?'<span class="tag tag-morning">Morning</span>':/afternoon/i.test(s)?'<span class="tag tag-afternoon">Afternoon</span>':"";
-    const visitTime=v=>`${escHtml(v.date)}<div class="sub" style="text-transform:none">${escHtml(v.slot)}</div>${slotTag(v.slot)?`<div style="margin-top:3px">${slotTag(v.slot)}</div>`:""}`;
-    const upRows=upV.length?upV.map(r=>`<tr data-open="${r.kind==="Sponsored"?"sponsored":"school"}:${r.idx}" style="cursor:pointer">
+    const visitTime=v=>`<span style="display:inline-flex;align-items:center;gap:8px">${escHtml(v.date)}${slotTag(v.slot)}</span>`;
+    const upRows=upV.length?upV.map(r=>`<tr>
         <td class="code" style="white-space:nowrap;vertical-align:top">${r.visits.map((v,vi)=>`<div${vi<r.visits.length-1?' style="margin-bottom:10px;padding-bottom:10px;border-bottom:1px dashed var(--rule2)"':''}>${visitTime(v)}</div>`).join("")}</td>
-        <td style="vertical-align:top"><b style="font-weight:500">${escHtml(r.school)}</b> ${kindTag(r.kind)}${r.location?`<div class="sub">${escHtml(r.location)}</div>`:""}</td>
-        <td style="vertical-align:top">${r.multi?'<span class="tag tag-a">Multi visit</span>':'<span class="tag">Single visit</span>'}</td>
+        <td style="vertical-align:middle"><b style="font-weight:500">${escHtml(r.school)}</b> ${kindTag(r.kind)}${r.location?`<div class="sub">${escHtml(r.location)}</div>`:""}</td>
+        <td style="vertical-align:top">${r.multi?'<span class="tag tag-a">Multi visit</span>':'<span class="tag tag-single">Single visit</span>'}</td>
         <td class="code ctr" style="vertical-align:top">${r.students||"—"}</td>
         <td class="code ctr" style="vertical-align:top">${r.adults||"—"}</td></tr>`).join("")
       :'<tr><td colspan="5" class="muted" style="text-align:center;padding:22px">No upcoming school visits.</td></tr>';
     const schoolsPanel=`<div class="card">
-      <div class="card-head"><span class="card-title">Upcoming schools</span><span class="card-note" style="margin-left:auto">confirmed · for Reception</span></div>
+      <div class="card-head"><span class="card-title">Upcoming schools</span></div>
       <div style="display:flex;gap:22px;padding:11px 16px;border-bottom:1px solid var(--rule);font-size:12.5px">
         <span><b style="font-size:15px">${upVisits}</b> upcoming visit${upVisits===1?"":"s"}</span>
         <span><b style="font-size:15px">${upV.length}</b> school${upV.length===1?"":"s"}</span>
         <span><b style="font-size:15px">${upStu}</b> students</span>
         <span><b style="font-size:15px">${upAd}</b> adults / teachers</span></div>
-      <div class="matrix-wrap" style="max-height:340px;overflow:auto"><table class="reclist"><thead><tr>
+      <div class="matrix-wrap" style="max-height:340px;overflow:auto"><table class="reclist up-schools"><thead><tr>
         <th>Date &amp; slot</th><th>School</th><th>Visit type</th><th class="ctr">Students</th><th class="ctr">Adults</th></tr></thead>
       <tbody>${upRows}</tbody></table></div></div>`;
 
