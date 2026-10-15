@@ -1939,7 +1939,7 @@ function schoolExportRows(kind){
 /* ---- Supporting masters ---- */
 const SPONSORS = [
   {name:"JSW Foundation", gstin:"27AAETJ5678K1Z4", state:"Maharashtra", addr:"JSW Centre, Bandra Kurla Complex, Mumbai 400051", email:"csr@jsw.in", is_active:true},
-  {name:"Tata Trusts",    gstin:"27AAATT1234C1ZP", state:"Maharashtra", addr:"Bombay House, 24 Homi Mody St, Fort, Mumbai 400001", email:"grants@tatatrusts.org", is_active:true},
+  {name:"MUSO Foundation", gstin:"27AAATT1234C1ZP", state:"Maharashtra", addr:"Bombay House, 24 Homi Mody St, Fort, Mumbai 400001", email:"grants@musofoundation.org", is_active:true},
   {name:"HDFC Parivartan",gstin:"27AAACH2233F1ZD", state:"Maharashtra", addr:"HDFC House, Churchgate, Mumbai 400020", email:"csr@hdfc.com", is_active:false}
 ];
 const DISTRICTS = [
@@ -2180,14 +2180,14 @@ const SPONSORED_BOOKINGS = [
     school:"Teach For India — M-East ward", location:"Govandi, Mumbai", boards:["State board"], boardsOther:"",
     grade:"Grade 6 to 8", poc:"Imran Shaikh", designation:"Admin",
     email:"mumbai@teachforindia.org", phone:"+91 98330 44556",
-    orgType:"Funded (NGO)", sponsor:"JSW Foundation", donorTicketing:"JSW Foundation", donorFood:"Tata Trusts", donorTravel:"JSW Foundation", district:"Mumbai Suburban",
+    orgType:"Funded (NGO)", sponsor:"JSW Foundation", donorTicketing:"JSW Foundation", donorFood:"MUSO Foundation", donorTravel:"JSW Foundation", district:"Mumbai Suburban",
     transport:{need:"Yes", vendor:"Sai Bus Service"},
     interested:["Museum Exploration"], interestedOther:"", prefDate:"14 Oct 2026",
     expChildren:150, expTeachers:12, note:"Annual sponsored visit.",
     proofDoc:"TFI-registration.pdf", foodVendor:"Annapurna Caterers",
     visits:[{date:"14 Oct 2026", slotId:"Afternoon slot", students:150, adults:12, escorts:5, teachersComp:0,
              food:{students:150,adults:12,comp:5,optionIds:["Snack box"]},
-             transport:{vendor:"Sai Bus Service", buses:[{type:"50-seater",count:3}]},
+             transport:{vendor:"Sai Bus Service", buses:[{type:"50-seater",count:3}], donor:"JSW Foundation"},
              optionals:[{kind:"Orientation", venue:"Auditorium", date:"14 Oct 2026", time:"14:15–14:45"}]}],
     entryStudent:350, entryAdult:500,
     ngoGstin:"", ngoPan:"AAATT9012Q", authNumber:"JSW/CSR/2026/0417", speciallyAbled:6, sponsoredGroups:[{title:"First-generation learners",count:"120"},{title:"Below poverty line",count:"45"}],
@@ -2200,23 +2200,23 @@ const SPONSORED_BOOKINGS = [
     school:"Pratham — Raigad", location:"Panvel, Raigad", boards:["State board"], boardsOther:"",
     grade:"Grade 5", poc:"Vikram Patil", designation:"Coordinator",
     email:"raigad@pratham.org", phone:"+91 99201 77883",
-    orgType:"Funded (NGO)", sponsor:"Tata Trusts", donorTicketing:"Tata Trusts", donorFood:"Tata Trusts", donorTravel:"Tata Trusts", district:"Raigad",
+    orgType:"Funded (NGO)", sponsor:"MUSO Foundation", donorTicketing:"MUSO Foundation", donorFood:"MUSO Foundation", donorTravel:"MUSO Foundation", district:"Raigad",
     transport:{need:"Yes", vendor:"Panvel Roadways"},
     interested:["Museum Exploration"], interestedOther:"", prefDate:"06 Aug 2026",
     expChildren:90, expTeachers:8, note:"",
     proofDoc:"Pratham-80G.pdf", foodVendor:"Tiffin Box Co.",
     visits:[{date:"06 Aug 2026", slotId:"Afternoon slot", students:90, adults:8, escorts:2, teachersComp:0,
              food:{students:90,adults:8,comp:2,optionIds:["Standard lunch"]},
-             transport:{vendor:"Panvel Roadways", buses:[{type:"35-seater",count:3}]}, optionals:[]}],
+             transport:{vendor:"Panvel Roadways", buses:[{type:"35-seater",count:3}], donor:"MUSO Foundation"}, optionals:[]}],
     entryStudent:350, entryAdult:500,
     ngoGstin:"", ngoPan:"AAATP3456R", authNumber:"TT/CSR/2026/1180", speciallyAbled:4, sponsoredGroups:[{title:"First-generation learners",count:"80"}],
     postVisit:{remark:"Wonderful, curious group — the light gallery was a hit. Two buses arrived 20 min late; noted for next time.",
                images:["group-atrium.jpg","light-gallery.jpg","lunch-courtyard.jpg"]},
     students:{uploaded:true,total:90,girls:48,boys:42}, feedback:{sent:true},
-    comments:"Visit completed; e-invoice raised to Tata Trusts.", invoice:{raised:true, on:"07 Aug 2026"},
+    comments:"Visit completed; e-invoice raised to MUSO Foundation.", invoice:{raised:true, on:"07 Aug 2026"},
     timeline:[{on:"12 Jul 2026", who:"Neha (CSR)", what:"Backend booking created; confirmation emailed to the NGO and Function Process circulated to staff."},
               {on:"06 Aug 2026", who:"Reception", what:"Group checked in — 90 students, 8 teachers."},
-              {on:"07 Aug 2026", who:"Shivam (Finance)", what:"Visit completed; e-invoice raised to Tata Trusts. Status → Completed."},
+              {on:"07 Aug 2026", who:"Shivam (Finance)", what:"Visit completed; e-invoice raised to MUSO Foundation. Status → Completed."},
               {on:"07 Aug 2026", who:"System", what:"Feedback + acknowledgement form emailed to the POC."}] }
 ];
 
@@ -2227,8 +2227,17 @@ const spById = id => SPONSORED_BOOKINGS.find(r=>r.id===id);
 const SP_DONOR_TYPES = [["donorTicketing","Ticketing (entry fees)"],["donorFood","Food (F&B)"],["donorTravel","Travel (transport)"]];
 function spFunding(rec){
   const c=schoolCompute(rec);
-  const amt={donorTicketing:c.visitTotal, donorFood:c.foodTotal, donorTravel:c.transportTotal};
-  return SP_DONOR_TYPES.map(([k,label])=>({key:k, label, donor:(rec[k]||"").trim(), amount:amt[k]}));
+  const rows=[
+    {key:"donorTicketing", label:"Ticketing (entry fees)", donor:(rec.donorTicketing||"").trim(), amount:c.visitTotal},
+    {key:"donorFood",      label:"Food (F&B)",             donor:(rec.donorFood||"").trim(),      amount:c.foodTotal}
+  ];
+  // Travel is funded per visit — group the visits' transport cost by each visit's own travel donor.
+  const travel={};
+  (rec.visits||[]).forEach(v=>{ const t=v.transport||{}; const cost=visitTransportCost(v); const d=(t.donor||"").trim(); if(!cost && !d) return; (travel[d]=travel[d]||{donor:d, amount:0}).amount+=cost; });
+  const tKeys=Object.keys(travel);
+  if(tKeys.length) tKeys.forEach(d=>rows.push({key:"donorTravel", label:"Travel (transport)", donor:travel[d].donor, amount:travel[d].amount}));
+  else rows.push({key:"donorTravel", label:"Travel (transport)", donor:"", amount:0});
+  return rows;
 }
 /* Transport across a booking's visits — distinct vendors, total buses and total cost (incl. GST). */
 function spTransportSummary(rec){
@@ -2247,7 +2256,8 @@ function spTransportLine(rec){
   if(s.vendors.length) bits.push(s.vendors.join(", "));
   return bits.length?("Yes · "+bits.join(" · ")):"Yes";
 }
-const spPrimaryDonor = rec => (rec.donorTicketing||rec.donorFood||rec.donorTravel||rec.sponsor||"").trim();
+const spTravelDonors = rec => [...new Set((rec.visits||[]).map(v=>((v.transport||{}).donor||"").trim()).filter(Boolean))];
+const spPrimaryDonor = rec => (rec.donorTicketing||rec.donorFood||spTravelDonors(rec)[0]||rec.sponsor||"").trim();
 /* Distinct organisations already on file — powers the Organisation typeahead. */
 function spDirectory(){ const seen={}, out=[]; SPONSORED_BOOKINGS.forEach(r=>{const k=(r.school||"").trim();if(!k||seen[k])return;seen[k]=1;out.push({name:r.school, rec:r});}); return out; }
 function nextSpId(){ const n=SPONSORED_BOOKINGS.reduce((mx,r)=>{const m=/SPS-(\d+)/.exec(r.id);return m?Math.max(mx,+m[1]):mx;},0); return "SPS-"+String(n+1).padStart(3,"0"); }
@@ -2328,7 +2338,7 @@ function spExportRows(kind){
   return [["ID","School / NGO name","Location","District","Type","Authorisation number","GST number of NGO","PAN of NGO","Proof of identity","Education board","Grade / Class","Preferred date of visit","Expected number of children","Expected number of teachers / staff","Transport support","Transport vendor","Food vendor","Name of POC","Designation","Email of POC","Phone of POC","Interested In","Message / Note","Ticketing donor","Food donor","Travel donor","Entry price preset","Entry price per student","Entry price per adult / teacher","Total Number of Visits","Start Date","Start Time slot","Total Students (all visits)","Total Adults / teachers (all visits)","Total Complementary adults (all visits)","Billing name","Billing address","GST number","PAN","Specially-abled children","Sponsored children remarks","Assignee","Status","Comments","Taxable value","GST (18%)","Grand total (incl. GST)","Invoice raised","Created"]].concat(
     SPONSORED_BOOKINGS.map(r=>{const c=schoolCompute(r),va=visitAgg(r),t=r.transport||{};
       const groups=(r.sponsoredGroups||[]).map(g=>`${g.title}: ${g.count}`).join("; ");
-      return [r.id,r.school,r.location,r.district||"",r.orgType||"",r.authNumber||"",r.ngoGstin||"",r.ngoPan||"",r.proofDoc||"",bkBoards(r),r.grade,r.prefDate,r.expChildren,r.expTeachers,t.need||"",t.vendor||"",r.foodVendor||"",r.poc,bkDesig(r),r.email,r.phone,bkInterested(r),r.note,r.donorTicketing||"",r.donorFood||"",r.donorTravel||"",r.entryPreset||"",r.entryStudent,r.entryAdult,va.count,va.startDate,va.startSlot,va.students,va.adults,va.comp,r.billName,r.billAddress,r.gstin,r.pan,r.speciallyAbled||0,groups,r.assignee||"",statusLabel(r.status),r.comments,c.subtotal,c.gst,c.grand,(r.invoice&&r.invoice.raised?"Yes":"No"),r.created];}));
+      return [r.id,r.school,r.location,r.district||"",r.orgType||"",r.authNumber||"",r.ngoGstin||"",r.ngoPan||"",r.proofDoc||"",bkBoards(r),r.grade,r.prefDate,r.expChildren,r.expTeachers,t.need||"",spTransportSummary(r).vendors.join("; "),r.foodVendor||"",r.poc,bkDesig(r),r.email,r.phone,bkInterested(r),r.note,r.donorTicketing||"",r.donorFood||"",spTravelDonors(r).join("; "),r.entryPreset||"",r.entryStudent,r.entryAdult,va.count,va.startDate,va.startSlot,va.students,va.adults,va.comp,r.billName,r.billAddress,r.gstin,r.pan,r.speciallyAbled||0,groups,r.assignee||"",statusLabel(r.status),r.comments,c.subtotal,c.gst,c.grand,(r.invoice&&r.invoice.raised?"Yes":"No"),r.created];}));
 }
 
 /* ---- Careers queries: the "ask us something" form on the careers page. Name,
@@ -2625,11 +2635,12 @@ function spRowToRecord(o,id){
     grade:String(o.Grade).trim(), poc:String(o.POC).trim(), designation:String(o.Designation||"").trim(), designationOther:"",
     email:String(o.Email).trim(), phone:String(o.Phone).trim(),
     orgType, donorTicketing:String(o.TicketingDonor||"").trim(), donorFood:String(o.FoodDonor||"").trim(), donorTravel:String(o.TravelDonor||"").trim(), sponsor:(String(o.TicketingDonor||"").trim()||String(o.FoodDonor||"").trim()||String(o.TravelDonor||"").trim()), district:String(o.District||"").trim(),
-    transport:{need:tneed, vendor:String(o.TransportVendor||"").trim()}, foodVendor:String(o.FoodVendor||"").trim(),
+    transport:{need:tneed}, foodVendor:String(o.FoodVendor||"").trim(),
     interested:bulkSplit(o.Interested), interestedOther:"", prefDate:date,
     expChildren:students||"", expTeachers:adults||"", note:String(o.Note||"").trim(), proofDoc:String(o.ProofDoc||"").trim(),
     visits:[{date, slotId:bulkSlot(o.Slot), students, adults, escorts:bulkNum(o.Escorts), teachersComp:0,
-             food:{students:bulkNum(o.FoodStudents),adults:bulkNum(o.FoodAdults),comp:bulkNum(o.FoodComp),optionIds:String(o.FBOption||"").trim()?[String(o.FBOption).trim()]:[]}, optionals:[]}],
+             food:{students:bulkNum(o.FoodStudents),adults:bulkNum(o.FoodAdults),comp:bulkNum(o.FoodComp),optionIds:String(o.FBOption||"").trim()?[String(o.FBOption).trim()]:[]},
+             transport:{vendor:String(o.TransportVendor||"").trim(), buses:[], donor:String(o.TravelDonor||"").trim()}, optionals:[]}],
     entryStudent:bulkNum(o.EntryStudent)||"", entryAdult:bulkNum(o.EntryAdult)||"",
     ngoGstin:String(o.NgoGstin||"").trim(), ngoPan:String(o.NgoPan||"").trim(), authNumber:String(o.AuthNumber||"").trim(),
     speciallyAbled:bulkNum(o.SpeciallyAbled), sponsoredGroups:bulkUnderpriv(o.Underprivileged),
@@ -2647,7 +2658,7 @@ const BULK_SCHOOL_SAMPLES=[
 ];
 const BULK_SP_SAMPLES=[
   {School:"Muktangan — Worli",Location:"Worli, Mumbai",OrgType:"Funded (NGO)",District:"Mumbai Suburban",Boards:"State board",Grade:"Grade 5",POC:"Anjali Rane",Designation:"Coordinator",Email:"visits@muktangan.org",Phone:"+91 98201 33445",VisitDate:"18 Feb 2025",Slot:"Morning slot",Students:80,Adults:8,Escorts:3,FoodStudents:80,FoodAdults:8,FoodComp:3,FBOption:"Snack box",EntryStudent:350,EntryAdult:500,TicketingDonor:"JSW Foundation",FoodDonor:"JSW Foundation",TravelDonor:"JSW Foundation",AuthNumber:"JSW/CSR/2025/0112",NgoGstin:"",NgoPan:"AAATM1234N",ProofDoc:"Muktangan-12A.pdf",TransportNeed:"Yes",TransportVendor:"Worli Roadways",FoodVendor:"Annapurna Caterers",SpeciallyAbled:4,Underprivileged:"First-generation learners:60; Below poverty line:20",BillName:"Muktangan",BillAddress:"Worli, Mumbai 400018",GSTIN:"",PAN:"AAATM1234N",Status:"Ended",Assignee:"Neha",Interested:"Museum Exploration;Multi Visit",Note:"Sponsored by JSW Foundation.",Comments:"Visit completed; e-invoice to JSW."},
-  {School:"Akanksha Foundation — Sewri",Location:"Sewri, Mumbai",OrgType:"Funded (NGO)",District:"Mumbai Suburban",Boards:"State board",Grade:"Grade 6 & 7",POC:"Imtiaz Shaikh",Designation:"Admin",Email:"programs@akanksha.org",Phone:"+91 90045 66778",VisitDate:"09 Mar 2025",Slot:"Afternoon slot",Students:110,Adults:10,Escorts:4,FoodStudents:110,FoodAdults:10,FoodComp:4,FBOption:"Standard lunch",EntryStudent:350,EntryAdult:500,TicketingDonor:"Tata Trusts",FoodDonor:"Tata Trusts",TravelDonor:"Tata Trusts",AuthNumber:"TT/GRANT/2025/0339",NgoGstin:"",NgoPan:"AAATA5678K",ProofDoc:"Akanksha-80G.pdf",TransportNeed:"Yes",TransportVendor:"Sewri Transport Co.",FoodVendor:"Tiffin Box Co.",SpeciallyAbled:2,Underprivileged:"First-generation learners:90",BillName:"Akanksha Foundation",BillAddress:"Sewri, Mumbai 400015",GSTIN:"",PAN:"AAATA5678K",Status:"Ended",Assignee:"Neha",Interested:"Museum Exploration",Note:"",Comments:"Completed."}
+  {School:"Akanksha Foundation — Sewri",Location:"Sewri, Mumbai",OrgType:"Funded (NGO)",District:"Mumbai Suburban",Boards:"State board",Grade:"Grade 6 & 7",POC:"Imtiaz Shaikh",Designation:"Admin",Email:"programs@akanksha.org",Phone:"+91 90045 66778",VisitDate:"09 Mar 2025",Slot:"Afternoon slot",Students:110,Adults:10,Escorts:4,FoodStudents:110,FoodAdults:10,FoodComp:4,FBOption:"Standard lunch",EntryStudent:350,EntryAdult:500,TicketingDonor:"MUSO Foundation",FoodDonor:"MUSO Foundation",TravelDonor:"MUSO Foundation",AuthNumber:"TT/GRANT/2025/0339",NgoGstin:"",NgoPan:"AAATA5678K",ProofDoc:"Akanksha-80G.pdf",TransportNeed:"Yes",TransportVendor:"Sewri Transport Co.",FoodVendor:"Tiffin Box Co.",SpeciallyAbled:2,Underprivileged:"First-generation learners:90",BillName:"Akanksha Foundation",BillAddress:"Sewri, Mumbai 400015",GSTIN:"",PAN:"AAATA5678K",Status:"Ended",Assignee:"Neha",Interested:"Museum Exploration",Note:"",Comments:"Completed."}
 ];
 function bulkTemplateRows(kind){
   const cols = kind==="sponsored"?SP_BULK_COLS:SCHOOL_BULK_COLS;
@@ -7209,7 +7220,7 @@ function schoolReports(){
 /* Each visit carries its own headcounts, Food & F&B and Optionals (venue blocks). */
 function blankVisit(){
   return {date:"", slotId:(SCHOOL_SLOTS[0]||{}).name||"", students:0, adults:0, escorts:0, teachersComp:0,
-    food:{students:0,adults:0,comp:0,optionIds:[]}, transport:{vendor:"",buses:[]}, optionals:[]};
+    food:{students:0,adults:0,comp:0,optionIds:[]}, transport:{vendor:"",buses:[],donor:""}, optionals:[]};
 }
 function blankSchool(mode){
   return {id:nextSchoolId(), status:"Open", origin:mode==="booking"?"backend":"enquiry", created:fmtDMY(new Date()),
@@ -7902,12 +7913,11 @@ function spForm(editing){
   const donorCell=(k,label,covers)=>`<div><div class="lab" style="margin-bottom:4px"><span class="lab-n">${label}</span></div>${sel(k,d[k],activeDonors,"— none —")}<div class="muted" style="font-size:10.5px;margin-top:3px">Covers ${covers}</div></div>`;
   const secSponsor=section("Donor &amp; funding",
     `<div class="fld wide" style="grid-column:1/-1;margin:0"><div class="lab"><span class="lab-n">Funding by donor</span></div>
-      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px 16px">
+      <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:12px 16px">
         ${donorCell("donorTicketing","Ticketing donor","entry fees")}
         ${donorCell("donorFood","Food donor","F&amp;B")}
-        ${donorCell("donorTravel","Travel donor","transport")}
       </div>
-      <div class="muted" style="font-size:11px;margin-top:6px">Each is optional and the same donor may cover more than one. The e-invoice reflects the split — the school pays nothing.</div></div>`);
+      <div class="muted" style="font-size:11px;margin-top:6px">Each is optional and the same donor may cover more than one. The <b>Travel donor</b> is set per visit in the Transport section. The e-invoice reflects the split — the school pays nothing.</div></div>`);
 
   // Entry pricing
   const pdis = priceLocked?" disabled":"";
@@ -7945,10 +7955,11 @@ function spForm(editing){
       ${optCheckBanner(chk)}
     </div>`;};
   const visitCard=(v,i)=>{ const f=v.food||{}; const tp=v.transport||{vendor:"",buses:[]};
-    const busRow=(b,bi)=>`<div data-spvbrow="${i}|${bi}" style="display:grid;grid-template-columns:1fr 150px 30px;gap:8px;align-items:center">
-      <div class="selwrap"><select class="inp" data-spvbf="type"><option value=""${!b.type?" selected":""}>Select bus type…</option>${busTypesOf(tp.vendor).map(bt=>`<option value="${escAttr(bt.name)}"${b.type===bt.name?" selected":""}>${escHtml(bt.name)} · ${bt.seater} seats · ${money(bt.cost)}</option>`).join("")}${b.type&&!busTypeOf(tp.vendor,b.type)?`<option selected>${escAttr(b.type)}</option>`:""}</select></div>
+    const busRow=(b,bi)=>{ const used=new Set((tp.buses||[]).filter((_,x)=>x!==bi).map(x=>x.type).filter(Boolean));   // a bus type already picked in another row of this visit can't be picked again
+      return `<div data-spvbrow="${i}|${bi}" style="display:grid;grid-template-columns:1fr 150px 30px;gap:8px;align-items:center">
+      <div class="selwrap"><select class="inp" data-spvbf="type"><option value=""${!b.type?" selected":""}>Select bus type…</option>${busTypesOf(tp.vendor).filter(bt=>bt.name===b.type||!used.has(bt.name)).map(bt=>`<option value="${escAttr(bt.name)}"${b.type===bt.name?" selected":""}>${escHtml(bt.name)} · ${bt.seater} seats · ${money(bt.cost)}</option>`).join("")}${b.type&&!busTypeOf(tp.vendor,b.type)?`<option selected>${escAttr(b.type)}</option>`:""}</select></div>
       <div class="inp-suffix"><input class="inp mono" type="number" min="0" data-spvbf="count" value="${esc(b.count)}" placeholder="0"><span>buses</span></div>
-      <button type="button" class="btn" data-sp-del-bus="${i}|${bi}" aria-label="Remove bus type" style="padding:5px 9px">&times;</button></div>`;
+      <button type="button" class="btn" data-sp-del-bus="${i}|${bi}" aria-label="Remove bus type" style="padding:5px 9px">&times;</button></div>`; };
     return `<div class="fld wide" data-spvrow="${i}" style="border:1px solid var(--rule2);border-radius:8px;padding:14px;margin:0;gap:0">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px"><b style="font-size:12.5px">Visit ${i+1}</b>${i>0?`<div style="display:flex;gap:8px"><button type="button" class="btn" data-sp-same="${i}">Same as above</button><button type="button" class="btn" data-sp-del-visit="${i}">Remove</button></div>`:""}</div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px 16px;align-items:start">
@@ -7973,8 +7984,9 @@ function spForm(editing){
     <div style="display:flex;flex-direction:column;gap:10px">
       ${fld("Transport vendor",`<div class="selwrap"><select class="inp" data-spvf="transportVendor"><option value=""${!tp.vendor?" selected":""}>Select vendor…</option>${TRANSPORT_VENDORS.filter(tv2=>tv2.is_active!==false||tv2.name===tp.vendor).map(tv2=>`<option value="${escAttr(tv2.name)}"${tp.vendor===tv2.name?" selected":""}>${escHtml(tv2.name)}</option>`).join("")}${tp.vendor&&!transportVendorByName(tp.vendor)?`<option selected>${escAttr(tp.vendor)}</option>`:""}</select></div>`,"From the Transport vendors master. Add one or more bus types and the number of buses per type.")}
       ${tp.vendor?`<div style="display:flex;flex-direction:column;gap:8px">${(tp.buses||[]).length?(tp.buses||[]).map(busRow).join(""):'<div class="muted" style="font-size:11.5px">No bus types added yet.</div>'}
-        <button type="button" class="rep-add" data-sp-add-bus="${i}" style="border-radius:4px;align-self:flex-start">+ Add bus type</button>
-        <div style="padding:7px 11px;border-radius:6px;background:#f6f8f5;border:1px solid var(--rule2);font-size:12px">Transport cost (incl. GST): <b>${money(visitTransportCost(v))}</b></div></div>`:""}
+        ${(tp.buses||[]).filter(b=>b.type).length>=busTypesOf(tp.vendor).length?`<div class="muted" style="font-size:11px">All bus types for this vendor have been added.</div>`:`<button type="button" class="rep-add" data-sp-add-bus="${i}" style="border-radius:4px;align-self:flex-start">+ Add bus type</button>`}
+        <div style="padding:7px 11px;border-radius:6px;background:#f6f8f5;border:1px solid var(--rule2);font-size:12px">Transport cost (incl. GST): <b>${money(visitTransportCost(v))}</b></div>
+        ${fld("Travel donor",`<div class="selwrap"><select class="inp" data-spvf="transportDonor"><option value=""${!tp.donor?" selected":""}>— none —</option>${activeDonors.map(dn=>`<option${tp.donor===dn?" selected":""}>${escHtml(dn)}</option>`).join("")}${tp.donor&&!activeDonors.includes(tp.donor)?`<option selected>${escHtml(tp.donor)}</option>`:""}</select></div>`,"Which donor funds this visit's transport. Covers the transport cost above.")}</div>`:""}
     </div>
     ${subHead("Optionals (venue blocks)")}
     <div style="display:flex;flex-direction:column;gap:10px">${(v.optionals||[]).map((o,oi)=>optCard(i,o,oi)).join("")}
@@ -8033,7 +8045,7 @@ function spForm(editing){
 function spCaptureForm(){
   const d=spDraft; if(!d) return;
   const g=k=>{const el=document.querySelector(`[data-spf="${k}"]`);return el?el.value:undefined;};
-  ["school","location","orgType","district","boardsOther","grade","prefDate","pocFirst","pocLast","designation","designationOther","email","phone","interestedOther","note","donorTicketing","donorFood","donorTravel","foodVendor","authNumber","ngoGstin","ngoPan","proofDoc","entryPreset","entryStudent","entryAdult","billName","billAddress","gstin","pan","speciallyAbled","status","comments","assignee","expChildren","expTeachers"].forEach(k=>{const v=g(k);if(v!==undefined)d[k]=v;});
+  ["school","location","orgType","district","boardsOther","grade","prefDate","pocFirst","pocLast","designation","designationOther","email","phone","interestedOther","note","donorTicketing","donorFood","foodVendor","authNumber","ngoGstin","ngoPan","proofDoc","entryPreset","entryStudent","entryAdult","billName","billAddress","gstin","pan","speciallyAbled","status","comments","assignee","expChildren","expTeachers"].forEach(k=>{const v=g(k);if(v!==undefined)d[k]=v;});
   if(document.querySelector('[data-spf="pocFirst"]')) d.poc=[d.pocFirst||"",d.pocLast||""].join(" ").replace(/\s+/g," ").trim();
   if(d.designation!=="Other") d.designationOther="";
   d.sponsor=spPrimaryDonor(d);   // keep the derived "primary" donor in sync for search / at-a-glance / by-donor
@@ -8052,10 +8064,11 @@ function spCaptureForm(){
     if(fs!==undefined)f.students=+fs||0; if(fa!==undefined)f.adults=+fa||0; if(fc!==undefined)f.comp=+fc||0;
     const fsel=rowEl.querySelector(`[data-spvfsel="foodopt|${i}"]`);
     if(fsel) f.optionIds=fsel.value?[fsel.value]:[];
-    // Per-visit transport — vendor + one or more bus types, each with a number of buses.
-    v.transport=v.transport||{vendor:"",buses:[]};
+    // Per-visit transport — vendor + one or more bus types (each with a number of buses) + the travel donor funding it.
+    v.transport=v.transport||{vendor:"",buses:[],donor:""};
     const tvSel=rowEl.querySelector('[data-spvf="transportVendor"]'); if(tvSel) v.transport.vendor=tvSel.value;
     v.transport.buses=[...rowEl.querySelectorAll("[data-spvbrow]")].map(br=>({type:(br.querySelector('[data-spvbf="type"]')||{}).value||"",count:(br.querySelector('[data-spvbf="count"]')||{}).value||""})).filter(b=>b.type||b.count);
+    const tdSel=rowEl.querySelector('[data-spvf="transportDonor"]'); if(tdSel) v.transport.donor=tdSel.value; else if(!v.transport.vendor) v.transport.donor="";
     v.optionals=v.optionals||[];
     rowEl.querySelectorAll("[data-spvorow]").forEach(orowEl=>{const oi=+orowEl.dataset.spvorow.split("|")[1],o=v.optionals[oi];if(!o)return;
       const og=n=>{const el=orowEl.querySelector(`[data-spvof="${n}"]`);return el?el.value:undefined;};
@@ -9596,7 +9609,7 @@ document.addEventListener("click",e=>{
   const spDelO=e.target.closest("[data-sp-del-optional]");
   if(spDelO){ spCaptureForm(); const d=spDraft; const [vi,oi]=spDelO.dataset.spDelOptional.split("|").map(Number); const v=d&&(d.visits||[])[vi]; if(v&&v.optionals) v.optionals.splice(oi,1); render(); return; }
   const spAddB=e.target.closest("[data-sp-add-bus]");
-  if(spAddB){ spCaptureForm(); const d=spDraft; const vi=+spAddB.dataset.spAddBus; const v=d&&(d.visits||[])[vi]; if(v){ v.transport=v.transport||{vendor:"",buses:[]}; v.transport.buses.push({type:"",count:""}); } render(); return; }
+  if(spAddB){ spCaptureForm(); const d=spDraft; const vi=+spAddB.dataset.spAddBus; const v=d&&(d.visits||[])[vi]; if(v){ v.transport=v.transport||{vendor:"",buses:[]}; const hasEmpty=v.transport.buses.some(b=>!b.type); if(!hasEmpty && v.transport.buses.filter(b=>b.type).length<busTypesOf(v.transport.vendor).length) v.transport.buses.push({type:"",count:""}); } render(); return; }
   const spDelB=e.target.closest("[data-sp-del-bus]");
   if(spDelB){ spCaptureForm(); const d=spDraft; const [vi,bi]=spDelB.dataset.spDelBus.split("|").map(Number); const v=d&&(d.visits||[])[vi]; if(v&&v.transport&&v.transport.buses) v.transport.buses.splice(bi,1); render(); return; }
   if(e.target.closest("[data-sp-add-uprow]")){ spCaptureForm(); const d=spDraft; if(d){ if(!Array.isArray(d.sponsoredGroups)) d.sponsoredGroups=[]; d.sponsoredGroups.push({title:"",count:""}); } render(); return; }
