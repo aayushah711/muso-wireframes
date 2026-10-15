@@ -432,10 +432,30 @@ All verified with `node --check` + render sweep + sponsored new/edit form tests 
 
 **Sponsor rename (2026-10-15).** `SPONSORS` "Tata Trusts" → **"MUSO Foundation"** (email `grants@musofoundation.org`); all 7 seed references updated.
 
+### 30. Program attendees trimmed, First + Last name split, Payment step + read-only sidebar (2026-10-14)
+Verified with `node --check` + jsdom render of `bookingForm()` (customer step), `memberForm(false|true)`, `shopSaleForm()` (0 errors). Uncommitted on top of `bf7326a`.
+
+**Program attendees (POS step 3).** Removed **Parent's WhatsApp number** (`#bookWhatsapp`), **Date of birth** and **Age** per seat (owner). Seat now = First name + Last name only. Reception check-in attendee rows no longer show "· DOB …". DOB/age-from-DOB handler (`data-dob`) kept — still used by the membership form.
+
+**Name → First name + Last name (owner).** Four places:
+- **POS customer** — `bookingCustomer.first`/`.last` (was `.name`), inputs `#bookCustFirst`/`#bookCustLast`, both **Required**; Next-gate + "Fill the required fields" message check both.
+- **POS program seats** — First name + Last name, both Required.
+- **Membership form** — Adult first/last name, Child first/last name, all Required.
+- **Shop sale** — Customer first/last name, both Optional (`shopCustomer.first`/`.last`, `#shopFirst`/`#shopLast`); saved sale stores `name` = joined "First Last".
+
+New helper **`splitName(n)`** (above `resetBooking`) splits a stored full name at the first space (`"Aarav Kumar Mehta"` → `Aarav` / `Kumar Mehta`); used when picking a customer, editing a booking and editing a member. Seeds (`BOOKINGS`, `CUSTOMERS`, `MEMBERS`) still hold one `name`/`customer`/`adult`/`child` string; list/display columns unchanged.
+
+**POS wizard → Payment is its own step (owner, 2026-10-14).** Steps now built from `STEP_KEYS`: **products/add-ons only = Customer → Booking → Payment**; **any program in the cart = Customer → Booking → Attendees → Payment** (Attendees only when there are program seats, `heads.length`). `bookingStep` stays a 1-based index, clamped if a program is removed while past the end; Next handler steps `bookingStep++` from step 2 on. Next button reads "Next: <step> →"; none on the last step (the CTA is there). Old "Pick a payment method in the order summary" hint removed.
+- **Payment step** (`paymentStepBody`) = Discount code box (+ code chips / errors) on top, then payment methods, voucher box. Methods **Cash · Card · UPI · Voucher in one row**: `.summary-pay-grid` is flex-wrap, each `.summary-pay-btn` fixed 132px, taller padding (was a 2-column grid stretched across the pane). **Take payment** CTA (`payCta`, labels unchanged: "Take payment · ₹X", "+ voucher", "Confirm free booking") sits in the form footer **next to ← Back** on the Payment step only, not in the body.
+- **Right sidebar = read-only**: new **Customer** card (name, phone, email, location · PIN, GSTIN, State, member tier) once a name or phone is entered, then cart groups, Subtotal / discount rows / Net / GST / Total due. No discount box, no payment controls, **no −/+/✕ on cart lines** (`cartCatLine` renders "×N" + amount only; quantities change in the Booking step). Discount code stays in Payment (owner). Sidebar has 0 buttons/inputs (jsdom-checked).
+- Verified: jsdom click-through of a product flow (3 steps, CTA "Take payment · ₹1,770") and a program flow (4 steps, 1 seat = First + Last name boxes, CTA "Take payment · ₹708"), 0 script errors.
+
+**Not changed (owner: later).** Sponsored student CSV template (Student / Guardian name), public `muso-booking-flow.html` "Full name" ×2, data dictionary `customer_name` row and visitor-category note "Date of birth is captured but optional" (now stale). School + Sponsored POC already First/Last. Billing name (school billing) left as is.
+
 ## Known wireframe simplifications / open notes
 - Auto discounts apply on **simplified bases** (whole-cart or the obvious line group), not a full `target/prods/cats` engine.
 - ~~Per "stack all", there is **no** mutual-exclusion (`no[]`) or biggest-saving enforcement in the POS — a member can get both the member add-on line and the Membership auto row.~~ — superseded by §19: one discount per order
-- `recalcBookingSummary()` / `renderBookingAttendees()` remain **dead code** (key off non-existent `[data-bookqty]`) — left untouched.
+- `recalcBookingSummary()` / `renderBookingAttendees()` remain **dead code** (key off non-existent `[data-bookqty]`) — left untouched (still renders single "Name" + "Date of birth"; never shown, so not updated in §30).
 - Seeds still carry some inert legacy fields (`prec`, `no`, old `apply` strings) — harmless.
 - Git: §20–§23 in history. **§24** = `6c3750c`. **§25** = `5e74352`. **§26** = `29cf102` ("Dashboard multi-visit stacking + colored tags, F&B pricing & live total, sponsored vendor cost/buses-seater, MuSo flyout columns, slot-label & misc cleanup"). **§27** = `ba38724` ("Shop invoice: discount each line on its own product… + save per-product instant lines + HSN Total Tax total row + right-align") — **pushed** to `origin/main`. **§28–§29** (dashboard Upcoming-schools polish + Live Footfall + multi-visit program name + shop-coupon Copy-code/all-approved helper chips/flat-requires-products + discount-badge removal; sponsored per-visit transport with Bus Types + cost rollup) are **uncommitted** in the working tree (`muso-admin-portal.html` + this `CONTEXT.md`) — commit when ready. Untracked docs (`VENUE-MODULE-PLAN.md`, `MUSO-SPARK-SUBMISSION-PORTAL-FEATURE-LIST.md`, scope docs, `.xlsx`, `package*.json`, `.gitignore`, `.vscode/`, etc.) remain untracked.
 - **Remote is now HTTPS** (`https://github.com/aayushah711/muso-wireframes.git`, switched from SSH): on this network port 22 is blocked and SSH-over-443 is dropped by a middlebox (`20.207.73.82`), so fetch/pull/push must go over HTTPS. An unused `~/.ssh/config` 443 route + GitHub host keys were added (backed up as `~/.ssh/*.bak.*`).
