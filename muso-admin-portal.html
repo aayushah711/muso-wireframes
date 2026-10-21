@@ -2285,7 +2285,32 @@ const SPONSORED_BOOKINGS = [
     postVisit:{remark:"", images:[]}, students:{uploaded:false,total:0,girls:0,boys:0}, feedback:{sent:false},
     assignee:"Neha Kulkarni", comments:"Confirmed; e-invoice to JSW on completion.", invoice:{raised:false, on:""},
     timeline:[{on:"20 Sep 2026", who:"Neha (CSR)", what:"Backend booking created; confirmation emailed to the NGO."},
-              {on:"22 Sep 2026", who:"Neha (CSR)", what:"Donor and date locked. Status → Confirmed."}] }
+              {on:"22 Sep 2026", who:"Neha (CSR)", what:"Donor and date locked. Status → Confirmed."}] },
+
+  { id:"SPS-006", status:"Confirmed", origin:"backend", created:"18 Sep 2026",
+    school:"Akanksha Foundation — Worli", location:"Worli, Mumbai", boards:["State board"], boardsOther:"",
+    grade:"Grade 7 & 8", poc:"Rhea Fernandes", designation:"Programme Lead",
+    email:"programs@akanksha.org", phone:"+91 98211 55667",
+    orgType:"Funded (NGO)", sponsor:"JSW Foundation", donorTicketing:"JSW Foundation", donorFood:"MUSO Foundation", donorTravel:"JSW Foundation", district:"Mumbai Suburban",
+    transport:{need:"Yes"},
+    interested:["Multi Visit"], interestedOther:"", mvPrograms:["Introduction to AI"], prefDate:"20 Oct 2026",
+    expChildren:80, expTeachers:6, note:"Three-visit AI programme — one cohort across the term.",
+    proofDoc:"Akanksha-12A.pdf", foodVendor:"Annapurna Caterers", multiProgram:true,
+    visits:[{date:"20 Oct 2026", slotId:"Morning", program:"Introduction to AI", students:80, adults:6, escorts:2, teachersComp:0,
+             food:{students:80,adults:6,comp:2,vendor:"Annapurna Caterers",option:"Snack box",donor:"MUSO Foundation"},
+             transport:{vendor:"Konkan Travels", buses:[{type:"45-seater",count:2}], donor:"JSW Foundation"}, optionals:[]},
+            {date:"10 Nov 2026", slotId:"Morning", program:"Introduction to AI", students:78, adults:6, escorts:2, teachersComp:0,
+             food:{students:78,adults:6,comp:2,vendor:"Annapurna Caterers",option:"Snack box",donor:"MUSO Foundation"},
+             transport:{vendor:"Konkan Travels", buses:[{type:"45-seater",count:2}], donor:"JSW Foundation"}, optionals:[]},
+            {date:"01 Dec 2026", slotId:"Morning", program:"Introduction to AI", students:80, adults:6, escorts:2, teachersComp:0,
+             food:{students:80,adults:6,comp:2,vendor:"Annapurna Caterers",option:"Snack box",donor:"MUSO Foundation"},
+             transport:{vendor:"Konkan Travels", buses:[{type:"45-seater",count:2}], donor:"JSW Foundation"}, optionals:[]}],
+    entryStudent:350, entryAdult:500,
+    ngoGstin:"", ngoPan:"AAATA7788L", authNumber:"JSW/CSR/2026/0631", speciallyAbled:5, sponsoredGroups:[{title:"First-generation learners",count:"72"}],
+    postVisit:{remark:"", images:[]}, students:{uploaded:false,total:0,girls:0,boys:0}, feedback:{sent:false},
+    assignee:"Neha Kulkarni", comments:"Multi-visit AI programme confirmed; e-invoice to JSW on completion.", invoice:{raised:false, on:""},
+    timeline:[{on:"18 Sep 2026", who:"Neha (CSR)", what:"Backend booking created; three-visit AI programme scheduled."},
+              {on:"21 Sep 2026", who:"Neha (CSR)", what:"Donors and dates locked. Status → Confirmed."}] }
 ];
 
 /* ---- Sponsored helpers (reuse School math + pills + PDF stack) ---- */
@@ -2315,6 +2340,16 @@ function spFoodSummary(rec){
   const vendors=new Set(), options=new Set(), donors=new Set();
   (rec.visits||[]).forEach(v=>{ const f=v.food||{}; if(f.vendor) vendors.add(f.vendor); if(f.option) options.add(f.option); if(f.donor) donors.add(f.donor); });
   return {vendors:[...vendors], options:[...options], donors:[...donors], cost:(rec.visits||[]).reduce((a,v)=>a+visitFoodCost(v),0)};
+}
+/* Planned F&B headcount — the peak (max) across visits per category, i.e. the largest
+   food order placed for any single visit (students, adults, complementary adults). */
+function spFbPlanned(rec){
+  return (rec.visits||[]).reduce((a,v)=>{ const f=v.food||{};
+    a.students=Math.max(a.students,+f.students||0);
+    a.adults=Math.max(a.adults,+f.adults||0);
+    a.comp=Math.max(a.comp,+f.comp||0);
+    return a; },
+    {students:0,adults:0,comp:0});
 }
 /* One-line food description for detail rows / emails. */
 function spFoodLine(rec){
@@ -4007,7 +4042,7 @@ function foodVendorFbEditor(opts){
   const groups=[], idx={};
   list.forEach(o=>{ const nm=o.option||""; if(!(nm in idx)){ idx[nm]=groups.length; groups.push({option:nm,rows:[]}); } groups[idx[nm]].rows.push(o); });
   if(!groups.length) groups.push({option:"",rows:[{donor:"",child:"",adult:""}]});
-  const donorSel=sel=>`<div class="selwrap"><select class="inp"><option value=""${!sel?" selected":""}>Select donor…</option>${donors.map(d=>`<option${d===sel?" selected":""}>${escHtml(d)}</option>`).join("")}${sel&&!donors.includes(sel)?`<option selected>${escHtml(sel)}</option>`:""}</select></div>`;
+  const donorSel=sel=>`<div class="selwrap"><select class="inp" data-fb-donor-sel><option value=""${!sel?" selected":""}>Select donor…</option>${donors.map(d=>`<option${d===sel?" selected":""}>${escHtml(d)}</option>`).join("")}${sel&&!donors.includes(sel)?`<option selected>${escHtml(sel)}</option>`:""}</select></div>`;
   const donorRow=r=>`<div class="fb-donor-row" style="display:grid;grid-template-columns:1fr 130px 130px 30px;gap:8px;align-items:center">
     ${donorSel(r.donor)}
     <div class="inp-suffix"><input class="inp mono" type="number" min="0" value="${escAttr(r.child??"")}" placeholder="0"><span>₹/child</span></div>
@@ -4022,6 +4057,16 @@ function foodVendorFbEditor(opts){
     <button type="button" class="rep-add" data-fb-add-donor style="border-radius:4px;margin-top:8px;align-self:flex-start">+ Add donor</button></div>`;
   return `<div class="fb-editor" style="display:flex;flex-direction:column;gap:10px">${groups.map(group).join("")}
     <button type="button" class="rep-add" data-fb-add-opt style="border-radius:4px;align-self:flex-start">+ Add F&B option</button></div>`;
+}
+// Keep each F&B option's donor rows duplicate-free: disable already-picked donors in the other rows' dropdowns, and stop "+ Add donor" once every active donor is used.
+function fbSyncDonorGroup(groupEl){
+  if(!groupEl) return;
+  const donorCount=SPONSORS.filter(s=>s.is_active).length;
+  const sels=[...groupEl.querySelectorAll("[data-fb-donor-sel]")];
+  const chosen=sels.map(s=>s.value).filter(Boolean);
+  sels.forEach(sel=>{ [...sel.options].forEach(o=>{ if(o.value) o.disabled = o.value!==sel.value && chosen.includes(o.value); }); });
+  const addBtn=groupEl.querySelector("[data-fb-add-donor]");
+  if(addBtn){ const full=sels.length>=donorCount; addBtn.disabled=full; addBtn.style.opacity=full?".45":""; addBtn.style.pointerEvents=full?"none":""; }
 }
 function couponProdsMsel(){
   const sel=couponProds||[]; const open=couponProdsOpen;
@@ -4185,7 +4230,7 @@ let mEdit = -1;   // generic Foundations master-row edit index
 let ruleDel = null;   // product Validation-rules: pending {ctx,i} awaiting delete confirmation
 let selSp = "", spsub = "overview", sptab = "records", spNewMode = "booking",
     spQ = "", spFStatus = "", spRange = "Monthly",
-    spDraft = null, spMsg = "", spEmailView = null, spSaveConfirm = false, spBulk = null, spFeedbackCompose = null;
+    spDraft = null, spMsg = "", spEmailView = null, spSaveConfirm = false, spBulk = null, spFeedbackCompose = null, spInvoiceEdit = null;
 let appFRole = "", appFStatus = "", appQ = "", careerQ = "";
 let qryQ = "";
 let qryExpanded = new Set();
@@ -8349,6 +8394,12 @@ function spDetail(){
       ${c.transportTotal?row("Transport total (incl. GST)",money(c.transportTotal)):""}
       ${row("Taxable value",money(c.subtotal))}${row("GST 18% (incl.)",money(c.gst))}${row("Grand total (incl. GST)",`<b>${money(c.grand)}</b>`)}
     </tbody></table></div></div>
+    <div class="card"><div class="card-head"><span class="card-title">Cost summary</span><span class="card-note">across all ${(rec.visits||[]).length} visit${(rec.visits||[]).length===1?"":"s"} · incl. GST</span></div>
+      <div class="card-body" style="display:flex;gap:12px;flex-wrap:wrap">
+        <div style="flex:1;min-width:150px;border:1px solid var(--rule2);border-radius:8px;padding:12px 14px;background:#FBFCFA"><div class="muted" style="font-size:11px;text-transform:uppercase;letter-spacing:.04em">Total Ticketing cost</div><div style="font-size:18px;font-weight:700;margin-top:4px">${money(c.visitTotal)}</div></div>
+        <div style="flex:1;min-width:150px;border:1px solid var(--rule2);border-radius:8px;padding:12px 14px;background:#FBFCFA"><div class="muted" style="font-size:11px;text-transform:uppercase;letter-spacing:.04em">Total Food cost</div><div style="font-size:18px;font-weight:700;margin-top:4px">${money(c.foodTotal)}</div></div>
+        <div style="flex:1;min-width:150px;border:1px solid var(--rule2);border-radius:8px;padding:12px 14px;background:#FBFCFA"><div class="muted" style="font-size:11px;text-transform:uppercase;letter-spacing:.04em">Total Transport cost</div><div style="font-size:18px;font-weight:700;margin-top:4px">${money(c.transportTotal)}</div></div>
+      </div></div>
     <div class="card"><div class="card-head"><span class="card-title">Impact &amp; comments</span></div><div class="matrix-wrap"><table class="reclist"><tbody>
       ${row("Specially-abled children",rec.speciallyAbled?`<b>${rec.speciallyAbled}</b>`:"")}${row("Sponsored children",(Array.isArray(rec.sponsoredGroups)?rec.sponsoredGroups:[]).filter(r=>r.title||r.count).map(r=>escHtml(r.title||"—")+(r.count?": "+escHtml(r.count):"")).join(" · "))}${row("Comments",escHtml(rec.comments))}
     </tbody></table></div></div>`;
@@ -8362,18 +8413,53 @@ function spDetail(){
         <button class="btn" data-sp-ackform="print">Print</button>
         <button class="btn" data-sp-upload="ackform">Attach filled form</button>
         ${rec.ackForm?`<span class="pill pill-ok" style="align-self:center"><i class="dot"></i>${escHtml(rec.ackForm)}</span>`:""}</div>
-      <label style="display:flex;gap:8px;align-items:flex-start;cursor:pointer"><input type="checkbox" data-sp-ackconsent ${rec.ackConsent?"checked":""} style="margin-top:2px"><span>The school / NGO has given consent to be contacted later — for future programs, updates and feedback.</span></label></div></div>
+      ${rec.ackForm?`<label style="display:flex;gap:8px;align-items:flex-start;cursor:pointer"><input type="checkbox" data-sp-ackconsent ${rec.ackConsent===false?"":"checked"} style="margin-top:2px"><span>The school / NGO has given consent to be contacted later — for future programs, updates and feedback.</span></label>`:""}</div></div>
     <div class="card"><div class="card-head"><span class="card-title">Event photos</span><span class="card-note">${(rec.postVisit&&rec.postVisit.images||[]).length} uploaded</span><button class="btn" style="margin-left:auto" data-sp-upload="images">Upload photos</button></div>
       <div class="card-body">${(rec.postVisit&&rec.postVisit.images||[]).length?`<div style="display:flex;gap:8px;flex-wrap:wrap">${rec.postVisit.images.map(im=>`<div style="width:96px"><div style="height:64px;border-radius:6px;background:var(--blue-wash);display:flex;align-items:center;justify-content:center;color:var(--blue)">IMG</div><div class="sub" style="font-size:10.5px;margin-top:3px">${escHtml(im)}</div></div>`).join("")}</div>`:'<span class="muted" style="font-size:12px">No photos yet (wireframe upload).</span>'}</div></div>
     <div class="card"><div class="card-head"><span class="card-title">Student information (CSV)</span><button class="btn" style="margin-left:auto" data-sp-student-template="1">Download format</button><button class="btn" style="margin-left:8px" data-sp-upload="students">Upload CSV</button></div><div class="card-body">${split}</div></div>
     <div class="card"><div class="card-head"><span class="card-title">Feedback</span></div><div class="card-body" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
       <span style="font-size:12.5px">${rec.feedback&&rec.feedback.sent?'<span class="pill pill-ok"><i class="dot"></i>Sent</span> Feedback form emailed to the POC.':'Not sent yet.'}</span>
-      <button class="btn" data-sp-feedback-open="1">${rec.feedback&&rec.feedback.sent?"Resend feedback form":"Send feedback form"}</button></div></div>
-    <div class="card"><div class="card-head"><span class="card-title">Vendor invoices</span><span class="card-note">upload + summary — wireframe</span></div>
+      <button class="btn" data-sp-feedback-open="1">${rec.feedback&&rec.feedback.sent?"Resend feedback form":"Send feedback form"}</button></div></div>`;
+
+  /* Vendor invoices — gated behind the actual attendance headcount */
+  const actChildren=rec.actualChildren, actAdults=rec.actualAdults, actComp=rec.actualComp;
+  const filled=x=>x!==undefined && x!==null && String(x).trim()!=="";
+  const hasActuals = filled(actChildren) && filled(actAdults) && filled(actComp);
+  const vendorTable=`<div class="card"><div class="card-head"><span class="card-title">Vendor invoices</span><span class="card-note">upload + summary — wireframe</span></div>
       <div class="matrix-wrap"><table class="reclist"><thead><tr><th>Type</th><th>Vendor</th><th>Detail</th><th>Amount</th><th></th></tr></thead><tbody>
-        ${(()=>{const s=spFoodSummary(rec);return `<tr><td>Food</td><td>${s.vendors.length?escHtml(s.vendors.join(", ")):"—"}</td><td class="sub">${s.options.length?escHtml(s.options.join(", ")):"Qty / menu summary"}</td><td class="code">${s.cost?money(s.cost):"—"}</td><td style="text-align:right"><button class="btn" data-sp-upload="food">Upload</button></td></tr>`;})()}
-        ${(()=>{const s=spTransportSummary(rec);return `<tr><td>Travel</td><td>${s.vendors.length?escHtml(s.vendors.join(", ")):"—"}</td><td class="sub">${s.buses?`${s.buses} bus${s.buses===1?"":"es"}`:"No. of buses"}</td><td class="code">${s.cost?money(s.cost):"—"}</td><td style="text-align:right"><button class="btn" data-sp-upload="travel">Upload</button></td></tr>`;})()}
+        ${(()=>{const s=spFoodSummary(rec);return `<tr><td>Food</td><td>${s.vendors.length?escHtml(s.vendors.join(", ")):"—"}</td><td class="sub">${s.options.length?escHtml(s.options.join(", ")):"Qty / menu summary"}</td><td class="code">${s.cost?money(s.cost):"—"}</td><td style="text-align:right;white-space:nowrap"><button class="btn" data-sp-invoice-edit="food">Edit</button> <button class="btn" data-sp-upload="food">Upload</button></td></tr>`;})()}
+        ${(()=>{const s=spTransportSummary(rec);return `<tr><td>Travel</td><td>${s.vendors.length?escHtml(s.vendors.join(", ")):"—"}</td><td class="sub">${s.buses?`${s.buses} bus${s.buses===1?"":"es"}`:"No. of buses"}</td><td class="code">${s.cost?money(s.cost):"—"}</td><td style="text-align:right;white-space:nowrap"><button class="btn" data-sp-invoice-edit="travel">Edit</button> <button class="btn" data-sp-upload="travel">Upload</button></td></tr>`;})()}
       </tbody></table></div></div>`;
+  const plan=spFbPlanned(rec);
+  const foodDonorName=spFoodDonors(rec)[0]||"";
+  const foodDonorRate=(()=>{ const v=(rec.visits||[]).find(v=>((v.food||{}).donor||"")===foodDonorName && (v.food||{}).option)||(rec.visits||[]).find(v=>(v.food||{}).option); return v?foodRateOf(v):null; })();
+  const foodDonorLabel=foodDonorName?`${escHtml(foodDonorName)}${foodDonorRate?` · ${money(foodDonorRate.child)}/child · ${money(foodDonorRate.adult)}/adult`:""}`:"food donor";
+  const wasteDays = (rec.wastageDays!==undefined && rec.wastageDays!=="") ? (+rec.wastageDays||0) : 1;
+  let totPayable=0, totWaste=0;
+  const wasteRow=(label,planned,actual,rate)=>{ const a=+actual||0; const w=Math.max(0,planned-a);
+    const dayWork=wasteDays!==1?` × ${wasteDays} day${wasteDays===1?"":"s"}`:"";
+    const payable=rate*a*wasteDays, wasteCost=rate*w*wasteDays; totPayable+=payable; totWaste+=wasteCost;
+    const payWork=rate&&a?`<div class="sub">${money(rate)} × ${a}${dayWork}</div>`:"";
+    const wCostWork=rate&&w?`<div class="sub">${money(rate)} × ${w}${dayWork}</div>`:"";
+    return `<tr><td>${label}</td><td class="code">${planned}</td><td class="code">${a}</td><td class="code"><b style="color:${w>0?"var(--warn)":"var(--ink2)"}">${w}</b></td><td class="code">${payable?money(payable):"—"}${payWork}</td><td class="code">${wasteCost?`<b style="color:var(--warn)">${money(wasteCost)}</b>`:"—"}${wCostWork}</td></tr>`; };
+  const rStudent=foodDonorRate?+foodDonorRate.child||0:0, rAdult=foodDonorRate?+foodDonorRate.adult||0:0;
+  const wasteRows=wasteRow("Students",plan.students,actChildren,rStudent)
+    +wasteRow("Adults / teachers",plan.adults,actAdults,rAdult)
+    +wasteRow("Complementary adults",plan.comp,actComp,rAdult);
+  const wastageCard=`<div class="card"><div class="card-head"><span class="card-title">Food wastage</span><span class="card-note">F&amp;B headcount − actual attendance</span></div>
+      <div class="matrix-wrap"><table class="reclist"><thead><tr><th>Category</th><th>F&amp;B (planned)</th><th>Actual</th><th>Food wastage</th><th>Cost payable by ${foodDonorLabel}</th><th>Food wastage cost</th></tr></thead><tbody>
+        ${wasteRows}
+        <tr><td colspan="4" style="text-align:right;color:var(--ink3)">Total</td><td class="code"><b>${totPayable?money(totPayable):"—"}</b></td><td class="code"><b style="color:${totWaste?"var(--warn)":"var(--ink2)"}">${totWaste?money(totWaste):"—"}</b></td></tr>
+      </tbody></table></div></div>`;
+  const invoices=`<div class="card"><div class="card-head"><span class="card-title">Actual attendance</span><span class="card-note">enter the headcount that actually attended</span></div>
+      <div class="card-body" style="display:flex;gap:16px;flex-wrap:wrap">
+        <div class="fld" style="margin:0;max-width:220px;flex:1"><div class="lab"><span class="lab-n">Actual students</span></div><input class="inp mono" type="number" min="0" data-sp-actual="children" value="${escAttr(actChildren??"")}" placeholder="0"></div>
+        <div class="fld" style="margin:0;max-width:220px;flex:1"><div class="lab"><span class="lab-n">Actual adults / teachers</span></div><input class="inp mono" type="number" min="0" data-sp-actual="adults" value="${escAttr(actAdults??"")}" placeholder="0"></div>
+        <div class="fld" style="margin:0;max-width:220px;flex:1"><div class="lab"><span class="lab-n">Actual complementary adults</span></div><input class="inp mono" type="number" min="0" data-sp-actual="comp" value="${escAttr(actComp??"")}" placeholder="0"></div>
+        <div class="fld" style="margin:0;max-width:220px;flex:1"><div class="lab"><span class="lab-n">Number of days</span></div><input class="inp mono" type="number" min="0" data-sp-actual="days" value="${escAttr(rec.wastageDays??"")}" placeholder="0"></div>
+        <div class="fld" style="margin:0;max-width:220px;flex:1"><div class="lab"><span class="lab-n">Food wastage donor</span></div><div class="selwrap"><select class="inp" data-sp-wastage-donor><option value=""${!rec.wastageDonor?" selected":""}>Select donor…</option>${SPONSORS.filter(s=>s.is_active).map(s=>s.name).map(d=>`<option${d===rec.wastageDonor?" selected":""}>${escHtml(d)}</option>`).join("")}${rec.wastageDonor&&!SPONSORS.some(s=>s.is_active&&s.name===rec.wastageDonor)?`<option selected>${escHtml(rec.wastageDonor)}</option>`:""}</select></div></div>
+      </div></div>
+    ${hasActuals?vendorTable+wastageCard:`<div class="card"><div class="card-body muted" style="font-size:12.5px">Enter Actual students, Actual adults / teachers and Actual complementary adults above to view the vendor invoices.</div></div>`}`;
 
   /* Timeline */
   const tl=(rec.timeline||[]).slice().sort((a,b)=>{const da=parseDMY(a.on),db=parseDMY(b.on);return (db?db.getTime():0)-(da?da.getTime():0);});
@@ -8389,14 +8475,13 @@ function spDetail(){
       <button class="btn btn-primary" data-sp-edit="1">Edit details</button>
       <button class="btn" data-sp-sendmail="1">Send email</button>
       <button class="btn" data-sp-feedback="1">Send feedback form</button>
-      <button class="btn" data-sp-invoice-pdf="1">Download invoice</button>
       ${rec.status!=="Ended"?`<button class="btn" data-sp-complete="1">Mark completed</button>`:""}
     </div></div></aside>`;
 
-  const subs=[["overview","Overview"],["after",`Post visit`],["timeline",`Timeline · ${tl.length}`]];
+  const subs=[["overview","Overview"],["after",`Post visit`],["invoices","Vendor Invoices"],["timeline",`Timeline · ${tl.length}`]];
   if(!subs.some(([k])=>k===spsub)) spsub="overview";
   const tabs=`<div class="subs">${subs.map(([k,l])=>`<button class="sub-tab" data-spsub="${k}" aria-selected="${spsub===k}">${l}</button>`).join("")}</div>`;
-  const bodyByTab = spsub==="after"?afterVisit : spsub==="timeline"?timeline : overview;
+  const bodyByTab = spsub==="after"?afterVisit : spsub==="invoices"?invoices : spsub==="timeline"?timeline : overview;
   const confirm = spMsg?`<div class="confirm-layer"><button class="confirm-backdrop" data-sp-msg-dismiss="1" aria-label="Close"></button>
     <div class="confirm-box" role="dialog" aria-modal="true"><div class="confirm-title">Done</div><div class="confirm-body">${escHtml(spMsg)}</div>
     <div class="confirm-actions"><button class="btn btn-primary" data-sp-msg-dismiss="1">Done</button></div></div></div>`:"";
@@ -8423,8 +8508,15 @@ function spDetail(){
       </div>
       <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;padding:12px 20px;border-top:1px solid var(--rule)"><span class="muted" style="font-size:11px">Wireframe — no email is actually sent.</span><span style="display:flex;gap:8px"><button class="btn" data-sp-feedback-cancel="1">Cancel</button><button class="btn btn-primary" data-sp-feedback-send="1">Send email</button></span></div>
     </div></div>`:"";
+  const invoiceDrawer = spInvoiceEdit?`<div class="drawer-layer" id="spInvoiceEditCard">
+    <button class="drawer-backdrop" data-sp-invoice-edit-close="1" aria-label="Close"></button>
+    <aside class="drawer-panel" role="dialog" aria-modal="true" aria-label="Edit vendor invoice">
+      <div class="card-head"><span class="card-title">Edit ${spInvoiceEdit==="travel"?"travel":"food"} invoice</span>
+        <button class="drawer-close" data-sp-invoice-edit-close="1" aria-label="Close">&times;</button></div>
+      <div class="form-body" style="grid-template-columns:1fr"></div>
+    </aside></div>`:"";
   return `<div class="detailhead"><h2 class="detailname">${escHtml(rec.school||"Sponsored booking")}</h2><span class="code">${rec.id}</span>${schoolStatusPill(rec)}${rec.sponsor?`<span class="tag">${escHtml(rec.sponsor)}</span>`:""}</div>
-  <div class="two"><div>${tabs}<div class="sub-body">${bodyByTab}</div></div>${aside}</div>${confirm}${emailModal}${feedbackModal}`;
+  <div class="two"><div>${tabs}<div class="sub-body">${bodyByTab}</div></div>${aside}</div>${confirm}${emailModal}${feedbackModal}${invoiceDrawer}`;
 }
 function syncSpSearch(){
   const tbl=document.getElementById("spTable"); if(!tbl) return;
@@ -9143,6 +9235,7 @@ function render(){
   syncSchoolSearch();
   syncSpSearch();
   syncRatio();
+  document.querySelectorAll(".fb-opt-group").forEach(fbSyncDonorGroup);   // keep F&B donor rows duplicate-free on first paint too
   $("#rail").innerHTML = railHTML();
   $("#railFoot").innerHTML = ORDER.length+" masters<br>Retail products &amp; pricing";
 }
@@ -9455,7 +9548,7 @@ document.addEventListener("click",e=>{
     if(a&&a.cv) careerOpenPdf(careerCvPdf(a), a.cv.name); return; }
   if(e.target.closest("[data-career-clear]")){ careerFDept=""; careerFType=""; careerFStatus="all"; render(); return; }
   const nav=e.target.closest(".mitem");
-  if(nav){ current=nav.dataset.k; mEdit=-1; ruleDel=null; venueAvail=null; venueCheck=null; musoAvail=null; musoCheck=null; selP=0; selW=0; selB=0; selE=0; esub="details"; eventCats=new Set(); selBooking=0; tab="list"; sub="details"; csub="details"; editD=-1; selD=0; dsub="summary"; editCond=-1; condDraft=null; draftDiscount=null; addOpen=null; progKind="event"; progCat="Event"; schoolDraft=null; schtab="records"; schoolEmailView=null; schoolMsg=""; schoolEInvView=false; schoolEInvConfirm=false; schoolSaveConfirm=false; schoolBulk=null; schoolPayFlyout=false; schoolPayEdit=-1; schoolPayDel=-1; schoolCNFlyout=false; schoolCNView=false; spDraft=null; sptab="records"; spEmailView=null; spMsg=""; spSaveConfirm=false; spBulk=null; moveScans=[]; moveMsg=""; couponProds=[]; couponProdsOpen=false; render(); $(".stage").scrollTop=0; return; }
+  if(nav){ current=nav.dataset.k; mEdit=-1; ruleDel=null; venueAvail=null; venueCheck=null; musoAvail=null; musoCheck=null; selP=0; selW=0; selB=0; selE=0; esub="details"; eventCats=new Set(); selBooking=0; tab="list"; sub="details"; csub="details"; editD=-1; selD=0; dsub="summary"; editCond=-1; condDraft=null; draftDiscount=null; addOpen=null; progKind="event"; progCat="Event"; schoolDraft=null; schtab="records"; schoolEmailView=null; schoolMsg=""; schoolEInvView=false; schoolEInvConfirm=false; schoolSaveConfirm=false; schoolBulk=null; schoolPayFlyout=false; schoolPayEdit=-1; schoolPayDel=-1; schoolCNFlyout=false; schoolCNView=false; spDraft=null; sptab="records"; spEmailView=null; spMsg=""; spSaveConfirm=false; spBulk=null; spInvoiceEdit=null; moveScans=[]; moveMsg=""; couponProds=[]; couponProdsOpen=false; render(); $(".stage").scrollTop=0; return; }
   const goto=e.target.closest("[data-goto]");
   if(goto){ current=goto.dataset.goto; mEdit=-1; selP=0; selW=0; selB=0; selE=0; selD=0; selBooking=0; tab="list"; sub="details"; csub="details"; dsub="summary"; addOpen=null; render(); $(".stage").scrollTop=0; return; }
   const t=e.target.closest("[data-tab]");
@@ -9633,7 +9726,7 @@ document.addEventListener("click",e=>{
     return; }
   const od=e.target.closest("[data-open]");
   if(od){ const [kind,i]=od.dataset.open.split(":"); const idx=+i;
-    if(kind==="prod") selP=idx; else if(kind==="camp"){ selW=idx; selB=0; progKind="camp"; } else if(kind==="event"){ selE=idx; progKind="event"; } else if(kind==="disc"){ selD=idx; dsub="summary"; } else if(kind==="member"){ selMember=idx; msub="summary"; } else if(kind==="tier"){ selTier=idx; } else if(kind==="shopitem"){ selShopItem=idx; sitab="details"; } else if(kind==="shopsale"){ selShopSale=idx; ssub="details"; } else if(kind==="shopcoupon"){ selShopCoupon=idx; } else if(kind==="school"){ selSchool=(SCHOOL_BOOKINGS[idx]||{}).id||""; schsub="overview"; schoolEmailView=null; schoolMsg=""; schoolEInvView=false; schoolEInvConfirm=false; schoolPayFlyout=false; schoolPayEdit=-1; schoolPayDel=-1; schoolCNFlyout=false; schoolCNView=false; } else if(kind==="sponsored"){ selSp=(SPONSORED_BOOKINGS[idx]||{}).id||""; spsub="overview"; spEmailView=null; spMsg=""; }
+    if(kind==="prod") selP=idx; else if(kind==="camp"){ selW=idx; selB=0; progKind="camp"; } else if(kind==="event"){ selE=idx; progKind="event"; } else if(kind==="disc"){ selD=idx; dsub="summary"; } else if(kind==="member"){ selMember=idx; msub="summary"; } else if(kind==="tier"){ selTier=idx; } else if(kind==="shopitem"){ selShopItem=idx; sitab="details"; } else if(kind==="shopsale"){ selShopSale=idx; ssub="details"; } else if(kind==="shopcoupon"){ selShopCoupon=idx; } else if(kind==="school"){ selSchool=(SCHOOL_BOOKINGS[idx]||{}).id||""; schsub="overview"; schoolEmailView=null; schoolMsg=""; schoolEInvView=false; schoolEInvConfirm=false; schoolPayFlyout=false; schoolPayEdit=-1; schoolPayDel=-1; schoolCNFlyout=false; schoolCNView=false; } else if(kind==="sponsored"){ selSp=(SPONSORED_BOOKINGS[idx]||{}).id||""; spsub="overview"; spEmailView=null; spMsg=""; spInvoiceEdit=null; }
     tab="detail"; sub="details"; esub="details"; csub="details"; addOpen=null; render(); $(".stage").scrollTop=0; return; }
   // ---- Bulk CSV import (School & Sponsored) ----
   const bulkOpen=e.target.closest("[data-bulk-open]");
@@ -9824,6 +9917,9 @@ document.addEventListener("click",e=>{
   if(e.target.closest("[data-sp-msg-dismiss]")){ spMsg=""; render(); return; }
   const spViewEmail=e.target.closest("[data-sp-view-email]");
   if(spViewEmail){ const rec=spById(selSp); const en=rec&&(rec.timeline||[])[+spViewEmail.dataset.spViewEmail]; if(en&&en.email) spEmailView=en.email; render(); return; }
+  const spInvEdit=e.target.closest("[data-sp-invoice-edit]");
+  if(spInvEdit){ spInvoiceEdit=spInvEdit.dataset.spInvoiceEdit; render(); return; }
+  if(e.target.closest("[data-sp-invoice-edit-close]")){ spInvoiceEdit=null; render(); return; }
   if(e.target.closest("[data-sp-email-close]")){ spEmailView=null; render(); return; }
   if(e.target.closest("[data-sp-email-resend]")){ const rec=spById(selSp), to=(spEmailView&&spEmailView.to)||"the POC"; if(rec&&spEmailView){ spLogEmail(rec,"System","Email resent to "+to+".",spEmailView.kind); } spEmailView=null; spMsg="Email resent to "+to+"."; render(); return; }
   // ---- Shop / Merchandise handlers ----
@@ -9945,14 +10041,18 @@ document.addEventListener("click",e=>{
   if(e.target.closest("[data-addsubmit]")){ addSubmit(); return; }
   // Food vendor F&B-options editor — DOM-only add/remove (master edits don't persist)
   const fbAddDonor=e.target.closest("[data-fb-add-donor]");
-  if(fbAddDonor){ const rows=fbAddDonor.closest(".fb-opt-group").querySelector(".fb-donor-rows"); const last=rows.lastElementChild;
-    if(last){ const c=last.cloneNode(true); c.querySelectorAll("input").forEach(i=>i.value=""); const s=c.querySelector("select"); if(s) s.selectedIndex=0; rows.appendChild(c); } return; }
+  if(fbAddDonor){ const grp=fbAddDonor.closest(".fb-opt-group"), rows=grp.querySelector(".fb-donor-rows"); const last=rows.lastElementChild;
+    const activeDonors=SPONSORS.filter(s=>s.is_active).map(s=>s.name);
+    const used=[...rows.querySelectorAll("[data-fb-donor-sel]")].map(s=>s.value).filter(Boolean);
+    if(used.length>=activeDonors.length) return;   // every donor already added — no duplicates
+    if(last){ const c=last.cloneNode(true); c.querySelectorAll("input").forEach(i=>i.value="");
+      const s=c.querySelector("select"); if(s){ const next=activeDonors.find(d=>!used.includes(d)); s.value=next||""; } rows.appendChild(c); fbSyncDonorGroup(grp); } return; }
   const fbDelDonor=e.target.closest("[data-fb-del-donor]");
-  if(fbDelDonor){ const rows=fbDelDonor.closest(".fb-donor-rows"); if(rows.children.length>1) fbDelDonor.closest(".fb-donor-row").remove(); return; }
+  if(fbDelDonor){ const grp=fbDelDonor.closest(".fb-opt-group"), rows=fbDelDonor.closest(".fb-donor-rows"); if(rows.children.length>1){ fbDelDonor.closest(".fb-donor-row").remove(); fbSyncDonorGroup(grp); } return; }
   const fbAddOpt=e.target.closest("[data-fb-add-opt]");
   if(fbAddOpt){ const editor=fbAddOpt.closest(".fb-editor"); const groups=editor.querySelectorAll(".fb-opt-group"); const last=groups[groups.length-1];
     if(last){ const c=last.cloneNode(true); c.querySelectorAll("input").forEach(i=>i.value=""); const rows=c.querySelector(".fb-donor-rows");
-      while(rows.children.length>1) rows.lastElementChild.remove(); const s=rows.querySelector("select"); if(s) s.selectedIndex=0; editor.insertBefore(c,fbAddOpt); } return; }
+      while(rows.children.length>1) rows.lastElementChild.remove(); const s=rows.querySelector("select"); if(s) s.selectedIndex=0; editor.insertBefore(c,fbAddOpt); fbSyncDonorGroup(c); } return; }
   const fbDelOpt=e.target.closest("[data-fb-del-opt]");
   if(fbDelOpt){ const editor=fbDelOpt.closest(".fb-editor"); if(editor.querySelectorAll(".fb-opt-group").length>1) fbDelOpt.closest(".fb-opt-group").remove(); return; }
   const repAdd=e.target.closest(".rep-add");
@@ -10050,6 +10150,9 @@ document.addEventListener("click",e=>{
 });
 document.addEventListener("change",e=>{
   if(e.target.matches&&e.target.matches("[data-sp-ackconsent]")){ const rec=spById(selSp); if(rec) rec.ackConsent=e.target.checked; return; }   // post-visit contact consent
+  if(e.target.matches&&e.target.matches("[data-sp-actual]")){ const rec=spById(selSp); if(rec){ const v=e.target.value.trim(); const k=e.target.dataset.spActual; if(k==="children") rec.actualChildren=v; else if(k==="adults") rec.actualAdults=v; else if(k==="days") rec.wastageDays=v; else rec.actualComp=v; } render(); return; }   // Vendor Invoices — actual attendance gate
+  if(e.target.matches&&e.target.matches("[data-sp-wastage-donor]")){ const rec=spById(selSp); if(rec) rec.wastageDonor=e.target.value; render(); return; }   // Vendor Invoices — food wastage donor
+  if(e.target.matches&&e.target.matches("[data-fb-donor-sel]")){ fbSyncDonorGroup(e.target.closest(".fb-opt-group")); return; }   // F&B options — keep donor rows duplicate-free
   if(e.target.matches&&e.target.matches("[data-apply-member]")){ syncDiscountForm(); render(); return; }   // show / hide the plan picker
   const oRowC=e.target.closest&&e.target.closest("[data-vorow],[data-spvorow]"); if(oRowC) syncOptCheckBtn(oRowC);
   if(e.target.matches&&e.target.matches('[data-vfsel^="foodopt"],[data-spvfsel^="foodopt"]')){ updateFbTot(e.target.closest("[data-vrow],[data-spvrow]")); }
