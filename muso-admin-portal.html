@@ -864,6 +864,23 @@ th .th-sort{padding:9px 14px}
 .inv-sign{text-align:right;min-width:190px}
 .inv-sign-line{height:38px}
 .inv-note{text-align:center;margin-top:14px;font-size:11px}
+.inv-top3{display:grid;grid-template-columns:1fr auto 1fr;align-items:start;gap:10px;margin-bottom:6px}
+.inv-top3 .inv-kind{text-align:center;font-size:15px}.inv-top3 .inv-etag{text-align:right;font-size:12px;font-weight:700}
+.inv-qr.big{width:84px;height:84px;margin:6px 0 0 auto;text-align:center}
+.einv-doc .inv-irn{margin-bottom:8px;line-height:1.6}
+.inv-hdr{display:grid;grid-template-columns:1.15fr 1fr;border:1px solid var(--rule2);margin-bottom:0}
+.inv-hdr>div{padding:8px 10px;font-size:12px;line-height:1.5;min-width:0;overflow-wrap:anywhere}
+.inv-hdr>div:first-child{border-right:1px solid var(--rule2)}
+.inv-mg{display:grid;grid-template-columns:1fr 1fr;padding:0!important}
+.inv-mg>div{padding:6px 8px;border-bottom:1px solid var(--rule);border-right:1px solid var(--rule);font-size:11.5px;min-height:34px;overflow-wrap:anywhere}
+.inv-mg>div:nth-child(2n){border-right:0}.inv-mg small{display:block;color:var(--ink3);font-size:10.5px}
+.einv-doc .inv-table td,.einv-doc .inv-table th,.einv-doc .inv-hsn td,.einv-doc .inv-hsn th{text-align:left}
+.einv-doc .inv-table th:nth-child(n+4),.einv-doc .inv-table td:nth-child(n+4),.einv-doc .inv-hsn th:nth-child(n+2),.einv-doc .inv-hsn td:nth-child(n+2){text-align:right}
+.einv-doc .inv-table th:nth-child(6),.einv-doc .inv-table td:nth-child(6){text-align:center}
+.einv-doc .inv-taxrow td{font-weight:700;text-align:right}.einv-doc .inv-taxrow td:nth-child(n+4){text-align:right}
+.einv-doc .inv-words{display:flex;justify-content:space-between;gap:10px}
+.einv-doc .inv-foot{border:1px solid var(--rule2);padding:8px 10px;margin-top:10px;font-size:12px;flex-wrap:wrap}
+.einv-doc .inv-foot>div{min-width:200px}
 /* shop sale: sticky Totals & payment box (right column) */
 .shop-sale-main{display:flex;flex-direction:column;gap:14px}
 .shop-totals-body{display:flex;flex-direction:column;gap:12px}
@@ -926,14 +943,14 @@ const GROUPS = [
 ];
 const ORDER = ["categories","pools","tax","hsn","shopcats","progcats","departments","fboptions","schoolslots","entryprices","sponsors","districts","spprograms","transportvendors","foodvendors","venues","bdaypartytypes","bdayslots","bdaypackages","bdayworkshops","bdayentertainment","corpeventtypes","products","programs","blackout","bookings","checkin",
                "discounts","sources","scripts","tiers","members",
-               "shopitems","movetostore","shopsales","shopcoupons","career","school","sponsored","birthday","corporate"];   // "shopreports", "affiliates", "paymodes" hidden from the rail (code kept)
+               "shopitems","movetostore","shopsales","shopcoupons","career","school","sponsored","birthday","corporate","einvoicing"];   // "shopreports", "affiliates", "paymodes" hidden from the rail (code kept)
 const PHASE = {categories:0,pools:0,tax:0,hsn:0,shopcats:0,progcats:0,departments:0,fboptions:0,schoolslots:0,entryprices:0,sponsors:0,districts:0,spprograms:0,transportvendors:0,foodvendors:0,venues:0, bdaypartytypes:0,bdayslots:0,bdaypackages:0,bdayworkshops:0,bdayentertainment:0, corpeventtypes:0, products:1, programs:1, blackout:2,
                discounts:3,affiliates:3,
                paymodes:4,sources:4,scripts:4,bookings:2,checkin:2,
                tiers:5,members:5,
                shopitems:6,movetostore:6,shopsales:6,shopcoupons:6,shopreports:6,
                career:7,
-               school:8,sponsored:8,birthday:8,corporate:8};
+               school:8,sponsored:8,birthday:8,corporate:8,einvoicing:8};
 const PREREQ = {
   career:[], categories:[], pools:[], tax:[], hsn:[], shopcats:[], departments:[], paymodes:[], sources:[], scripts:[], progcats:[], bookings:["Products & add-ons"], checkin:["Products & add-ons"],
   fboptions:[], schoolslots:["Products & add-ons"], entryprices:[], sponsors:[], districts:[], spprograms:[], transportvendors:[], foodvendors:[], venues:[],
@@ -941,6 +958,7 @@ const PREREQ = {
   school:["School F&B options","School time slots"], sponsored:["Sponsored School Donors","School time slots"],
   birthday:["Birthday time windows","Birthday packages"],
   corporate:["Corporate event types","Venues"],
+  einvoicing:[],
   products:["Visitor categories","Inventory pools","Tax rates","HSN / SAC codes"],
   programs:["Program categories","Visitor categories","Tax rates","HSN / SAC codes"],
   events:["Program categories","Visitor categories","Tax rates","HSN / SAC codes"],
@@ -1437,6 +1455,9 @@ const M = {
   corporate:{g:8,n:"Corporate booking",owner:"Events & Experiences",perm:"corporate.manage",src:"Corporate booking",q:0,
     d:"Venue-rental enquiries for corporate/collaboration events (conferences, launches, screenings) in one place — inquiry details, the backend MOU form, MOU sign-off, invoicing and payments. A record starts as an enquiry and moves through MOU sent → signed → invoice raised → confirmed → completed.",
     view:"corporate"},
+  einvoicing:{g:8,n:"E-Invoicing",owner:"Finance & Accounts",perm:"einvoice.manage",src:"E-Invoicing",q:0,
+    d:"Every invoice sent for approval from a School, Sponsored School or Birthday booking, plus the credit notes raised against them — one list, each credit note shown under its invoice. Both move Pending approval → Approved.",
+    view:"einvoicing"},
   shopreports:{g:6,n:"Shop reports",owner:"Shivam · Finance & Accounts",perm:"shop.report.view",src:"Scope §12",q:0,
     d:"Shop sales summary and the HSN/SAC-wise quantity + GST breakup for the GST return.",view:"shopreports"},
   dashboard:{n:"Dashboard",owner:"Visitor Experience",perm:"dashboard.view",view:"dashboard"},
@@ -2569,6 +2590,17 @@ function musoDayBookings(date, src, skipVi){
   }
   return out;
 }
+/* Per-slot headcount (children + adults) on a date, School + Sponsored school visits only — feeds the
+   MuSo availability calendar cells. Mirrors musoDayBookings' draft handling (this booking's other visits count). */
+function musoSlotHeads(date, src, skipVi){
+  const d = (src==="sponsored")?spDraft:(src==="birthday")?null:schoolDraft;
+  const draftId = d?d.id:null, out={};
+  const add=(v,extra)=>{ if(v.date!==date||!schoolSlotByName(v.slotId)) return; const o=out[v.slotId]=out[v.slotId]||{c:0,a:0}; o.c+=(+v.students||0)+(extra?(+v.extraStudents||0):0); o.a+=(+v.adults||0)+(extra?(+v.extraAdults||0):0); };
+  SCHOOL_BOOKINGS.forEach(r=>{ if(r.id===draftId) return; (r.visits||[]).forEach(v=>add(v,true)); });
+  SPONSORED_BOOKINGS.forEach(r=>{ if(r.id===draftId) return; (r.visits||[]).forEach(v=>add(v,false)); });
+  if(d && Array.isArray(d.visits)) d.visits.forEach((v,vi)=>{ if(vi!==skipVi) add(v,src!=="sponsored"); });
+  return out;
+}
 /* Informational "Check availability" verdict for a main visit (never blocks — the museum hosts several groups at once). */
 function runMusoCheck(src,vi){
   const d = src==="sponsored"?spDraft:schoolDraft;
@@ -2697,6 +2729,7 @@ const SPONSORED_BOOKINGS = [
     entryStudent:350, entryAdult:500,
     ngoGstin:"", ngoPan:"AAATV1234K", authNumber:"JSW/CSR/2026/0520", speciallyAbled:3, sponsoredGroups:[{title:"First-generation learners",count:"70"}],
     postVisit:{remark:"", images:[]}, students:{uploaded:false,total:0,girls:0,boys:0}, feedback:{sent:false},
+    actualChildren:"86", actualAdults:"8", actualComp:"0", wastageDays:"1", wastageDonor:"JSW Foundation", checkinSaved:true,
     assignee:"Neha Kulkarni", comments:"Confirmed; e-invoice to JSW on completion.", invoice:{raised:false, on:""},
     timeline:[{on:"20 Sep 2026", who:"Neha (CSR)", what:"Backend booking created; confirmation emailed to the NGO."},
               {on:"22 Sep 2026", who:"Neha (CSR)", what:"Donor and date locked. Status → Confirmed."}] },
@@ -2722,6 +2755,7 @@ const SPONSORED_BOOKINGS = [
     entryStudent:350, entryAdult:500,
     ngoGstin:"", ngoPan:"AAATA7788L", authNumber:"JSW/CSR/2026/0631", speciallyAbled:5, sponsoredGroups:[{title:"First-generation learners",count:"72"}],
     postVisit:{remark:"", images:[]}, students:{uploaded:false,total:0,girls:0,boys:0}, feedback:{sent:false},
+    actualChildren:"232", actualAdults:"18", actualComp:"0", wastageDays:"1", wastageDonor:"MUSO Foundation", checkinSaved:true,
     assignee:"Neha Kulkarni", comments:"Multi-visit AI programme confirmed; e-invoice to JSW on completion.", invoice:{raised:false, on:""},
     timeline:[{on:"18 Sep 2026", who:"Neha (CSR)", what:"Backend booking created; three-visit AI programme scheduled."},
               {on:"21 Sep 2026", who:"Neha (CSR)", what:"Donors and dates locked. Status → Confirmed."}] }
@@ -2732,6 +2766,12 @@ const spById = id => SPONSORED_BOOKINGS.find(r=>r.id===id);
 /* Funding split — up to three donors cover Ticketing (entry fees), Food (F&B) and
    Travel (transport). Each is optional and the same donor may cover more than one. */
 const SP_DONOR_TYPES = [["donorTicketing","Ticketing (entry fees)"],["donorFood","Food (F&B)"],["donorTravel","Travel (transport)"]];
+/* Donor names with a coloured cover tag (Ticketing / Food / Travel) — shared by the Sponsored list's Donor column and the detail "At a glance" panel. */
+function spDonorTags(rec){
+  const fu=spFunding(rec), by=k=>[...new Set(fu.filter(f=>f.key===k).map(f=>f.donor).filter(Boolean))];
+  const ln=(tag,cls,names)=>`<div style="display:flex;align-items:center;gap:6px;margin:0 0 3px;justify-content:flex-start;text-align:left"><span class="pill ${cls}" style="font-size:9.5px;min-width:54px;justify-content:center;text-align:center">${tag}</span><span>${names.length?names.map(escHtml).join(", "):'<span class="muted">—</span>'}</span></div>`;
+  return ln("Ticketing","pill-purple",by("donorTicketing"))+ln("Food","pill-pink",by("donorFood"))+ln("Travel","pill-blue",by("donorTravel"));
+}
 function spFunding(rec){
   const c=schoolCompute(rec);
   const rows=[];
@@ -4717,8 +4757,8 @@ function head(){
   const roleOnScreen = current==="career" && tab==="detail" && roleById(selCareer);
   const roleForm     = current==="career" && (tab==="edit" || tab==="new");
   document.getElementById("hRecActions")?.remove();
-  if(addBtn) addBtn.style.display=(roleOnScreen||roleForm||current==="movetostore")?"none":"";
-  if(histBtn) histBtn.style.display=(roleOnScreen||roleForm)?"none":"";
+  if(addBtn) addBtn.style.display=(roleOnScreen||roleForm||current==="movetostore"||current==="einvoicing")?"none":"";
+  if(histBtn) histBtn.style.display=(roleOnScreen||roleForm||current==="einvoicing")?"none":"";
   if(roleOnScreen || roleForm){
     const holder=document.createElement("span");
     holder.id="hRecActions";
@@ -6315,7 +6355,7 @@ const VIEWS = {
       return `<tr data-open="sponsored:${i}" data-sp-row data-search="${escAttr(hay)}">
         <td class="code">${r.id}</td>
         <td><b style="font-weight:500">${escHtml(r.school)}</b><div class="sub">${escHtml(r.district||r.location||"")}</div></td>
-        <td>${escHtml(r.sponsor||'—')}</td>
+        <td>${spDonorTags(r)}</td>
         <td class="code" style="white-space:nowrap">${when}</td>
         <td class="code">${heads}</td>
         <td>${schoolStatusPill(r)}</td>
@@ -6334,7 +6374,7 @@ const VIEWS = {
       <button class="btn" data-export="sponsored">Download Report</button></div>`;
     return tabs+`<div class="sub-body">${tiles}${toolbar}
       <div class="card"><div class="matrix-wrap"><table class="reclist" id="spTable"><thead><tr>
-        <th>ID</th><th>Organisation</th><th>Donor</th><th>Visit / preferred</th><th>Heads</th><th>Status</th><th>Invoice</th><th></th></tr></thead>
+        <th>ID</th><th>Organisation</th><th>Donors</th><th>Visit / preferred</th><th>Heads</th><th>Status</th><th>Invoice</th><th></th></tr></thead>
       <tbody>${rows}
         <tr data-sp-newrow><td colspan="8"><button class="rep-add" data-sp-new="booking" style="border-radius:4px">+ New booking</button></td></tr>
         <tr data-sp-empty style="display:none"><td colspan="8" class="muted" style="text-align:center;padding:16px">No records match that search.</td></tr>
@@ -7145,7 +7185,7 @@ const SING={blackout:"blackout date",affiliates:"affiliate link",
   bdaypartytypes:"birthday party type",
   bdayslots:"birthday time window",bdaypackages:"birthday package",
   bdayworkshops:"birthday workshop add-on",bdayentertainment:"birthday entertainment add-on",birthday:"birthday booking",
-  corpeventtypes:"corporate event type",corporate:"corporate booking"};
+  corpeventtypes:"corporate event type",corporate:"corporate booking",einvoicing:"e-invoice"};
 const singular=(k,n)=>SING[k]||n.toLowerCase().replace(/s$/,"");
 const TYPE_LABEL={media:"Files",string:"Text",int:"Number",decimal:"Number",money:"Amount",
   date:"Date",datetime:"Date and time",time:"Time",bool:"Yes or no",enum:"Choose one",
@@ -8124,11 +8164,26 @@ function musoAvailCard(){
   if(!musoAvail) return "";
   const {date,src,vi}=musoAvail;
   const close='data-musoavail-close="1"';
-  const filters=`<div class="fld" style="margin:0 0 14px"><div class="lab"><span class="lab-n">Date</span></div>
-      <div style="display:flex;gap:8px"><input class="inp" data-musoavail-date value="${escAttr(date)}" placeholder="DD Mon YYYY" style="flex:1">
-        <button type="button" class="btn btn-primary" data-musoavail-apply="1">Apply</button></div></div>`;
+  // Month calendar — click a day to see its activities below. Cells show children + adults per School slot (School + Sponsored only).
+  const anchorD=parseDMY(date)||new Date();
+  if(musoAvail.cal==null) musoAvail.cal=anchorD.getFullYear()*12+anchorD.getMonth();
+  const cy=Math.floor(musoAvail.cal/12), cm=musoAvail.cal%12;
+  const slots=SCHOOL_SLOTS.filter(x=>x.is_active);
+  const cells=[]; for(let i=0;i<dayIndexMon0(new Date(cy,cm,1));i++) cells.push(null);
+  for(let n=1,dim=new Date(cy,cm+1,0).getDate();n<=dim;n++) cells.push(new Date(cy,cm,n));
+  const calBody=cells.map(dt=>{
+    if(!dt) return '<span></span>';
+    const ds=fmtDMY(dt), heads=musoSlotHeads(ds,src,vi), sel=ds===date;
+    const lines=slots.filter(x=>heads[x.name]).map(x=>`<span title="${escAttr(x.name)} — ${heads[x.name].c} children, ${heads[x.name].a} adults" style="display:block;font-size:9px;line-height:1.25;white-space:nowrap;letter-spacing:-.2px"><b>${escHtml(x.name.charAt(0))}</b> ${heads[x.name].c}c·${heads[x.name].a}a</span>`).join("");
+    return `<button type="button" data-musoavail-day="${escAttr(ds)}" style="min-height:56px;padding:3px 1px;overflow:hidden;border-radius:6px;border:1px solid ${sel?"var(--ink)":lines?"var(--blue-line)":"var(--rule)"};background:${sel?"var(--ink)":lines?"var(--blue-wash)":"#fff"};color:${sel?"#fff":"var(--ink)"};text-align:center;font-family:var(--mono)"><span style="display:block;font-size:11px;font-weight:${lines?700:400};${lines||sel?"":"color:var(--ink3)"}">${dt.getDate()}</span>${lines}</button>`;
+  }).join("");
+  const filters=`<div class="cal-cal" style="margin:0 0 14px">
+      <div class="cal-head"><button type="button" class="cal-nav" data-musoavail-nav="-1" aria-label="Previous month">‹</button><span>${MONTHS[cm]} ${cy}</span><button type="button" class="cal-nav" data-musoavail-nav="1" aria-label="Next month">›</button></div>
+      <div class="cal-grid">${WEEKDAYS.map(w=>`<span class="cal-dow">${w}</span>`).join("")}${calBody}</div>
+      <div class="cal-legend"><span>${slots.map(x=>`<b>${escHtml(x.name.charAt(0))}</b> = ${escHtml(x.name)}`).join(" · ")}</span><span>c = children, a = adults / teachers · School &amp; Sponsored only</span></div>
+    </div>`;
   let body;
-  if(!date){ body=`<div class="muted" style="padding:8px 4px">Enter a date above to see what's planned at MuSo that day.</div>`; }
+  if(!date){ body=`<div class="muted" style="padding:8px 4px">Pick a date in the calendar to see what's planned at MuSo that day.</div>`; }
   else {
     const books=musoDayBookings(date,src,vi).sort((a,b)=>(timeToMin(a.start)||0)-(timeToMin(b.start)||0));
     if(!books.length){ body=`<div style="padding:10px 12px;border-radius:8px;background:#eaf7ee;border:1px solid #bfe6cb;color:#1e7f3c;font-size:12.5px">Nothing is planned at MuSo on ${escHtml(date)} — the day is open.</div>`; }
@@ -8586,8 +8641,7 @@ function schoolDetail(){
       <button class="btn btn-primary" data-school-edit="1">Edit details</button>
       ${(()=>{const inv=rec.einvoice&&rec.einvoice.generated;const t=inv?' disabled title="E-invoice already generated"':'';return `<button class="btn" data-school-proforma-pdf="1"${t}>Download proforma</button>
       <button class="btn" data-school-send-proforma="1"${t}>Send proforma</button>`;})()}
-      ${c.eInv?((rec.einvoice&&rec.einvoice.generated)?`<button class="btn" data-school-einvoice-view="1">View E-invoice</button><button class="btn" data-school-send-einvoice="1">Send E-invoice</button>`:`<button class="btn" data-school-einvoice-gen="1">Generate E-invoice</button>`):`<div class="muted" style="font-size:11px">Add a GST number (Billing, via Edit) to raise an e-invoice.</div>`}
-      ${(rec.einvoice&&rec.einvoice.generated)?(rec.creditNote?`<button class="btn" data-school-cn-view="1">View Credit Note</button>`:`<button class="btn" data-school-cn-gen="1">Generate Credit Note</button>`):(c.eInv?`<button class="btn" disabled title="Raise the e-invoice first">Generate Credit Note</button>`:"")}
+      ${einvFlowHtml("School",rec)}
       ${(rec.status!=="Ended"&&schoolStatusLocked(rec))?`<button class="btn" data-school-complete="1">Mark completed</button>`:""}
     </div></div></aside>`;
 
@@ -8613,44 +8667,11 @@ function schoolDetail(){
     <div class="confirm-box" role="dialog" aria-modal="true"><div class="confirm-title">Generate e-invoice?</div>
     <div class="confirm-body">Are you sure? An <b>e-invoice can be generated only once</b> for a booking (IRN is issued against the buyer's GSTIN and can't be re-raised). Make sure the visit details and totals are final.</div>
     <div class="confirm-actions"><button class="btn" data-school-einvoice-cancel="1">Cancel</button><button class="btn btn-primary" data-school-einvoice-confirm="1">Generate e-invoice</button></div></div></div>`:"";
-  const einvModal = schoolEInvView?`<div class="confirm-layer"><button class="confirm-backdrop" data-school-einvoice-close="1" aria-label="Close"></button>
-    <div class="confirm-box" role="dialog" aria-modal="true" style="max-width:680px;width:94%;padding:0;overflow:hidden">
-      <div style="display:flex;justify-content:space-between;align-items:center;padding:14px 20px;border-bottom:1px solid var(--rule)"><b style="font-size:14px">E-invoice · ${rec.id}</b><button class="btn" data-school-einvoice-close="1" aria-label="Close">✕</button></div>
-      <div style="padding:16px 20px;max-height:70vh;overflow:auto">${schoolProformaInvoice(rec,"einvoice")}</div>
-    </div></div>`:"";
+  const einvModal = (schoolEInvView&&einvFlow("School",rec).e)?einvDocModalHtml("E-invoice · "+einvFlow("School",rec).e.id,einvFlow("School",rec).e,null,"data-school-einvoice-close"):"";
   // ---- Credit note: generate flyout + view modal ----
-  const cnClose='data-school-cn-close="1"';
-  const cnReasons=["Sales return","Post-supply discount","Deficiency in service","Cancellation of visit","Correction — value/tax overcharged"];
-  const cnInit=creditNoteCompute({creditNote:{amount:c.grand}});
-  const cnFlyout = schoolCNFlyout?`<div class="drawer-layer" id="schoolCNCard">
-    <button class="drawer-backdrop" ${cnClose} aria-label="Close"></button>
-    <aside class="drawer-panel" role="dialog" aria-modal="true" aria-label="Generate credit note">
-      <div class="card-head"><span class="card-title">Generate credit note</span>
-        <button class="drawer-close" ${cnClose} aria-label="Close">&times;</button></div>
-      <div class="form-body" style="display:block">
-        <div style="padding:10px 12px;border-radius:8px;background:#FBFCFA;border:1px solid var(--rule2);font-size:12px;margin-bottom:14px">Against <b>Tax Invoice INV-${rec.id}</b> dated ${escHtml((rec.einvoice&&rec.einvoice.on)||rec.created||"—")} · Buyer GSTIN <span class="code">${escHtml(rec.gstin||"—")}</span> · Invoice total ${money(c.grand)}</div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px 16px">
-          <div class="fld wide" style="margin:0;grid-column:1/-1"><div class="lab"><span class="lab-n">Reason</span></div><div class="selwrap"><select class="inp" id="schoolCNReason">${cnReasons.map(r=>`<option>${escHtml(r)}</option>`).join("")}</select></div></div>
-          <div class="fld" style="margin:0"><div class="lab"><span class="lab-n">Credit type</span></div><div class="selwrap"><select class="inp" data-school-cn-type id="schoolCNType"><option>Full (entire invoice)</option><option>Partial amount</option></select></div></div>
-          <div class="fld" style="margin:0"><div class="lab"><span class="lab-n">Amount (incl. GST)</span></div><input class="inp mono" id="schoolCNAmt" type="number" min="0" max="${c.grand}" value="${c.grand}" disabled></div>
-          <div class="fld wide" style="margin:0;grid-column:1/-1"><div class="muted" id="schoolCNBreakdown" style="font-size:11.5px">Of which GST (18%): ${money(cnInit.gst)} (CGST ${money(cnInit.cgst)} + SGST ${money(cnInit.sgst)}) · Taxable ${money(cnInit.taxable)}</div></div>
-          <div class="fld" style="margin:0"><div class="lab"><span class="lab-n">Settle as</span></div><div class="selwrap"><select class="inp" data-school-cn-settle id="schoolCNSettle"><option>Refund to the school</option><option>Voucher</option></select></div></div>
-          <div class="fld" style="margin:0;display:none" id="schoolCNVoucherRow"><div class="lab"><span class="lab-n">Voucher valid until</span></div><input class="inp mono" id="schoolCNVoucherExp" value="${escAttr(fmtDMY(new Date(new Date().getFullYear()+1,new Date().getMonth(),new Date().getDate())))}" placeholder="dd Mon yyyy"></div>
-          <div class="fld wide" style="margin:0;grid-column:1/-1"><div class="muted" style="font-size:11.5px">A voucher is a flat amount the school can use as payment on a later order. One code, one use: any part of it that an order does not use is lost.</div></div>
-          <div class="fld wide" style="margin:0;grid-column:1/-1"><div class="lab"><span class="lab-n">Remark</span></div><textarea class="inp" id="schoolCNRemark" rows="2" style="resize:vertical" placeholder="Optional note for the record"></textarea></div>
-        </div>
-        <div class="muted" style="font-size:11px;margin-top:14px;line-height:1.6">A credit note reduces MuSo's output tax against this invoice and is reported with its own IRN. One credit note can be raised per booking. Issue by 30 Nov following the financial year of the original supply.</div>
-      </div>
-      <div class="form-foot" style="display:flex;gap:8px;justify-content:flex-end;padding:14px 20px;border-top:1px solid var(--rule)">
-        <button class="btn" ${cnClose}>Cancel</button>
-        <button class="btn btn-primary" data-school-cn-save="1">Generate credit note</button>
-      </div>
-    </aside></div>`:"";
-  const cnViewModal = (schoolCNView&&rec.creditNote)?`<div class="confirm-layer"><button class="confirm-backdrop" data-school-cn-viewclose="1" aria-label="Close"></button>
-    <div class="confirm-box" role="dialog" aria-modal="true" style="max-width:680px;width:94%;padding:0;overflow:hidden">
-      <div style="display:flex;justify-content:space-between;align-items:center;padding:14px 20px;border-bottom:1px solid var(--rule)"><b style="font-size:14px">Credit Note · ${escHtml(rec.creditNote.number)}</b><button class="btn" data-school-cn-viewclose="1" aria-label="Close">✕</button></div>
-      <div style="padding:16px 20px;max-height:70vh;overflow:auto">${schoolCreditNoteDoc(rec)}</div>
-    </div></div>`:"";
+  const sf=einvFlow("School",rec);
+  const cnFlyout = (schoolCNFlyout&&sf.e)?einvCnFlyoutHtml({id:"schoolCNCard",close:"data-school-cn-close",save:"data-school-cn-save",grand:sf.e.amount,invNo:sf.e.id,invDate:sf.e.date,gstin:rec.gstin,refundLabel:"Refund to the school"}):"";
+  const cnViewModal = (schoolCNView&&sf.e&&sf.cn&&sf.cn.status==="Generated")?einvDocModalHtml("Credit Note · "+sf.cn.id,sf.e,sf.cn,"data-school-cn-viewclose"):"";
   return `<div class="detailhead"><h2 class="detailname">${escHtml(rec.school||"School booking")}</h2><span class="code">${rec.id}</span>${schoolStatusPill(rec)}</div>
   <div class="two"><div>${tabs}<div class="sub-body">${bodyByTab}</div></div>${aside}</div>${confirm}${emailModal}${einvConfirm}${einvModal}${cnFlyout}${cnViewModal}`;
 }
@@ -9095,52 +9116,60 @@ function spDetail(){
   /* Vendor invoices — gated behind the actual attendance headcount */
   const actChildren=rec.actualChildren, actAdults=rec.actualAdults, actComp=rec.actualComp;
   const filled=x=>x!==undefined && x!==null && String(x).trim()!=="";
-  const hasActuals = filled(actChildren) && filled(actAdults) && filled(actComp);
-  const vendorTable=`<div class="card"><div class="card-head"><span class="card-title">Vendor invoices</span><span class="card-note">upload + summary — wireframe</span></div>
-      <div class="matrix-wrap"><table class="reclist"><thead><tr><th>Type</th><th>Vendor</th><th>Detail</th><th>Amount</th><th></th></tr></thead><tbody>
-        ${(()=>{const s=spFoodSummary(rec);return `<tr><td>Food</td><td>${s.vendors.length?escHtml(s.vendors.join(", ")):"—"}</td><td class="sub">${s.options.length?escHtml(s.options.join(", ")):"Qty / menu summary"}</td><td class="code">${s.cost?money(s.cost):"—"}</td><td style="text-align:right;white-space:nowrap"><button class="btn" data-sp-upload="food">Upload</button></td></tr>`;})()}
-        ${(()=>{const s=spTransportSummary(rec);return `<tr><td>Travel</td><td>${s.vendors.length?escHtml(s.vendors.join(", ")):"—"}</td><td class="sub">${s.buses?`${s.buses} bus${s.buses===1?"":"es"}`:"No. of buses"}</td><td class="code">${s.cost?money(s.cost):"—"}</td><td style="text-align:right;white-space:nowrap"><button class="btn" data-sp-upload="travel">Upload</button></td></tr>`;})()}
-      </tbody></table></div></div>`;
+  const hasActuals = filled(actChildren) && filled(actAdults) && filled(actComp) && filled(rec.wastageDays) && filled(rec.wastageDonor);
   const plan=spFbPlanned(rec);
   const foodDonorName=spFoodDonors(rec)[0]||"";
   const foodDonorRate=(()=>{ const v=(rec.visits||[]).find(v=>((v.food||{}).donor||"")===foodDonorName && (v.food||{}).option)||(rec.visits||[]).find(v=>(v.food||{}).option); return v?foodRateOf(v):null; })();
   const foodDonorLabel=foodDonorName?`${escHtml(foodDonorName)}${foodDonorRate?`<div style="font-weight:400;text-transform:none;letter-spacing:0;margin-top:2px">${money(foodDonorRate.child)}/child · ${money(foodDonorRate.adult)}/adult</div>`:""}`:"food donor";
+  /* Wastage rate: first visit's food vendor + F&B option, priced for the donor picked in Vendor Invoices (exact donor row only — no fallback). */
+  const wasteDonorSel=(rec.wastageDonor||"").trim();
+  const wasteVisit=(rec.visits||[]).find(v=>(v.food||{}).vendor&&(v.food||{}).option);
+  const wasteRateObj=(wasteDonorSel&&wasteVisit)?(()=>{ const o=fbOptionsOf(wasteVisit.food.vendor).find(o=>o.option===wasteVisit.food.option&&o.donor===wasteDonorSel); return o?{child:+o.child||0,adult:+o.adult||0}:null; })():null;
+  const subSty='font-weight:400;text-transform:none;letter-spacing:0;margin-top:2px';
+  const wasteDonorLabel=wasteDonorSel?`${escHtml(wasteDonorSel)}<div style="${subSty}">${wasteRateObj?`${money(wasteRateObj.child)}/child · ${money(wasteRateObj.adult)}/adult`:"No rate for this option"}</div>`:`<div style="${subSty}">Select a food wastage donor</div>`;
   const wasteDays = (rec.wastageDays!==undefined && rec.wastageDays!=="") ? (+rec.wastageDays||0) : 1;
   let totPayable=0, totWaste=0;
-  const wasteRow=(label,planned,actual,rate)=>{ const a=+actual||0; const w=Math.max(0,planned-a);
+  const wasteRow=(label,planned,actual,rate,wrate)=>{ const a=+actual||0; const w=Math.max(0,planned-a);
     const dayWork=wasteDays!==1?` × ${wasteDays} day${wasteDays===1?"":"s"}`:"";
-    const payable=rate*a*wasteDays, wasteCost=rate*w*wasteDays; totPayable+=payable; totWaste+=wasteCost;
+    const payable=rate*a*wasteDays, wasteCost=wrate*w*wasteDays; totPayable+=payable; totWaste+=wasteCost;
     const payWork=rate&&a?`<div class="sub">${money(rate)} × ${a}${dayWork}</div>`:"";
-    const wCostWork=rate&&w?`<div class="sub">${money(rate)} × ${w}${dayWork}</div>`:"";
+    const wCostWork=wrate&&w?`<div class="sub">${money(wrate)} × ${w}${dayWork}</div>`:"";
     return `<tr><td>${label}</td><td class="code">${planned}</td><td class="code">${a}</td><td class="code"><b style="color:${w>0?"var(--warn)":"var(--ink2)"}">${w}</b></td><td class="code">${payable?money(payable):"—"}${payWork}</td><td class="code">${wasteCost?`<b style="color:var(--warn)">${money(wasteCost)}</b>`:"—"}${wCostWork}</td></tr>`; };
   const rStudent=foodDonorRate?+foodDonorRate.child||0:0, rAdult=foodDonorRate?+foodDonorRate.adult||0:0;
-  const wasteRows=wasteRow("Students",plan.students,actChildren,rStudent)
-    +wasteRow("Adults / teachers",plan.adults,actAdults,rAdult)
-    +wasteRow("Complementary adults",plan.comp,actComp,rAdult);
+  const wrStudent=wasteRateObj?wasteRateObj.child:0, wrAdult=wasteRateObj?wasteRateObj.adult:0;
+  const wasteRows=wasteRow("Students",plan.students,actChildren,rStudent,wrStudent)
+    +wasteRow("Adults / teachers",plan.adults,actAdults,rAdult,wrAdult)
+    +wasteRow("Complementary adults",plan.comp,actComp,rAdult,wrAdult);
   const wastageCard=`<div class="card"><div class="card-head"><span class="card-title">Food wastage</span><span class="card-note">F&amp;B headcount − actual attendance</span></div>
-      <div class="matrix-wrap"><table class="reclist"><thead><tr><th>Category</th><th>F&amp;B (planned)</th><th>Actual</th><th>Food wastage</th><th>Cost payable by ${foodDonorLabel}</th><th>Food wastage cost</th></tr></thead><tbody>
+      <div class="matrix-wrap"><table class="reclist"><thead><tr><th>Category</th><th>F&amp;B (planned)</th><th>Actual</th><th>Food wastage</th><th style="white-space:normal">Cost payable by ${foodDonorLabel}</th><th style="white-space:normal">Wastage Cost Payable by ${wasteDonorLabel}</th></tr></thead><tbody>
         ${wasteRows}
         <tr><td colspan="4" style="text-align:right;color:var(--ink3)">Total</td><td class="code"><b>${totPayable?money(totPayable):"—"}</b></td><td class="code"><b style="color:${totWaste?"var(--warn)":"var(--ink2)"}">${totWaste?money(totWaste):"—"}</b></td></tr>
       </tbody></table></div></div>`;
-  /* Ticketing cost — Max(total planned, actual) × a single entry price × No. of days; per-visit program ticketing donor (fallback: booking donor) */
+  const foodAmt=totPayable+totWaste;   // Vendor invoices › Food = Cost payable by the booking's food donor + Wastage Cost Payable by the wastage donor
+  const vendorTable=`<div class="card"><div class="card-head"><span class="card-title">Vendor invoices</span><span class="card-note">upload + summary — wireframe</span></div>
+      <div class="matrix-wrap"><table class="reclist"><thead><tr><th>Type</th><th>Vendor</th><th>Detail</th><th>Amount</th><th></th></tr></thead><tbody>
+        ${(()=>{const s=spFoodSummary(rec);return `<tr><td>Food</td><td>${s.vendors.length?escHtml(s.vendors.join(", ")):"—"}</td><td class="sub">${s.options.length?escHtml(s.options.join(", ")):"Qty / menu summary"}</td><td class="code">${foodAmt?money(foodAmt):"—"}${foodAmt?`<div class="sub">${money(totPayable)} payable + ${money(totWaste)} wastage</div>`:""}</td><td style="text-align:right;white-space:nowrap"><button class="btn" data-sp-upload="food">Upload</button></td></tr>`;})()}
+        ${(()=>{const s=spTransportSummary(rec);return `<tr><td>Travel</td><td>${s.vendors.length?escHtml(s.vendors.join(", ")):"—"}</td><td class="sub">${s.buses?`${s.buses} bus${s.buses===1?"":"es"}`:"No. of buses"}</td><td class="code">${s.cost?money(s.cost):"—"}</td><td style="text-align:right;white-space:nowrap"><button class="btn" data-sp-upload="travel">Upload</button></td></tr>`;})()}
+      </tbody></table></div></div>`;
+  /* Ticketing cost — ACTUAL × a single entry price × No. of days; per-visit program ticketing donor (fallback: booking donor) */
   const ticketRate=entryRateOf(rec,(rec.visits||[])[0]||{});
   const ticketDonor=(rec.visits||[]).map(v=>visitTicketingDonor(rec,v)).find(Boolean)||(rec.donorTicketing||"").trim();
-  const ticketRow=(label,planned,actual,rate)=>{ const billed=Math.min(+planned||0,+actual||0); const amt=rate*billed*wasteDays;
-    const work=rate&&billed?`<div class="sub">${money(rate)} × ${billed}${wasteDays!==1?` × ${wasteDays} day${wasteDays===1?"":"s"}`:""}</div>`:"";
-    return {amt, html:`<tr><td>${label}</td><td class="code">${+planned||0}</td><td class="code">${+actual||0}</td><td class="code"><b>${billed}</b></td><td class="code">${rate?money(rate):"—"}</td><td class="code">${amt?money(amt):"—"}${work}</td></tr>`}; };
+  const ticketRow=(label,planned,actual,rate)=>{ const act=+actual||0; const amt=rate*act*wasteDays;
+    const work=rate&&act?`<div class="sub">${money(rate)} × ${act}${wasteDays!==1?` × ${wasteDays} day${wasteDays===1?"":"s"}`:""}</div>`:"";
+    return {amt, html:`<tr><td>${label}</td><td class="code">${+planned||0}</td><td class="code">${act}</td><td class="code">${rate?money(rate):"—"}</td><td class="code">${amt?money(amt):"—"}${work}</td></tr>`}; };
   const trS=ticketRow("Students",c.students,actChildren,+ticketRate.child||0);
   const trA=ticketRow("Adults / teachers",c.adults,actAdults,+ticketRate.adult||0);
   const ticketTotal=trS.amt+trA.amt;
-  const ticketingCard=`<div class="card"><div class="card-head"><span class="card-title">Ticketing cost</span><span class="card-note">min(planned, actual) × entry price${wasteDays!==1?` × ${wasteDays} days`:""}</span></div>
+  const ticketingCard=`<div class="card"><div class="card-head"><span class="card-title">Ticketing cost</span><span class="card-note">actual × entry price${wasteDays!==1?` × ${wasteDays} days`:""}</span></div>
       <div class="card-body" style="padding-bottom:6px"><div style="display:flex;gap:16px;flex-wrap:wrap;align-items:flex-start">
         <div><div class="muted" style="font-size:11px;text-transform:uppercase;letter-spacing:.04em">Ticketing donor</div><div style="font-weight:600;margin-top:2px">${ticketDonor?escHtml(ticketDonor):'<span class="muted">—</span>'}</div></div>
         <div style="margin-left:auto;text-align:right"><div class="muted" style="font-size:11px;text-transform:uppercase;letter-spacing:.04em">Amount</div><div style="font-size:18px;font-weight:700;margin-top:2px">${ticketTotal?money(ticketTotal):"—"}</div></div>
       </div></div>
-      <div class="matrix-wrap"><table class="reclist"><thead><tr><th>Category</th><th>Planned</th><th>Actual</th><th>Billed (min)</th><th>Entry price</th><th>Amount</th></tr></thead><tbody>
+      <div class="matrix-wrap"><table class="reclist"><thead><tr><th>Category</th><th>Planned</th><th>Actual</th><th>Entry price</th><th>Amount</th></tr></thead><tbody>
         ${trS.html}${trA.html}
-        <tr><td colspan="5" style="text-align:right;color:var(--ink3)">Total</td><td class="code"><b>${ticketTotal?money(ticketTotal):"—"}</b></td></tr>
+        <tr><td colspan="4" style="text-align:right;color:var(--ink3)">Total</td><td class="code"><b>${ticketTotal?money(ticketTotal):"—"}</b></td></tr>
       </tbody></table></div></div>`;
-  const invoices=`<div class="card"><div class="card-head"><span class="card-title">Actual attendance</span><span class="card-note">enter the headcount that actually attended</span></div>
+  const invoices=`<div class="card"><div class="card-head"><span class="card-title">Actual attendance</span><span class="card-note">enter the headcount that actually attended, then save</span></div>
       <div class="card-body" style="display:flex;gap:16px;flex-wrap:wrap">
         <div class="fld" style="margin:0;max-width:220px;flex:1"><div class="lab"><span class="lab-n">Actual students</span></div><input class="inp mono" type="number" min="0" data-sp-actual="children" value="${escAttr(actChildren??"")}" placeholder="0"></div>
         <div class="fld" style="margin:0;max-width:220px;flex:1"><div class="lab"><span class="lab-n">Actual adults / teachers</span></div><input class="inp mono" type="number" min="0" data-sp-actual="adults" value="${escAttr(actAdults??"")}" placeholder="0"></div>
@@ -9148,8 +9177,9 @@ function spDetail(){
         <div style="flex-basis:100%;height:0"></div>
         <div class="fld" style="margin:0;max-width:220px;flex:1"><div class="lab"><span class="lab-n">Number of days</span></div><input class="inp mono" type="number" min="0" data-sp-actual="days" value="${escAttr(rec.wastageDays??"")}" placeholder="0"></div>
         <div class="fld" style="margin:0;max-width:220px;flex:1"><div class="lab"><span class="lab-n">Food wastage donor</span></div><div class="selwrap"><select class="inp" data-sp-wastage-donor><option value=""${!rec.wastageDonor?" selected":""}>Select donor…</option>${SPONSORS.filter(s=>s.is_active).map(s=>s.name).map(d=>`<option${d===rec.wastageDonor?" selected":""}>${escHtml(d)}</option>`).join("")}${rec.wastageDonor&&!SPONSORS.some(s=>s.is_active&&s.name===rec.wastageDonor)?`<option selected>${escHtml(rec.wastageDonor)}</option>`:""}</select></div></div>
+        <div style="flex-basis:100%;display:flex;gap:10px;align-items:center"><button class="btn btn-primary" data-sp-checkin-save="1">Save check-in numbers</button>${rec.checkinSaved&&hasActuals?'<span class="pill pill-ok"><i class="dot"></i>Saved ✓</span>':'<span class="muted" style="font-size:12px">Not saved yet.</span>'}</div>
       </div></div>
-    ${hasActuals?ticketingCard+vendorTable+wastageCard:`<div class="card"><div class="card-body muted" style="font-size:12.5px">Enter Actual students, Actual adults / teachers and Actual complementary adults above to view the vendor invoices.</div></div>`}`;
+    ${hasActuals&&rec.checkinSaved?ticketingCard+wastageCard+vendorTable:`<div class="card"><div class="card-body muted" style="font-size:12.5px">Enter Actual students, Actual adults / teachers, Actual complementary adults, Number of days and Food wastage donor above, then click Save check-in numbers to view the vendor invoices.</div></div>`}`;
 
   /* Timeline */
   const tl=(rec.timeline||[]).slice().sort((a,b)=>{const da=parseDMY(a.on),db=parseDMY(b.on);return (db?db.getTime():0)-(da?da.getTime():0);});
@@ -9159,10 +9189,11 @@ function spDetail(){
 
   const aside=`<aside class="disc-summary-col">
     <div class="card"><div class="card-head"><span class="card-title">At a glance</span></div><div class="matrix-wrap"><table class="reclist"><tbody>
-      ${row("Status",schoolStatusPill(rec))}${row("Donors",(()=>{const ds=[...new Set(spFunding(rec).map(f=>f.donor).filter(Boolean))];return ds.length?ds.map(escHtml).join(", "):'<span class="muted">—</span>';})())}${row("Students",`<b>${c.students}</b>`)}${row("Billed to donors",money(c.grand))}
+      ${row("Status",schoolStatusPill(rec))}${row("Donors",spDonorTags(rec))}${row("Students",`<b>${c.students}</b>`)}${row("Billed to donors",money(c.grand))}
     </tbody></table></div></div>
     <div class="card"><div class="card-head"><span class="card-title">Actions</span></div><div class="card-body" style="display:flex;flex-direction:column;gap:8px">
       <button class="btn btn-primary" data-sp-edit="1">Edit details</button>
+      ${einvSendBtn("Sponsored School",rec.id)}
       <button class="btn" data-sp-sendmail="1">Send email</button>
       <button class="btn" data-sp-feedback="1">Send feedback form</button>
       ${rec.status!=="Ended"?`<button class="btn" data-sp-complete="1">Mark completed</button>`:""}
@@ -9191,10 +9222,8 @@ function spDetail(){
     <div class="confirm-box" role="dialog" aria-modal="true" style="max-width:560px;width:92%;padding:0;overflow:hidden">
       <div style="display:flex;justify-content:space-between;align-items:center;padding:14px 20px;border-bottom:1px solid var(--rule)"><b style="font-size:14px">Confirm feedback email</b><button class="btn" data-sp-feedback-cancel="1" aria-label="Close">✕</button></div>
       <div style="padding:16px 20px;max-height:62vh;overflow:auto">
-        <div class="muted" style="font-size:11.5px;margin-bottom:10px">To: ${escHtml(fc.to)} · Review &amp; edit the message before sending.</div>
-        <div class="fld" style="margin:0 0 12px"><div class="lab"><span class="lab-n">Subject</span></div><input class="inp" data-sp-feedback-subject value="${escAttr(fc.subject)}"></div>
-        <div class="fld" style="margin:0"><div class="lab"><span class="lab-n">Message</span></div><textarea class="inp" data-sp-feedback-body rows="11" style="resize:vertical;font-size:12.5px;line-height:1.55">${escHtml(fc.body)}</textarea></div>
-        <div class="muted" style="font-size:11px;margin-top:6px">The message includes the Google Form feedback link.</div>
+        <div class="fld" style="margin:0"><div class="lab"><span class="lab-n">Email</span></div><input class="inp" type="email" data-sp-feedback-email value="${escAttr(fc.to)}" placeholder="name@example.com"></div>
+        <div class="muted" style="font-size:11px;margin-top:6px">The feedback form (Google Form link) will be emailed to this address.</div>
       </div>
       <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;padding:12px 20px;border-top:1px solid var(--rule)"><span class="muted" style="font-size:11px">Wireframe — no email is actually sent.</span><span style="display:flex;gap:8px"><button class="btn" data-sp-feedback-cancel="1">Cancel</button><button class="btn btn-primary" data-sp-feedback-send="1">Send email</button></span></div>
     </div></div>`:"";
@@ -9227,14 +9256,17 @@ function syncSpSearch(){
    ========================================================================== */
 
 let selBday = "", bdFStatus = "", bdayQ = "",
-    bdayDraft = null, bdayNewMode = "booking", bdayMsg = "",
+    bdayDraft = null, bdayNewMode = "booking", bdayMsg = "", bdayFeedbackCompose = null,
     bdayPayFlyout = false, bdayPayEdit = -1, bdayPayDel = -1, bdaySaveConfirm = false,
     bdayCancelConfirm = false, bdsub = "overview";
 
 let selCorp = "", corpFStatus = "", corpQ = "",
     corpDraft = null,
     corpPayFlyout = false, corpPayEdit = -1, corpPayDel = -1,
-    corpCancelConfirm = false, corpsub = "overview";
+    corpCancelConfirm = false, corpsub = "overview",
+    corpEInvConfirm = false, corpEInvView = false, corpCNFlyout = false, corpCNView = false;
+
+let einvQ = "", einvFStatus = "", einvFModule = "", einvView = null, einvOpen = new Set();
 
 function nextBdayId(){
   const n=BIRTHDAY_BOOKINGS.reduce((mx,r)=>{const m=/BDAY-(\d+)/.exec(r.id);return m?Math.max(mx,+m[1]):mx;},0);
@@ -10127,6 +10159,7 @@ function corpDetail(){
     </tbody></table></div></div>
     <div class="card"><div class="card-head"><span class="card-title">Actions</span></div><div class="card-body" style="display:flex;flex-direction:column;gap:8px">
       <button class="btn btn-primary" data-corp-edit="1">Edit details</button>
+      ${(rec.invoice&&rec.invoice.generated)?einvFlowHtml("Corporate",rec):""}
       ${(rec.status==="Confirmed"&&c.balance<=0)?`<button class="btn" data-corp-complete="1">Mark completed</button>`:""}
       ${rec.status!=="Cancelled"&&rec.status!=="Completed"?`<button class="btn btn-danger" data-corp-cancelbtn="1">Cancel booking</button>`:""}
     </div></div></aside>`;
@@ -10139,8 +10172,16 @@ function corpDetail(){
     <div class="confirm-box" role="dialog" aria-modal="true"><div class="confirm-title">Cancel this booking?</div>
     <div class="confirm-body">This marks ${escHtml(rec.id)} as Cancelled.</div>
     <div class="confirm-actions"><button class="btn" data-corp-cancel-cancel="1">Back</button><button class="btn btn-danger" data-corp-cancel-confirm="1">Cancel booking</button></div></div></div>`:"";
+  const cf=(rec.invoice&&rec.invoice.generated)?einvFlow("Corporate",rec):{e:null,cn:null};
+  const einvConfirm = corpEInvConfirm?`<div class="confirm-layer"><button class="confirm-backdrop" data-corp-einv-cancel="1" aria-label="Cancel"></button>
+    <div class="confirm-box" role="dialog" aria-modal="true"><div class="confirm-title">Generate e-invoice?</div>
+    <div class="confirm-body">Are you sure? An <b>e-invoice can be generated only once</b> for a booking (the IRN can't be re-raised). Make sure the totals are final.</div>
+    <div class="confirm-actions"><button class="btn" data-corp-einv-cancel="1">Cancel</button><button class="btn btn-primary" data-corp-einv-confirm="1">Generate e-invoice</button></div></div></div>`:"";
+  const einvModal = (corpEInvView&&cf.e)?einvDocModalHtml("E-invoice · "+cf.e.id,cf.e,null,"data-corp-einv-close"):"";
+  const cnFlyout = (corpCNFlyout&&cf.e)?einvCnFlyoutHtml({id:"corpCNCard",close:"data-corp-cn-close",save:"data-corp-cn-save",grand:cf.e.amount,invNo:cf.e.id,invDate:cf.e.date,gstin:rec.gst,refundLabel:"Refund to the company"}):"";
+  const cnViewModal = (corpCNView&&cf.e&&cf.cn&&cf.cn.status==="Generated")?einvDocModalHtml("Credit Note · "+cf.cn.id,cf.e,cf.cn,"data-corp-cn-viewclose"):"";
   return `<div class="detailhead"><h2 class="detailname">${escHtml(rec.companyName||rec.email||"Corporate booking")}</h2><span class="code">${rec.id}</span>${corpStatusPill(rec)}</div>
-  <div class="two"><div>${tabs}<div class="sub-body">${bodyByTab}</div></div>${aside}</div>${cancelConfirm}`;
+  <div class="two"><div>${tabs}<div class="sub-body">${bodyByTab}</div></div>${aside}</div>${cancelConfirm}${einvConfirm}${einvModal}${cnFlyout}${cnViewModal}`;
 }
 
 /* ---- Detail page ---- */
@@ -10269,8 +10310,18 @@ function bdayDetail(){
   const msgModal = bdayMsg?`<div class="confirm-layer"><button class="confirm-backdrop" data-bday-msg-dismiss="1" aria-label="Close"></button>
     <div class="confirm-box" role="dialog" aria-modal="true"><div class="confirm-title">Email sent</div><div class="confirm-body">${escHtml(bdayMsg)}</div>
     <div class="confirm-actions"><button class="btn btn-primary" data-bday-msg-dismiss="1">Done</button></div></div></div>`:"";
+  const bfc=bdayFeedbackCompose;
+  const feedbackModal = bfc?`<div class="confirm-layer"><button class="confirm-backdrop" data-bday-feedback-cancel="1" aria-label="Close"></button>
+    <div class="confirm-box" role="dialog" aria-modal="true" style="max-width:560px;width:92%;padding:0;overflow:hidden">
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:14px 20px;border-bottom:1px solid var(--rule)"><b style="font-size:14px">Confirm feedback email</b><button class="btn" data-bday-feedback-cancel="1" aria-label="Close">✕</button></div>
+      <div style="padding:16px 20px">
+        <div class="fld" style="margin:0"><div class="lab"><span class="lab-n">Email</span></div><input class="inp" type="email" data-bday-feedback-addr value="${escAttr(bfc.to)}" placeholder="name@example.com"></div>
+        <div class="muted" style="font-size:11px;margin-top:6px">The feedback form will be emailed to this address.</div>
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;padding:12px 20px;border-top:1px solid var(--rule)"><span class="muted" style="font-size:11px">Wireframe — no email is actually sent.</span><span style="display:flex;gap:8px"><button class="btn" data-bday-feedback-cancel="1">Cancel</button><button class="btn btn-primary" data-bday-feedback-send="1">Send email</button></span></div>
+    </div></div>`:"";
   return `<div class="detailhead"><h2 class="detailname">${escHtml(rec.contactName||"Birthday booking")}</h2><span class="code">${rec.id}</span>${bdayStatusPill(rec)}</div>
-  <div class="two"><div>${tabs}<div class="sub-body">${bodyByTab}</div></div>${aside}</div>${cancelConfirm}${msgModal}`;
+  <div class="two"><div>${tabs}<div class="sub-body">${bodyByTab}</div></div>${aside}</div>${cancelConfirm}${msgModal}${feedbackModal}`;
 }
 function syncBdaySearch(){
   const tbl=document.getElementById("bdayTable"); if(!tbl) return;
@@ -10287,6 +10338,345 @@ function syncCorpSearch(){
   const empty=tbl.querySelector("[data-corp-empty]"); if(empty) empty.style.display=shown?"none":"";
   const nr=tbl.querySelector("[data-corp-newrow]"); if(nr) nr.style.display=needle?"none":"";
   const cnt=document.getElementById("corpCount"); if(cnt) cnt.textContent=needle?`${shown} of ${CORPORATE_BOOKINGS.length} records`:`${CORPORATE_BOOKINGS.length} records`;
+}
+
+/* ================= E-Invoicing ==================================================
+   Invoices sent for approval from School, Sponsored School and Corporate bookings,
+   plus credit notes raised against them. One flat store, EINVOICES: an invoice carries
+   its credit notes in creditNotes[] and the list shows each credit note as a child row
+   under its parent. Statuses: "Pending approval" -> "Approved" (here) -> "Generated"
+   (from the booking page: Generate E-invoice / Generate Credit Note, which is when the
+   IRN + QR are issued). School and Corporate bookings drive the whole flow from their
+   Actions panel (einvFlowHtml); Sponsored School only sends for approval.
+   Sponsored bookings bill the donor(s), so one invoice is raised per funding donor. */
+const EINV_MODULES = ["School","Sponsored School","Corporate"];
+const EINV_PILL = {"Pending approval":"pill-warn", Approved:"pill-ok", Generated:"pill-blue"};
+const EINVOICES = [];
+function einvBooking(module, ref){ return (module==="School"?schoolById:module==="Sponsored School"?spById:corpById)(ref); }
+function einvLog(module, rec, what){ (module==="School"?schoolLog:module==="Sponsored School"?spLog:corpLog)(rec,"Admin",what); }
+function einvNextId(){ return "EINV-"+String(EINVOICES.reduce((mx,e)=>{const m=/EINV-(\d+)/.exec(e.id);return m?Math.max(mx,+m[1]):mx;},0)+1).padStart(3,"0"); }
+function einvNextCnId(){ return "ECN-"+String(EINVOICES.reduce((mx,e)=>(e.creditNotes||[]).reduce((m2,c)=>{const m=/ECN-(\d+)/.exec(c.id);return m?Math.max(m2,+m[1]):m2;},mx),0)+1).padStart(3,"0"); }
+const einvById = id => EINVOICES.find(e=>e.id===id);
+const einvForBooking = (module, ref) => EINVOICES.filter(e=>e.module===module&&e.ref===ref);
+/* What would be invoiced for a booking, from its existing invoice data — one entry per bill-to party. */
+function einvPlan(module, rec){
+  if(module==="School"){
+    const c=schoolCompute(rec);
+    return [{billName:rec.billName||rec.school, party:rec.school, gstin:rec.gstin||"", amount:c.grand, gst:c.gst,
+      lines:schoolProformaLines(rec).filter(l=>l.amount>0).map(l=>({name:l.name,qty:l.qty,amount:l.amount}))}];
+  }
+  if(module==="Sponsored School"){
+    const by={};
+    spFunding(rec).filter(f=>f.donor&&f.amount>0).forEach(f=>{ (by[f.donor]=by[f.donor]||[]).push(f); });
+    return Object.keys(by).map(d=>{
+      const amount=by[d].reduce((a,f)=>a+f.amount,0), sp=SPONSORS.find(s=>s.name===d);
+      return {billName:d, party:d, gstin:(sp&&sp.gstin)||"", amount, gst:amount-Math.round(amount/1.18),
+        lines:by[d].map(f=>({name:f.label+" — "+rec.school,qty:"",amount:f.amount}))};
+    });
+  }
+  const c=corpCompute(rec);
+  return [{billName:rec.companyName||rec.email||"Corporate client", party:rec.companyName||rec.email||"Corporate client", gstin:(rec.gst||"").trim(), amount:c.grand, gst:c.gst,
+    lines:c.lines.map(l=>({name:l.name,qty:l.qty,amount:Math.round(l.amount+l.tax)}))}];
+}
+function einvCreate(module, rec, p, date, status, approvedOn){
+  const e={id:einvNextId(), type:"Invoice", module, ref:rec.id, party:p.party, billName:p.billName, gstin:p.gstin, amount:p.amount, gst:p.gst,
+    lines:p.lines, date:date||fmtDMY(new Date()), status:status||"Pending approval", approvedOn:approvedOn||"", generatedOn:"", note:"", creditNotes:[]};
+  EINVOICES.push(e); return e;
+}
+function einvAddCn(e, amount, reason, date, status, approvedOn, remark){
+  const cn={id:einvNextCnId(), amount, gst:Math.round(amount*e.gst/e.amount), reason, remark:remark||"", date:date||fmtDMY(new Date()), status:status||"Pending approval", approvedOn:approvedOn||""};
+  e.creditNotes.push(cn); return cn;
+}
+/* Parties of a booking still to be sent (Sponsored: per donor; School / Corporate: one invoice per booking; Corporate only once its invoice is raised). */
+function einvTodo(module, rec){
+  const sent=einvForBooking(module,rec.id);
+  if(module==="Corporate"&&!(rec.invoice&&rec.invoice.generated)) return [];
+  return einvPlan(module,rec).filter(p=>p.amount>0&&(module==="Sponsored School"?!sent.some(e=>e.billName===p.billName):!sent.length));
+}
+/* Send a booking's invoice(s) for approval. Returns how many were created. */
+function einvSend(module, ref){
+  einvEnsure();
+  const rec=einvBooking(module,ref); if(!rec) return 0;
+  const todo=einvTodo(module,rec);
+  todo.forEach(p=>{ const e=einvCreate(module,rec,p); einvLog(module,rec,`Invoice ${e.id} (${money(e.amount)}${module==="Sponsored School"?", billed to "+e.billName:""}) sent for approval.`); });
+  return todo.length;
+}
+/* Aside "Actions" button on a booking's detail page — shows the state once the invoice has been sent. */
+function einvSendBtn(module, ref){
+  einvEnsure();
+  const rec=einvBooking(module,ref); if(!rec) return "";
+  const sent=einvForBooking(module,ref);
+  if(!einvTodo(module,rec).length) return sent.length
+    ? `<button class="btn" disabled title="See it under E-Invoicing">${sent.every(e=>e.status!=="Pending approval")?"Invoice approved":"Invoice sent for approval"}</button>`
+    : `<button class="btn" disabled title="Nothing billable on this booking yet">Send invoice for approval</button>`;
+  return `<button class="btn" data-einv-send="${escAttr(module+"|"+ref)}">Send invoice for approval</button>`;
+}
+// Seeds — built from real bookings so the amounts match what each booking's own invoice computes.
+// Built on first use (not at load): the date helpers they lean on are declared further down the script.
+let einvSeeded = false;
+function einvEnsure(){
+  if(einvSeeded) return; einvSeeded=true;
+  const mk=(module,id,donor,date,status,appr)=>{ try{
+    const rec=einvBooking(module,id), plan=rec&&einvPlan(module,rec).filter(p=>p.amount>0);
+    const p=plan&&(donor?plan.find(x=>x.billName===donor):plan[0]);
+    return p?einvCreate(module,rec,p,date,status,appr):null; }catch(err){ return null; } };
+  const a=mk("School","SCH-004","","04 Aug 2026","Generated","04 Aug 2026"); if(a) a.generatedOn="05 Aug 2026";   // SCH-004 already has rec.einvoice.generated
+  mk("School","SCH-003","","20 Oct 2026","Pending approval");
+  mk("Sponsored School","SPS-003","JSW Foundation","12 Oct 2026","Approved","14 Oct 2026");
+  mk("Sponsored School","SPS-006","JSW Foundation","22 Oct 2026","Pending approval");
+  mk("Corporate","CORP-003","","03 Aug 2026","Approved","04 Aug 2026");   // invoice raised, e-invoice not generated yet
+  if(a) einvAddCn(a,Math.min(8000,a.amount),"Deficiency in service","18 Aug 2026","Pending approval","","Two classrooms had no projector on the day; school asked for a partial credit.");
+}
+const einvPill = s => `<span class="pill ${EINV_PILL[s]||"pill-off"}">${escHtml(s)}</span>`;
+/* Resolve "inv:EINV-001" / "cn:EINV-001:ECN-001" keys used by the row buttons. */
+function einvItem(key){
+  const [kind,id,cnId]=String(key||"").split(":"), e=einvById(id); if(!e) return null;
+  if(kind==="cn"){ const cn=(e.creditNotes||[]).find(c=>c.id===cnId); return cn?{inv:e,cn,item:cn}:null; }
+  return {inv:e,cn:null,item:e};
+}
+function einvApprove(key){ const it=einvItem(key); if(it&&it.item.status==="Pending approval"){ it.item.status="Approved"; it.item.approvedOn=fmtDMY(new Date()); } }
+
+/* ---- Booking-page flow (School + Corporate): Send for approval -> Generate E-invoice -> Credit note (send, generate). ----
+   One step's button(s) show at a time, driven by the booking's EINVOICES records. A seeded rec.einvoice.generated /
+   rec.creditNote counts as already Generated (a matching record is created on first look). */
+function einvFlow(module, rec){
+  einvEnsure();
+  let e=einvForBooking(module,rec.id)[0];
+  const flag=rec.einvoice&&rec.einvoice.generated;
+  if(!e&&flag){ const p=einvPlan(module,rec).find(x=>x.amount>0); if(p){ e=einvCreate(module,rec,p,rec.einvoice.on,"Generated",rec.einvoice.on); e.generatedOn=rec.einvoice.on||e.date; } }
+  if(e&&flag&&e.status!=="Generated"){ e.status="Generated"; e.generatedOn=rec.einvoice.on||e.date; }
+  if(e&&rec.creditNote&&!e.creditNotes.length){ const c=einvAddCn(e,Math.min(+rec.creditNote.amount||0,e.amount),rec.creditNote.reason||"Adjustment",rec.creditNote.on,"Generated",rec.creditNote.on,rec.creditNote.remark); c.generatedOn=rec.creditNote.on; c.full=!!rec.creditNote.full; }
+  return {e, cn:e?e.creditNotes[0]:null};
+}
+function einvFlowHtml(module, rec){
+  const f=einvFlow(module,rec), e=f.e, cn=f.cn, sc=module==="School";
+  const A=sc?{gen:"data-school-einvoice-gen",view:"data-school-einvoice-view",cnReq:"data-school-cn-gen",cnGen:"data-school-cn-generate",cnView:"data-school-cn-view"}
+            :{gen:"data-corp-einv-gen",view:"data-corp-einv-view",cnReq:"data-corp-cn-gen",cnGen:"data-corp-cn-generate",cnView:"data-corp-cn-view"};
+  const off=t=>`<button class="btn" disabled title="See it under E-Invoicing">${t}</button>`;
+  if(!e) return einvSendBtn(module,rec.id);
+  if(e.status==="Pending approval") return off("Invoice sent for approval");
+  if(e.status==="Approved") return (sc&&!schoolCompute(rec).eInv)
+    ? `<button class="btn" disabled title="A GST number is needed to generate an e-invoice">Generate E-invoice</button><div class="muted" style="font-size:11px">Add a GST number (Billing, via Edit) to generate the e-invoice.</div>`
+    : `<button class="btn" ${A.gen}="1">Generate E-invoice</button>`;
+  const inv=`<button class="btn" ${A.view}="1">View E-invoice</button>${sc?`<button class="btn" data-school-send-einvoice="1">Send E-invoice</button>`:""}`;
+  if(!cn) return inv+`<button class="btn" ${A.cnReq}="1">Send Credit Note for approval</button>`;
+  if(cn.status==="Pending approval") return inv+off("Credit note sent for approval");
+  if(cn.status==="Approved") return inv+`<button class="btn" ${A.cnGen}="1">Generate Credit Note</button>`;
+  return inv+`<button class="btn" ${A.cnView}="1">View Credit Note</button>`;
+}
+/* Generate the e-invoice (booking page confirm) — the invoice must be Approved. */
+function einvInvGenerate(module, rec){
+  const f=einvFlow(module,rec); if(!f.e||f.e.status!=="Approved") return false;
+  const on=fmtDMY(new Date()); rec.einvoice={generated:true,on}; f.e.status="Generated"; f.e.generatedOn=on;
+  einvLog(module,rec,`E-invoice ${f.e.id} generated (IRN issued).`); return true;
+}
+/* Read the credit-note form (ids shared by School + Corporate) and send it for approval under the invoice. */
+function einvCnRequest(module, rec){
+  const f=einvFlow(module,rec); if(!f.e||f.e.status!=="Generated"||f.cn) return false;
+  const g=id=>(document.getElementById(id)||{}).value||"";
+  const reason=g("schoolCNReason")||"Adjustment", full=g("schoolCNType").indexOf("Full")===0;
+  let amount=full?f.e.amount:Math.max(0,+g("schoolCNAmt")||0); amount=Math.min(amount,f.e.amount);
+  if(!(amount>0)) return false;
+  const settle=g("schoolCNSettle")||"Refund", exp=g("schoolCNVoucherExp").trim(), user=g("schoolCNRemark").trim();
+  const remark=["Credit type: "+(full?"Full":"Partial"),"Settle as: "+settle+(settle==="Voucher"&&exp?" (valid until "+exp+")":"")].concat(user?[user]:[]).join(" · ");
+  const cn=einvAddCn(f.e,amount,reason,undefined,"Pending approval","",remark);
+  Object.assign(cn,{full,settle,voucherExp:exp,userRemark:user});
+  einvLog(module,rec,`Credit note ${cn.id} for ${money(amount)} (${full?"full":"partial"}) sent for approval — ${reason}.`); return true;
+}
+/* Generate an Approved credit note: sets rec.creditNote (+ voucher if settled that way) and flips the record to Generated. */
+function einvCnGenerate(module, rec){
+  const f=einvFlow(module,rec), cn=f.cn; if(!cn||cn.status!=="Approved") return false;
+  const on=fmtDMY(new Date());
+  rec.creditNote={number:"CRN-"+rec.id,on,reason:cn.reason,full:!!cn.full,amount:cn.amount,remark:cn.userRemark||""};
+  if(cn.settle==="Voucher"){ const code="CN-"+genCode().slice(0,6); VOUCHERS.push({code,amount:cn.amount,expires:cn.voucherExp||"",status:"Active",issued:on,source:"Credit note "+rec.creditNote.number+" ("+(module==="School"?"school":"corporate")+" booking)"}); rec.creditNote.voucher={code,expires:cn.voucherExp||""}; einvLog(module,rec,"Credit note settled as voucher "+code+" for "+money(cn.amount)+", valid until "+(cn.voucherExp||"—")+"."); }
+  else rec.creditNote.refund=true;
+  cn.status="Generated"; cn.generatedOn=on;
+  einvLog(module,rec,`Credit note ${cn.id} generated (IRN issued) against invoice ${f.e.id}.`); return true;
+}
+/* Credit-note form flyout, shared by School and Corporate (ids/attrs the School handlers already use). */
+function einvCnFlyoutHtml(o){
+  const reasons=["Sales return","Post-supply discount","Deficiency in service","Cancellation of visit","Correction — value/tax overcharged"];
+  const init=creditNoteCompute({creditNote:{amount:o.grand}}), cl=`${o.close}="1"`;
+  const nx=new Date(), vexp=fmtDMY(new Date(nx.getFullYear()+1,nx.getMonth(),nx.getDate()));
+  return `<div class="drawer-layer" id="${o.id}">
+    <button class="drawer-backdrop" ${cl} aria-label="Close"></button>
+    <aside class="drawer-panel" role="dialog" aria-modal="true" aria-label="Send credit note for approval">
+      <div class="card-head"><span class="card-title">Send credit note for approval</span>
+        <button class="drawer-close" ${cl} aria-label="Close">&times;</button></div>
+      <div class="form-body" style="display:block">
+        <div style="padding:10px 12px;border-radius:8px;background:#FBFCFA;border:1px solid var(--rule2);font-size:12px;margin-bottom:14px">Against <b>Tax Invoice ${escHtml(o.invNo)}</b> dated ${escHtml(o.invDate||"—")} · Buyer GSTIN <span class="code">${escHtml(o.gstin||"—")}</span> · Invoice total ${money(o.grand)}</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px 16px">
+          <div class="fld wide" style="margin:0;grid-column:1/-1"><div class="lab"><span class="lab-n">Reason</span></div><div class="selwrap"><select class="inp" id="schoolCNReason">${reasons.map(r=>`<option>${escHtml(r)}</option>`).join("")}</select></div></div>
+          <div class="fld" style="margin:0"><div class="lab"><span class="lab-n">Credit type</span></div><div class="selwrap"><select class="inp" data-school-cn-type id="schoolCNType"><option>Full (entire invoice)</option><option>Partial amount</option></select></div></div>
+          <div class="fld" style="margin:0"><div class="lab"><span class="lab-n">Amount (incl. GST)</span></div><input class="inp mono" id="schoolCNAmt" type="number" min="0" max="${o.grand}" value="${o.grand}" disabled></div>
+          <div class="fld wide" style="margin:0;grid-column:1/-1"><div class="muted" id="schoolCNBreakdown" style="font-size:11.5px">Of which GST (18%): ${money(init.gst)} (CGST ${money(init.cgst)} + SGST ${money(init.sgst)}) · Taxable ${money(init.taxable)}</div></div>
+          <div class="fld" style="margin:0"><div class="lab"><span class="lab-n">Settle as</span></div><div class="selwrap"><select class="inp" data-school-cn-settle id="schoolCNSettle"><option>${escHtml(o.refundLabel)}</option><option>Voucher</option></select></div></div>
+          <div class="fld" style="margin:0;display:none" id="schoolCNVoucherRow"><div class="lab"><span class="lab-n">Voucher valid until</span></div><input class="inp mono" id="schoolCNVoucherExp" value="${escAttr(vexp)}" placeholder="dd Mon yyyy"></div>
+          <div class="fld wide" style="margin:0;grid-column:1/-1"><div class="muted" style="font-size:11.5px">A voucher is a flat amount usable as payment on a later order. One code, one use: any part of it that an order does not use is lost.</div></div>
+          <div class="fld wide" style="margin:0;grid-column:1/-1"><div class="lab"><span class="lab-n">Remark</span></div><textarea class="inp" id="schoolCNRemark" rows="2" style="resize:vertical" placeholder="Optional note for the record"></textarea></div>
+        </div>
+        <div class="muted" style="font-size:11px;margin-top:14px;line-height:1.6">The credit note goes to E-Invoicing for approval; once approved, generate it from this page (IRN is issued then). One credit note can be raised per booking. Issue by 30 Nov following the financial year of the original supply.</div>
+      </div>
+      <div class="form-foot" style="display:flex;gap:8px;justify-content:flex-end;padding:14px 20px;border-top:1px solid var(--rule)">
+        <button class="btn" ${cl}>Cancel</button>
+        <button class="btn btn-primary" ${o.save}="1">Send for approval</button>
+      </div>
+    </aside></div>`;
+}
+/* Modal showing the GST-format e-invoice / credit note on a booking page. */
+function einvDocModalHtml(title, e, cn, closeAttr){
+  return `<div class="confirm-layer"><button class="confirm-backdrop" ${closeAttr}="1" aria-label="Close"></button>
+    <div class="confirm-box" role="dialog" aria-modal="true" style="max-width:920px;width:96%;padding:0;overflow:hidden">
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:14px 20px;border-bottom:1px solid var(--rule)"><b style="font-size:14px">${escHtml(title)}</b><button class="btn" ${closeAttr}="1" aria-label="Close">✕</button></div>
+      <div style="padding:16px 20px;max-height:74vh;overflow:auto">${einvDocHtml(e,cn)}</div>
+    </div></div>`;
+}
+
+/* GST-format document (same layout as the reference e-invoice PDF) for an e-invoice or one of its credit notes.
+   Amounts are GST-inclusive in the store; taxable = amount - gst, CGST = floor(gst/2), SGST = rest, so totals equal the list. */
+function einvDocHtml(e, cn){
+  const isCn=!!cn, doc=cn||e, amount=doc.amount, gst=isCn?doc.gst:e.gst, taxable=amount-gst, gen=doc.status==="Generated";
+  let rec=null, sp=null; try{ rec=einvBooking(e.module,e.ref); }catch(x){}
+  if(e.module==="Sponsored School") sp=SPONSORS.find(x=>x.name===e.billName);
+  const addr=(rec&&(rec.billAddress||rec.companyAddress))||(sp&&sp.addr)||"", pos=(sp&&sp.state)||MUSO_SELLER.state;
+  const fb=n=>/food|f&b|meal|snack|lunch|cake|catering|beverage/i.test(n||"");
+  const src=isCn?[{name:"Credit — "+cn.reason,amount:cn.amount}]:(e.lines||[]).filter(l=>l.amount>0);
+  const base=src.length?src:[{name:"Revenue",amount}];
+  // taxable split by line share; last line takes the rounding remainder so it sums exactly
+  let used=0; const parts=base.map((l,i)=>{ const t=i===base.length-1?taxable-used:Math.round(taxable*l.amount/amount); used+=t; return {name:l.name,qty:l.qty,t,hsn:fb(l.name)?"996333":"997212",fb:fb(l.name)}; });
+  const heads=[["Revenue (excl F&B)","997212",parts.filter(p=>!p.fb&&!/other/i.test(p.name))],["F&B Revenue","996333",parts.filter(p=>p.fb)],["Revenue Other","997212",parts.filter(p=>!p.fb&&/other/i.test(p.name))]]
+    .map(h=>({name:h[0],hsn:h[1],items:h[2],t:h[2].reduce((a,p)=>a+p.t,0)})).filter(h=>h.items.length);
+  heads.forEach(h=>{ if(h.name==="Revenue Other") h.name="Revenue Other("+h.items.map(p=>p.name).join(", ")+")"; else h.name+=" — "+h.items.map(p=>p.name).join(", "); });
+  // tax: one effective rate across the invoice (portal's single-GST treatment)
+  const cg=Math.floor(gst/2), sg=gst-cg, half=taxable?Math.round(gst/2/taxable*10000)/100:0, hs=(+half.toFixed(2))+"%";
+  // per-HSN tax allocation, remainder to the last HSN
+  const hm={}; heads.forEach(h=>{ hm[h.hsn]=(hm[h.hsn]||0)+h.t; });
+  const hk=Object.keys(hm); let tu=0; const hrows=hk.map((k,i)=>{ const tx=i===hk.length-1?gst-tu:Math.round(gst*hm[k]/(taxable||1)); tu+=tx; const c=Math.floor(tx/2); return {hsn:k,t:hm[k],c,s:tx-c,tx}; });
+  const num=isCn?cn.id:e.id, dated=doc.date, refTxt=escHtml(e.ref);
+  const irn=gen?`<div>IRN : <span class="code">${isCn?"c9d8e7":"a1b2c3"}…(generated)</span></div><div>Ack No. : <span class="code">${(isCn?"1126":"1125")+String(num).replace(/\D/g,"").padStart(8,"0")}</span></div><div>Ack Date : ${escHtml(doc.generatedOn||doc.approvedOn||dated)}</div>`:`<div>IRN : <span class="muted">${doc.status==="Approved"?"to be generated":"to be generated on approval"}</span></div>`;
+  const wordsAmt=n=>"INR "+amountInWords(n).replace(/^Rupees /,"");
+  const mg=(k,v)=>`<div><small>${k}</small>${v||"—"}</div>`;
+  const rows=heads.map((h,i)=>`<tr><td>${i+1}</td><td><b>${escHtml(h.name)}</b></td><td class="code">${h.hsn}</td><td class="code">—</td><td class="code">—</td><td></td><td class="code">${money(h.t)}</td></tr>`).join("");
+  const tax=(k,r,v)=>`<tr class="inv-taxrow"><td></td><td colspan="3">${k}</td><td class="code">${r}</td><td>%</td><td class="code">${money(v)}</td></tr>`;
+  return `<div class="invoice einv-doc">
+    <div class="inv-top3"><div></div><div class="inv-kind">${isCn?"Credit Note":"Tax Invoice"}</div><div class="inv-etag">e-Invoice</div></div>
+    <div style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start"><div class="inv-irn" style="margin:0">${irn}${isCn?`<div>Against Invoice : <span class="code">${e.id}</span> dated ${escHtml(e.date)}</div>`:""}</div><div class="inv-qr big" style="${gen?"":"border-style:dashed"}">${gen?"QR":(doc.status==="Approved"?"QR on generation":"QR on approval")}</div></div>
+    <div class="inv-hdr" style="margin-top:8px">
+      <div><b>${MUSO_SELLER.name}</b><br>${MUSO_SELLER.addr.join("<br>")}<br>GSTIN/UIN: <span class="code">${MUSO_SELLER.gstin}</span><br>State Name : ${MUSO_SELLER.state}, Code : ${MUSO_SELLER.stateCode}<br>E-Mail : ${MUSO_SELLER.email}
+        <div style="margin-top:8px;border-top:1px solid var(--rule);padding-top:6px"><span class="muted">Buyer (Bill to)</span><br><b>${escHtml(e.billName)}</b>${addr?"<br>"+escHtml(addr):""}<br>${e.gstin?`GSTIN/UIN : <span class="code">${escHtml(e.gstin)}</span>`:'<span class="muted">B2C — no GSTIN</span>'}<br>State Name : ${escHtml(pos)}${pos===MUSO_SELLER.state?", Code : "+MUSO_SELLER.stateCode:""}<br>Place of Supply : ${escHtml(pos)}</div></div>
+      <div class="inv-mg">${mg(isCn?"Credit Note No.":"Invoice No.","<b>"+num+"</b>")}${mg("Dated","<b>"+escHtml(dated)+"</b>")}${mg("Mode/Terms of Payment","")}${mg("Reference No. &amp; Date",refTxt+(isCn?" · "+e.id:"")+" dt. "+escHtml(e.date))}${mg("Other References",escHtml(e.module)+" booking")}${mg("Buyer's Order No.","")}${mg("Dated","")}${mg("Terms of Delivery","")}</div>
+    </div>
+    <div class="matrix-wrap"><table class="reclist inv-table"><thead><tr><th>Sl No.</th><th>Particulars</th><th>HSN/SAC</th><th>Quantity</th><th>Rate</th><th>per</th><th>Amount</th></tr></thead><tbody>${rows}
+      ${tax("CGST "+hs+" Output",hs.replace("%",""),cg)}${tax("SGST "+hs+" Output",hs.replace("%",""),sg)}
+      <tr class="inv-total"><td></td><td colspan="5" style="text-align:right"><b>Total</b></td><td class="code" style="white-space:nowrap"><b>₹ ${money(amount).replace(/^₹\s*/,"")}</b></td></tr></tbody></table></div>
+    <div class="inv-words"><span>Amount Chargeable (in words)<br><b>${wordsAmt(amount)}</b></span><span class="muted">E. &amp; O.E</span></div>
+    <div class="matrix-wrap"><table class="reclist inv-hsn"><thead><tr><th rowspan="2">HSN/SAC</th><th rowspan="2">Taxable Value</th><th colspan="2" style="text-align:center">Central Tax</th><th colspan="2" style="text-align:center">State Tax</th><th rowspan="2">Total Tax Amount</th></tr><tr><th>Rate</th><th>Amount</th><th>Rate</th><th>Amount</th></tr></thead><tbody>${hrows.map(r=>`<tr><td class="code">${r.hsn}</td><td class="code">${money(r.t)}</td><td class="code">${hs}</td><td class="code">${money(r.c)}</td><td class="code">${hs}</td><td class="code">${money(r.s)}</td><td class="code">${money(r.tx)}</td></tr>`).join("")}
+      <tr class="inv-total"><td><b>Total</b></td><td class="code"><b>${money(taxable)}</b></td><td></td><td class="code"><b>${money(cg)}</b></td><td></td><td class="code"><b>${money(sg)}</b></td><td class="code"><b>${money(gst)}</b></td></tr></tbody></table></div>
+    <div class="inv-words">Tax Amount (in words) : <b>${wordsAmt(gst)}</b></div>
+    <div class="inv-foot"><div style="flex:1 1 52%"><b>Remarks:</b><br>${isCn?`${escHtml(cn.reason)}${cn.remark?" — "+escHtml(cn.remark):""} (against invoice ${e.id})`:`Being invoice towards ${escHtml(e.module)} booking ${refTxt}${e.party?" — "+escHtml(e.party):""}`}<div style="margin-top:14px">Customer's Seal and Signature</div></div>
+      <div style="flex:1 1 42%;display:flex;flex-direction:column;justify-content:space-between;gap:18px"><div><b>Company's Bank Details</b><br>Bank Name : ${MUSO_SELLER.bank.name}<br>A/c No. : <span class="code">${MUSO_SELLER.bank.ac}</span><br>Branch &amp; IFS Code : ${MUSO_SELLER.bank.ifsc}</div>
+      <div class="inv-sign" style="text-align:right;align-self:flex-end"><div>for <b>${MUSO_SELLER.name}</b></div><div class="inv-sign-line"></div><div class="muted">Authorised Signatory</div></div></div></div>
+    <div class="inv-note muted">This is a Computer Generated Invoice</div>
+  </div>`;
+}
+
+VIEWS.einvoicing = function(){
+  einvEnsure();
+  const stOk=s=>!einvFStatus||s===einvFStatus;
+  const acts=(key,st)=>`<div style="display:flex;gap:8px;justify-content:flex-end"><button class="btn" data-einv-view="${escAttr(key)}">View</button>${st==="Pending approval"?`<button class="btn btn-primary" data-einv-approve="${escAttr(key)}">Approve</button>`:""}</div>`;
+  const rowsFor=p=>{
+    const kids=(p.creditNotes||[]).filter(c=>stOk(c.status));
+    if(einvFModule&&p.module!==einvFModule) return "";
+    if(!stOk(p.status)&&!kids.length) return "";   // a credit note that matches keeps its parent invoice on screen
+    const hay=`${p.id} ${p.ref} ${p.party} ${p.billName} ${p.module} ${p.status} ${(p.creditNotes||[]).map(c=>c.id+" "+c.status).join(" ")}`.toLowerCase();
+    const n=(p.creditNotes||[]).length, open=einvOpen.has(p.id)&&n>0;
+    const cnCell=n?`<button class="btn-link" style="color:var(--blue);background:none;border:0;padding:0;font:inherit;font-weight:500;cursor:pointer;white-space:nowrap" data-einv-toggle="${escAttr(p.id)}" aria-expanded="${open}">${n} Credit Note${n===1?"":"s"} ${open?"&#8963;":"&#8964;"}</button>`:`<span class="muted">&mdash;</span>`;
+    const main=`<tr data-einv-row data-search="${escAttr(hay)}">
+        <td>${escHtml(p.module)}</td>
+        <td class="code">${escHtml(p.ref)}<div class="sub">${p.id}</div></td>
+        <td><b style="font-weight:500">${escHtml(p.party)}</b><div class="sub code">${p.gstin?"GSTIN "+escHtml(p.gstin):"No GSTIN"}</div></td>
+        <td class="code">${money(p.amount)}</td>
+        <td class="code" style="white-space:nowrap">${escHtml(p.date)}</td>
+        <td>${einvPill(p.status)}</td>
+        <td>${cnCell}</td>
+        <td>${acts("inv:"+p.id,p.status)}</td></tr>`;
+    if(!open) return main;
+    const cnRows=(p.creditNotes||[]).map(c=>`<tr>
+          <td class="code">${c.id}</td><td>${escHtml(c.reason)}</td>
+          <td class="code">${money(c.amount)}</td><td class="code" style="white-space:nowrap">${escHtml(c.date)}</td>
+          <td>${einvPill(c.status)}</td>
+          <td style="max-width:260px;white-space:normal">${c.remark?escHtml(c.remark):'<span class="muted">&mdash;</span>'}</td>
+          <td>${acts("cn:"+p.id+":"+c.id,c.status)}</td></tr>`).join("");
+    const exp=`<tr data-einv-exp><td colspan="8" style="background:var(--blue-wash);padding:12px 16px">
+        <div style="font-size:12px;font-weight:700;margin-bottom:8px">Credit Note Details</div>
+        <div style="border:1px solid var(--blue-line);border-radius:8px;overflow:hidden;background:#fff"><table class="reclist" style="margin:0"><thead><tr>
+          <th>Credit note no.</th><th>Reason</th><th>Amount</th><th>Date</th><th>Status</th><th>Remark</th><th></th></tr></thead>
+          <tbody>${cnRows}</tbody></table></div></td></tr>`;
+    return main+exp;
+  };
+  const rows=EINVOICES.filter(e=>e.type==="Invoice").map(rowsFor).join("");
+  const sel=(attr,label,opts,cur)=>`<div class="selwrap tool-sel"><select class="inp" ${attr}><option value="">${label}</option>${opts.map(s=>`<option value="${escAttr(s)}"${s===cur?" selected":""}>${escHtml(s)}</option>`).join("")}</select></div>`;
+  const toolbar=`<div class="toolbar">
+      <label class="search"><span>&#8981;</span><input data-einv-search value="${escAttr(einvQ)}" autocomplete="off"
+        placeholder="Search by booking ref, invoice no. or party" aria-label="Search e-invoices"></label>
+      ${sel("data-einv-fstatus","All statuses",["Pending approval","Approved","Generated"],einvFStatus)}
+      ${sel("data-einv-fmodule","All modules",EINV_MODULES,einvFModule)}
+      <span class="tool-note" id="einvCount"></span></div>`;
+  return `<div class="sub-body">${toolbar}
+    <div class="card"><div class="matrix-wrap"><table class="reclist" id="einvTable"><thead><tr>
+      <th>Module</th><th>Booking ref</th><th>Party</th><th>Amount</th><th>Date</th><th>Status</th><th>Credit notes</th><th></th></tr></thead>
+    <tbody>${rows}
+      <tr data-einv-empty style="display:none"><td colspan="8" class="muted" style="text-align:center;padding:16px">No e-invoices match.</td></tr>
+    </tbody></table></div></div>
+    <div class="muted" style="font-size:11.5px;margin-top:10px">Invoices are sent here from a School, Sponsored School or Corporate booking (Actions &rarr; Send invoice for approval). Credit notes (School and Corporate) are sent for approval from the booking and listed under each invoice (use the Credit notes link to expand them). Approve them here: Pending approval &rarr; Approved. The e-invoice / credit note is then generated from the booking page (Generate E-invoice / Generate Credit Note), which turns the status to Generated and issues the IRN and QR code. Sponsored School invoices stop at Approved.</div>
+    ${einvFlyout()}</div>`;
+};
+function syncEinvSearch(){
+  const tbl=document.getElementById("einvTable"); if(!tbl) return;
+  const needle=(einvQ||"").trim().toLowerCase(); let shown=0;
+  tbl.querySelectorAll("[data-einv-row]").forEach(tr=>{const hit=!needle||(tr.dataset.search||"").includes(needle);tr.style.display=hit?"":"none";const nx=tr.nextElementSibling;if(nx&&nx.hasAttribute("data-einv-exp"))nx.style.display=hit?"":"none";if(hit)shown++;});
+  const empty=tbl.querySelector("[data-einv-empty]"); if(empty) empty.style.display=shown?"none":"";
+  const cnt=document.getElementById("einvCount"); if(cnt) cnt.textContent=`${shown} ${shown===1?"invoice":"invoices"}`;
+}
+/* Read-only invoice / credit-note document, as a right-hand flyout. */
+function einvFlyout(){
+  if(!einvView) return "";
+  const e=einvById(einvView.id); if(!e) return "";
+  const cn=einvView.cn?(e.creditNotes||[]).find(c=>c.id===einvView.cn):null;
+  const doc=cn||e, isCn=!!cn, amount=doc.amount, gst=isCn?doc.gst:e.gst, taxable=amount-gst;
+  const cnList=(!isCn&&(e.creditNotes||[]).length)?`<div style="margin-top:14px"><div style="font-size:12px;font-weight:600;margin-bottom:6px">Credit notes</div><table class="reclist"><tbody>${e.creditNotes.map(c=>`<tr><td class="code">${c.id}</td><td>${escHtml(c.reason)}</td><td class="code">${money(c.amount)}</td><td>${einvPill(c.status)}</td></tr>`).join("")}</tbody></table></div>`:"";
+  return `<div class="drawer-layer" id="einvViewCard"><button class="drawer-backdrop" data-einv-close="1" aria-label="Close"></button>
+    <aside class="drawer-panel" style="flex-basis:min(920px,94vw)" role="dialog" aria-modal="true" aria-label="${isCn?"Credit note":"Invoice"}">
+      <div class="card-head"><span class="card-title">${isCn?"Credit note "+cn.id:"Tax invoice "+e.id}</span><button class="drawer-close" data-einv-close="1" aria-label="Close">&times;</button></div>
+      <div class="form-body" style="display:block">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">${einvPill(doc.status)}<span class="muted" style="font-size:12px">${doc.status==="Generated"?"Generated on "+escHtml(doc.generatedOn||"—"):doc.status==="Approved"?"Approved on "+escHtml(doc.approvedOn||"—")+" · generate it from the booking page":"Awaiting approval"}</span></div>
+        ${einvDocHtml(e,cn)}
+        ${cnList}
+      </div>
+      <div class="form-foot" style="display:flex;gap:8px;justify-content:flex-end;padding:14px 20px;border-top:1px solid var(--rule)">
+        ${doc.status==="Pending approval"?`<button class="btn btn-primary" data-einv-approve="${escAttr(isCn?"cn:"+e.id+":"+cn.id:"inv:"+e.id)}">Approve</button>`:""}
+        <button class="btn" data-einv-close="1">Close</button></div>
+    </aside></div>`;
+}
+function einvHandleClick(e){
+  const t=e.target.closest&&e.target.closest("[data-einv-send],[data-einv-view],[data-einv-approve],[data-einv-close],[data-einv-toggle]");
+  if(!t) return false;
+  einvEnsure();
+  if(t.dataset.einvToggle!=null){ const k=t.dataset.einvToggle; if(einvOpen.has(k)) einvOpen.delete(k); else einvOpen.add(k); render(); return true; }
+  if(t.dataset.einvSend!=null){ const [module,ref]=t.dataset.einvSend.split("|"); einvSend(module,ref); render(); return true; }
+  if(t.dataset.einvView!=null){ const it=einvItem(t.dataset.einvView); if(it){ einvView={id:it.inv.id,cn:it.cn?it.cn.id:null}; render(); } return true; }
+  if(t.dataset.einvApprove!=null){ einvApprove(t.dataset.einvApprove); render(); return true; }
+  if(t.dataset.einvClose!=null){ einvView=null; render(); return true; }
+  return false;
+}
+function einvHandleChange(e){
+  if(e.target.matches&&e.target.matches("[data-einv-fstatus]")){ einvFStatus=e.target.value; render(); return true; }
+  if(e.target.matches&&e.target.matches("[data-einv-fmodule]")){ einvFModule=e.target.value; render(); return true; }
+  return false;
+}
+function einvHandleInput(e){
+  if(e.target.matches&&e.target.matches("[data-einv-search]")){ einvQ=e.target.value; syncEinvSearch(); return true; }
+  return false;
 }
 
 const DETAIL = { career:()=>careerDetail(), products:productDetail, programs:campDetail, events:eventDetail, camps:campDetail, discounts:discountDetail, members:memberDetail, tiers:tierDetail, shopsales:shopSaleDetail, shopitems:shopItemDetail, shopcoupons:shopCouponDetail, school:()=>schoolDetail(), sponsored:()=>spDetail(), birthday:()=>bdayDetail(), corporate:()=>corpDetail() };
@@ -11002,6 +11392,7 @@ function render(){
   syncSchoolSearch();
   syncBdaySearch();
   syncSpSearch();
+  syncEinvSearch();
   syncRatio();
   document.querySelectorAll(".fb-opt-group").forEach(fbSyncDonorGroup);   // keep F&B donor rows duplicate-free on first paint too
   $("#rail").innerHTML = railHTML();
@@ -11316,15 +11707,16 @@ document.addEventListener("click",e=>{
     if(a&&a.cv) careerOpenPdf(careerCvPdf(a), a.cv.name); return; }
   if(e.target.closest("[data-career-clear]")){ careerFDept=""; careerFType=""; careerFStatus="all"; render(); return; }
   const nav=e.target.closest(".mitem");
-  if(nav){ current=nav.dataset.k; mEdit=-1; ruleDel=null; venueAvail=null; venueCheck=null; musoAvail=null; musoCheck=null; selP=0; selW=0; selB=0; selE=0; esub="details"; eventCats=new Set(); selBooking=0; tab="list"; sub="details"; csub="details"; editD=-1; selD=0; dsub="summary"; editCond=-1; condDraft=null; draftDiscount=null; addOpen=null; progKind="event"; progCat="Event"; schoolDraft=null; schtab="records"; schoolEmailView=null; schoolMsg=""; schoolEInvView=false; schoolEInvConfirm=false; schoolSaveConfirm=false; schoolBulk=null; schoolPayFlyout=false; schoolPayEdit=-1; schoolPayDel=-1; schoolCNFlyout=false; schoolCNView=false; spDraft=null; sptab="records"; spEmailView=null; spMsg=""; spSaveConfirm=false; spBulk=null; spInvoiceEdit=null; moveScans=[]; moveMsg=""; couponProds=[]; couponProdsOpen=false; bdayDraft=null; bdsub="overview"; bdFStatus=""; bdayMsg=""; bdayPayFlyout=false; bdayPayEdit=-1; bdayPayDel=-1; bdaySaveConfirm=false; bdayCancelConfirm=false; corpDraft=null; corpsub="overview"; corpFStatus=""; corpPayFlyout=false; corpPayEdit=-1; corpPayDel=-1; corpCancelConfirm=false; render(); $(".stage").scrollTop=0; return; }
+  if(nav){ current=nav.dataset.k; mEdit=-1; ruleDel=null; venueAvail=null; venueCheck=null; musoAvail=null; musoCheck=null; selP=0; selW=0; selB=0; selE=0; esub="details"; eventCats=new Set(); selBooking=0; tab="list"; sub="details"; csub="details"; editD=-1; selD=0; dsub="summary"; editCond=-1; condDraft=null; draftDiscount=null; addOpen=null; progKind="event"; progCat="Event"; schoolDraft=null; schtab="records"; schoolEmailView=null; schoolMsg=""; schoolEInvView=false; schoolEInvConfirm=false; schoolSaveConfirm=false; schoolBulk=null; schoolPayFlyout=false; schoolPayEdit=-1; schoolPayDel=-1; schoolCNFlyout=false; schoolCNView=false; spDraft=null; sptab="records"; spEmailView=null; spMsg=""; spSaveConfirm=false; spBulk=null; spInvoiceEdit=null; moveScans=[]; moveMsg=""; couponProds=[]; couponProdsOpen=false; bdayDraft=null; bdsub="overview"; bdFStatus=""; bdayMsg=""; bdayFeedbackCompose=null; bdayPayFlyout=false; bdayPayEdit=-1; bdayPayDel=-1; bdaySaveConfirm=false; bdayCancelConfirm=false; corpDraft=null; corpsub="overview"; corpFStatus=""; corpPayFlyout=false; corpPayEdit=-1; corpPayDel=-1; corpCancelConfirm=false; corpEInvConfirm=false; corpEInvView=false; corpCNFlyout=false; corpCNView=false; einvQ=""; einvFStatus=""; einvFModule=""; einvView=null; einvOpen=new Set(); render(); $(".stage").scrollTop=0; return; }
   const goto=e.target.closest("[data-goto]");
   if(goto){ current=goto.dataset.goto; mEdit=-1; selP=0; selW=0; selB=0; selE=0; selD=0; selBooking=0; tab="list"; sub="details"; csub="details"; dsub="summary"; addOpen=null; render(); $(".stage").scrollTop=0; return; }
   const t=e.target.closest("[data-tab]");
-  if(t){ tab=t.dataset.tab; if(tab==="new"&&current==="bookings") resetBooking(); if(tab==="new"&&current==="shopsales") resetShopSale(); if((tab==="new"||tab==="edit")&&current==="shopcoupons"){ couponProds=(tab==="edit"&&SHOP_COUPONS[selShopCoupon]?(SHOP_COUPONS[selShopCoupon].products||[]).slice():[]); couponProdsOpen=false; } if(tab==="new"&&current==="programs"){progKind=progFormat(progCat)==="multi"?"camp":"event";eventCats=new Set();} if(tab==="new"&&current==="events") eventCats=new Set(); if(tab==="new"&&current==="discounts"){ draftDiscount=null; } if((tab==="new"||tab==="edit")&&current==="tiers") seedTierDraft(tab==="edit"); if(tab==="new"&&(current==="products"||current==="programs")) prodBuildingPool=false; if(tab==="new"&&current==="school") schoolDraft=blankSchool(schoolNewMode); if(tab==="new"&&current==="sponsored") spDraft=blankSp(spNewMode); if(tab==="new"&&current==="birthday") bdayDraft=blankBday(); if(tab==="new"&&current==="corporate") corpDraft=blankCorp(); if(tab==="list"){ schoolDraft=null; spDraft=null; bdayDraft=null; corpDraft=null; } mEdit=-1; venueAvail=null; venueCheck=null; musoAvail=null; musoCheck=null; addOpen=null; render(); $(".stage").scrollTop=0; return; }
+  if(t){ tab=t.dataset.tab; if(tab==="new"&&current==="bookings") resetBooking(); if(tab==="new"&&current==="shopsales") resetShopSale(); if((tab==="new"||tab==="edit")&&current==="shopcoupons"){ couponProds=(tab==="edit"&&SHOP_COUPONS[selShopCoupon]?(SHOP_COUPONS[selShopCoupon].products||[]).slice():[]); couponProdsOpen=false; } if(tab==="new"&&current==="programs"){progKind=progFormat(progCat)==="multi"?"camp":"event";eventCats=new Set();} if(tab==="new"&&current==="events") eventCats=new Set(); if(tab==="new"&&current==="discounts"){ draftDiscount=null; } if((tab==="new"||tab==="edit")&&current==="tiers") seedTierDraft(tab==="edit"); if(tab==="new"&&(current==="products"||current==="programs")) prodBuildingPool=false; if(tab==="new"&&current==="school") schoolDraft=blankSchool(schoolNewMode); if(tab==="new"&&current==="sponsored") spDraft=blankSp(spNewMode); if(tab==="new"&&current==="birthday") bdayDraft=blankBday(); if(tab==="new"&&current==="corporate") corpDraft=blankCorp(); if(tab==="list"){ schoolDraft=null; spDraft=null; bdayDraft=null; corpDraft=null; } einvView=null; mEdit=-1; venueAvail=null; venueCheck=null; musoAvail=null; musoCheck=null; addOpen=null; render(); $(".stage").scrollTop=0; return; }
   const medit=e.target.closest("[data-medit]");
   if(medit){ mEdit=+medit.dataset.medit; tab="edit"; render(); $(".stage").scrollTop=0; return; }
   if(e.target.closest("[data-medit-save]")){ mEdit=-1; tab="list"; render(); $(".stage").scrollTop=0; return; }
-  if(e.target.closest("#hAdd")){ tab="new"; mEdit=-1; if(current==="bookings") resetBooking(); if(current==="shopsales") resetShopSale(); if(current==="shopcoupons"){ couponProds=[]; couponProdsOpen=false; } if(current==="events") eventCats=new Set(); if(current==="discounts") draftDiscount=null; if(current==="tiers") seedTierDraft(false); if(current==="products"||current==="programs") prodBuildingPool=false; if(current==="school") schoolDraft=blankSchool(schoolNewMode); if(current==="sponsored") spDraft=blankSp(spNewMode); if(current==="birthday") bdayDraft=blankBday(); if(current==="corporate") corpDraft=blankCorp(); addOpen=null; render(); $(".stage").scrollTop=0; return; }
+  if(e.target.closest("#hAdd")){ tab="new"; mEdit=-1; if(current==="bookings") resetBooking(); if(current==="shopsales") resetShopSale(); if(current==="shopcoupons"){ couponProds=[]; couponProdsOpen=false; } if(current==="events") eventCats=new Set(); if(current==="discounts") draftDiscount=null; if(current==="tiers") seedTierDraft(false); if(current==="products"||current==="programs") prodBuildingPool=false; if(current==="school") schoolDraft=blankSchool(schoolNewMode); if(current==="sponsored") spDraft=blankSp(spNewMode); if(current==="birthday") bdayDraft=blankBday(); if(current==="corporate") corpDraft=blankCorp(); einvView=null; addOpen=null; render(); $(".stage").scrollTop=0; return; }
+  if(einvHandleClick(e)) return;
   // member form Save — Location and PIN code are each optional, but at least one must be given
   const memSave=e.target.closest("[data-member-save]");
   if(memSave){ const loc=((document.getElementById("memberLocation")||{}).value||"").trim(), pin=((document.getElementById("memberPincode")||{}).value||"").trim();
@@ -11493,8 +11885,8 @@ document.addEventListener("click",e=>{
     if(navigator.clipboard&&navigator.clipboard.writeText){ navigator.clipboard.writeText(code).then(done).catch(done); } else done();
     return; }
   const od=e.target.closest("[data-open]");
-  if(od){ const [kind,i]=od.dataset.open.split(":"); const idx=+i;
-    if(kind==="prod") selP=idx; else if(kind==="camp"){ selW=idx; selB=0; progKind="camp"; } else if(kind==="event"){ selE=idx; progKind="event"; } else if(kind==="disc"){ selD=idx; dsub="summary"; } else if(kind==="member"){ selMember=idx; msub="summary"; } else if(kind==="tier"){ selTier=idx; } else if(kind==="shopitem"){ selShopItem=idx; sitab="details"; } else if(kind==="shopsale"){ selShopSale=idx; ssub="details"; } else if(kind==="shopcoupon"){ selShopCoupon=idx; } else if(kind==="school"){ selSchool=(SCHOOL_BOOKINGS[idx]||{}).id||""; schsub="overview"; schoolEmailView=null; schoolMsg=""; schoolEInvView=false; schoolEInvConfirm=false; schoolPayFlyout=false; schoolPayEdit=-1; schoolPayDel=-1; schoolCNFlyout=false; schoolCNView=false; } else if(kind==="sponsored"){ selSp=(SPONSORED_BOOKINGS[idx]||{}).id||""; spsub="overview"; spEmailView=null; spMsg=""; spInvoiceEdit=null; } else if(kind==="birthday"){ selBday=(BIRTHDAY_BOOKINGS[idx]||{}).id||""; bdsub="overview"; bdayMsg=""; bdayPayFlyout=false; bdayPayEdit=-1; bdayPayDel=-1; bdaySaveConfirm=false; bdayCancelConfirm=false; } else if(kind==="corporate"){ selCorp=(CORPORATE_BOOKINGS[idx]||{}).id||""; corpsub="overview"; corpPayFlyout=false; corpPayEdit=-1; corpPayDel=-1; corpCancelConfirm=false; }
+  if(od){ const [kind,i]=od.dataset.open.split(":"); const idx=+i; einvView=null;
+    if(kind==="prod") selP=idx; else if(kind==="camp"){ selW=idx; selB=0; progKind="camp"; } else if(kind==="event"){ selE=idx; progKind="event"; } else if(kind==="disc"){ selD=idx; dsub="summary"; } else if(kind==="member"){ selMember=idx; msub="summary"; } else if(kind==="tier"){ selTier=idx; } else if(kind==="shopitem"){ selShopItem=idx; sitab="details"; } else if(kind==="shopsale"){ selShopSale=idx; ssub="details"; } else if(kind==="shopcoupon"){ selShopCoupon=idx; } else if(kind==="school"){ selSchool=(SCHOOL_BOOKINGS[idx]||{}).id||""; schsub="overview"; schoolEmailView=null; schoolMsg=""; schoolEInvView=false; schoolEInvConfirm=false; schoolPayFlyout=false; schoolPayEdit=-1; schoolPayDel=-1; schoolCNFlyout=false; schoolCNView=false; } else if(kind==="sponsored"){ selSp=(SPONSORED_BOOKINGS[idx]||{}).id||""; spsub="overview"; spEmailView=null; spMsg=""; spInvoiceEdit=null; } else if(kind==="birthday"){ selBday=(BIRTHDAY_BOOKINGS[idx]||{}).id||""; bdsub="overview"; bdayMsg=""; bdayPayFlyout=false; bdayPayEdit=-1; bdayPayDel=-1; bdaySaveConfirm=false; bdayCancelConfirm=false; } else if(kind==="corporate"){ selCorp=(CORPORATE_BOOKINGS[idx]||{}).id||""; corpsub="overview"; corpPayFlyout=false; corpPayEdit=-1; corpPayDel=-1; corpCancelConfirm=false; corpEInvConfirm=false; corpEInvView=false; corpCNFlyout=false; corpCNView=false; }
     tab="detail"; sub="details"; esub="details"; csub="details"; addOpen=null; render(); $(".stage").scrollTop=0; return; }
   // ---- Bulk CSV import (School & Sponsored) ----
   const bulkOpen=e.target.closest("[data-bulk-open]");
@@ -11566,7 +11958,10 @@ document.addEventListener("click",e=>{
   if(schMC){ schoolCaptureForm(); musoCheck=runMusoCheck("school",+schMC.dataset.schoolMusocheck); render(); return; }
   const spMC=e.target.closest("[data-sp-musocheck]");
   if(spMC){ spCaptureForm(); musoCheck=runMusoCheck("sponsored",+spMC.dataset.spMusocheck); render(); return; }
-  if(e.target.closest("[data-musoavail-apply]")){ if(musoAvail){ const d=document.querySelector("[data-musoavail-date]"); if(d) musoAvail.date=d.value.trim(); } render(); return; }
+  const mvDay=e.target.closest("[data-musoavail-day]");
+  if(mvDay){ if(musoAvail){ musoAvail.date=mvDay.dataset.musoavailDay; } render(); return; }
+  const mvNav=e.target.closest("[data-musoavail-nav]");
+  if(mvNav){ if(musoAvail){ musoAvail.cal+=+mvNav.dataset.musoavailNav; } render(); return; }
   if(e.target.closest("[data-musoavail-close]")){ musoAvail=null; render(); return; }
   const schAddV=e.target.closest("[data-school-add-visit]");
   if(schAddV){ schoolCaptureForm(); const d=schoolDraft; if(d){ (d.visits=d.visits||[]).push(blankVisit()); } render(); return; }
@@ -11609,17 +12004,17 @@ document.addEventListener("click",e=>{
   const schPdf=e.target.closest("[data-school-proforma-pdf]");
   if(schPdf){ const rec=schoolById(selSchool); if(rec) careerOpenPdf(schoolProformaPdf(rec), rec.id+"-proforma.pdf"); return; }
   if(e.target.closest("[data-school-proforma-upload]")){ const rec=schoolById(selSchool); if(rec){ rec.proformaUpload="proforma-"+rec.id+".pdf"; schoolLog(rec,"Admin","Custom proforma uploaded and attached to the email."); } render(); return; }
-  if(e.target.closest("[data-school-einvoice-gen]")){ const rec=schoolById(selSchool); if(rec&&rec.gstin&&rec.gstin.trim()&&!(rec.einvoice&&rec.einvoice.generated)) schoolEInvConfirm=true; render(); return; }
+  if(e.target.closest("[data-school-einvoice-gen]")){ const rec=schoolById(selSchool); if(rec&&rec.gstin&&rec.gstin.trim()&&einvFlow("School",rec).e&&einvFlow("School",rec).e.status==="Approved") schoolEInvConfirm=true; render(); return; }
   if(e.target.closest("[data-school-einvoice-cancel]")){ schoolEInvConfirm=false; render(); return; }
-  if(e.target.closest("[data-school-einvoice-confirm]")){ const rec=schoolById(selSchool); schoolEInvConfirm=false; if(rec&&rec.gstin&&rec.gstin.trim()&&!(rec.einvoice&&rec.einvoice.generated)){ rec.einvoice={generated:true,on:fmtDMY(new Date())}; schoolLogEmail(rec,"Finance","E-invoice generated against GSTIN "+rec.gstin+" and emailed to the POC.","booking"); schoolEInvView=true; } render(); return; }
+  if(e.target.closest("[data-school-einvoice-confirm]")){ const rec=schoolById(selSchool); schoolEInvConfirm=false; if(rec&&rec.gstin&&rec.gstin.trim()&&einvInvGenerate("School",rec)){ schoolLogEmail(rec,"Finance","E-invoice generated against GSTIN "+rec.gstin+" and emailed to the POC.","booking"); schoolEInvView=true; } render(); return; }
   if(e.target.closest("[data-school-einvoice-view]")){ schoolEInvView=true; render(); return; }
   if(e.target.closest("[data-school-einvoice-close]")){ schoolEInvView=false; render(); return; }
   if(e.target.closest("[data-school-einvoice-pdf]")){ const rec=schoolById(selSchool); if(rec) careerOpenPdf(schoolProformaPdf(rec,"einvoice"), rec.id+"-einvoice.pdf"); return; }
   // ---- Credit note (School) ----
-  if(e.target.closest("[data-school-cn-gen]")){ const rec=schoolById(selSchool); if(rec&&rec.einvoice&&rec.einvoice.generated&&!rec.creditNote){ schoolCNFlyout=true; } render(); return; }
+  if(e.target.closest("[data-school-cn-gen]")){ const rec=schoolById(selSchool); if(rec){ const f=einvFlow("School",rec); if(f.e&&f.e.status==="Generated"&&!f.cn) schoolCNFlyout=true; } render(); return; }
   if(e.target.closest("[data-school-cn-close]")){ schoolCNFlyout=false; render(); return; }
-  if(e.target.closest("[data-school-cn-save]")){ const rec=schoolById(selSchool); if(rec&&rec.einvoice&&rec.einvoice.generated&&!rec.creditNote){ const c=schoolCompute(rec); const reason=(document.getElementById("schoolCNReason")||{}).value||"Adjustment"; const full=((document.getElementById("schoolCNType")||{}).value||"").indexOf("Full")===0; let amount=full?c.grand:Math.max(0,+((document.getElementById("schoolCNAmt")||{}).value)||0); amount=Math.min(amount,c.grand); const remark=((document.getElementById("schoolCNRemark")||{}).value||"").trim(); if(amount>0){ rec.creditNote={number:"CRN-"+rec.id,on:fmtDMY(new Date()),reason,full,amount,remark}; schoolLog(rec,"Finance","Credit note "+rec.creditNote.number+" for "+money(amount)+(full?" (full)":" (partial)")+" issued against invoice INV-"+rec.id+" — "+reason+".");
-      if(((document.getElementById("schoolCNSettle")||{}).value||"")==="Voucher"){ const exp=((document.getElementById("schoolCNVoucherExp")||{}).value||"").trim(); const code="CN-"+genCode().slice(0,6); VOUCHERS.push({code,amount,expires:exp,status:"Active",issued:fmtDMY(new Date()),source:"Credit note "+rec.creditNote.number+" (school booking)"}); rec.creditNote.voucher={code,expires:exp}; schoolLog(rec,"Finance","Credit note settled as voucher "+code+" for "+money(amount)+", valid until "+(exp||"—")+"."); } else { rec.creditNote.refund=true; } schoolCNFlyout=false; schoolCNView=true; } } render(); return; }
+  if(e.target.closest("[data-school-cn-save]")){ const rec=schoolById(selSchool); if(rec&&einvCnRequest("School",rec)) schoolCNFlyout=false; render(); return; }
+  if(e.target.closest("[data-school-cn-generate]")){ const rec=schoolById(selSchool); if(rec&&einvCnGenerate("School",rec)) schoolCNView=true; render(); return; }
   if(e.target.closest("[data-school-cn-view]")){ schoolCNView=true; render(); return; }
   if(e.target.closest("[data-school-cn-viewclose]")){ schoolCNView=false; render(); return; }
   if(e.target.closest("[data-school-cn-pdf]")){ const rec=schoolById(selSchool); if(rec&&rec.creditNote) careerOpenPdf(schoolProformaPdf(rec,"creditnote"), rec.id+"-credit-note.pdf"); return; }
@@ -11705,11 +12100,14 @@ document.addEventListener("click",e=>{
   const bdPdf=e.target.closest("[data-bday-proforma-pdf]");
   if(bdPdf){ const rec=bdayById(selBday); if(rec) careerOpenPdf(bdayProformaPdf(rec), rec.id+"-proforma.pdf"); return; }
   if(e.target.closest("[data-bday-send-proforma]")){ const rec=bdayById(selBday); if(rec){ bdayLog(rec,"System","Proforma invoice emailed to "+(rec.email||"the contact")+"."); bdayMsg="Proforma sent to "+(rec.email||"the contact")+". (Wireframe — no email is actually sent.)"; } render(); return; }
-  if(e.target.closest("[data-bday-feedback-email]")){ const rec=bdayById(selBday); if(rec){
+  if(e.target.closest("[data-bday-feedback-email]")){ const rec=bdayById(selBday); if(rec){ bdayFeedbackCompose={to:rec.email||""}; } render(); return; }
+  if(e.target.closest("[data-bday-feedback-cancel]")){ bdayFeedbackCompose=null; render(); return; }
+  if(e.target.closest("[data-bday-feedback-send]")){ const rec=bdayById(selBday); const emEl=document.querySelector("[data-bday-feedback-addr]"); if(rec){
+      const to=(emEl?emEl.value.trim():"")||rec.email||"the contact";
       rec.feedback=rec.feedback||{}; rec.feedback.emailSent=true;
-      bdayLog(rec,"System","Feedback form emailed to "+(rec.email||"the contact")+".");
-      bdayMsg="Feedback form sent to "+(rec.email||"the contact")+". (Wireframe — no email is actually sent.)";
-    } render(); return; }
+      bdayLog(rec,"System","Feedback form emailed to the POC - "+to+' — "We\'d love your feedback — your MuSo visit"');
+      bdayMsg="Feedback form sent to "+to+". (Wireframe — no email is actually sent.)";
+    } bdayFeedbackCompose=null; render(); return; }
   if(e.target.closest("[data-bday-msg-dismiss]")){ bdayMsg=""; render(); return; }
   // ---- Corporate booking handlers ----
   const cpEditRow=e.target.closest("[data-corp-edit-row]");
@@ -11737,6 +12135,17 @@ document.addEventListener("click",e=>{
       } } render(); return; }
   if(e.target.closest("[data-corp-mou-gen]")){ const rec=corpById(selCorp); if(rec&&!(rec.mou&&rec.mou.generated)){ rec.mou={generated:true, on:fmtDMY(new Date())}; if(rec.status==="Enquiry") rec.status="MOU Sent"; corpLog(rec,"Admin","MOU generated — non-negotiable sections marked — and emailed to the client for review. Status → MOU Sent."); } render(); return; }
   if(e.target.closest("[data-corp-invoice-gen]")){ const rec=corpById(selCorp); if(rec&&rec.mouUpload&&!(rec.invoice&&rec.invoice.generated)){ const eInv=corpEInvoiceEligible(rec); rec.invoice={generated:true, kind:eInv?"e-invoice":"tax invoice", on:fmtDMY(new Date())}; rec.status="Invoice Raised"; corpLog(rec,"Finance",(eInv?"E-invoice":"Tax invoice")+" raised"+(eInv?" against GSTIN "+rec.gst:"")+". Status → Invoice Raised."); } render(); return; }
+  if(e.target.closest("[data-corp-einv-gen]")){ const rec=corpById(selCorp); if(rec&&rec.invoice&&rec.invoice.generated){ const f=einvFlow("Corporate",rec); if(f.e&&f.e.status==="Approved") corpEInvConfirm=true; } render(); return; }
+  if(e.target.closest("[data-corp-einv-cancel]")){ corpEInvConfirm=false; render(); return; }
+  if(e.target.closest("[data-corp-einv-confirm]")){ const rec=corpById(selCorp); corpEInvConfirm=false; if(rec&&einvInvGenerate("Corporate",rec)) corpEInvView=true; render(); return; }
+  if(e.target.closest("[data-corp-einv-view]")){ corpEInvView=true; render(); return; }
+  if(e.target.closest("[data-corp-einv-close]")){ corpEInvView=false; render(); return; }
+  if(e.target.closest("[data-corp-cn-gen]")){ const rec=corpById(selCorp); if(rec){ const f=einvFlow("Corporate",rec); if(f.e&&f.e.status==="Generated"&&!f.cn) corpCNFlyout=true; } render(); return; }
+  if(e.target.closest("[data-corp-cn-close]")){ corpCNFlyout=false; render(); return; }
+  if(e.target.closest("[data-corp-cn-save]")){ const rec=corpById(selCorp); if(rec&&einvCnRequest("Corporate",rec)) corpCNFlyout=false; render(); return; }
+  if(e.target.closest("[data-corp-cn-generate]")){ const rec=corpById(selCorp); if(rec&&einvCnGenerate("Corporate",rec)) corpCNView=true; render(); return; }
+  if(e.target.closest("[data-corp-cn-view]")){ corpCNView=true; render(); return; }
+  if(e.target.closest("[data-corp-cn-viewclose]")){ corpCNView=false; render(); return; }
   if(e.target.closest("[data-corp-complete]")){ const rec=corpById(selCorp); if(rec){ rec.status="Completed"; corpLog(rec,"Admin","Marked Completed."); } render(); return; }
   if(e.target.closest("[data-corp-cancelbtn]")){ corpCancelConfirm=true; render(); return; }
   if(e.target.closest("[data-corp-cancel-cancel]")){ corpCancelConfirm=false; render(); return; }
@@ -11750,11 +12159,14 @@ document.addEventListener("click",e=>{
   const spExp=e.target.closest("[data-export]");
   if(spExp && spExp.dataset.export.startsWith("sponsored")){ downloadCSV(SP_EXPORT_NAMES[spExp.dataset.export]||"sponsored.csv", spExportRows(spExp.dataset.export)); return; }
   if(e.target.closest("[data-sp-sendmail]")){ const rec=spById(selSp); if(rec){ spLogEmail(rec,"CSR","Email sent to "+(rec.email||"the POC")+" with the sponsored-visit details.","confirm"); spMsg="Email sent to "+(rec.email||"the POC")+". (Wireframe — no email is actually sent.)"; } render(); return; }
-  if(e.target.closest("[data-sp-feedback-open]")){ const rec=spById(selSp); if(rec){ const name=(rec.poc||"").trim()||"Team";
-      spFeedbackCompose={to:rec.email||"the POC",subject:"We'd love your feedback — your MuSo visit",
-        body:`Dear ${name},\n\nThank you for visiting the Museum of Solutions! It was a pleasure hosting ${rec.school||"your group"}. We'd love your feedback on the experience, food and transport.\n\nPlease take a moment to fill our feedback form:\nhttps://forms.gle/MuSoVisitFeedback\n\nWarm regards,\nMuseum of Solutions`}; } render(); return; }
+  if(e.target.closest("[data-sp-checkin-save]")){ const rec=spById(selSp); if(rec){
+      document.querySelectorAll("[data-sp-actual]").forEach(el=>{ const v=el.value.trim(), k=el.dataset.spActual; if(k==="children") rec.actualChildren=v; else if(k==="adults") rec.actualAdults=v; else if(k==="days") rec.wastageDays=v; else rec.actualComp=v; });
+      const dn=document.querySelector("[data-sp-wastage-donor]"); if(dn) rec.wastageDonor=dn.value;
+      const ok=[rec.actualChildren,rec.actualAdults,rec.actualComp,rec.wastageDays,rec.wastageDonor].every(x=>x!==undefined&&x!==null&&String(x).trim()!=="");
+      rec.checkinSaved=ok; if(!ok) spMsg="Enter Actual students, Actual adults / teachers, Actual complementary adults, Number of days and Food wastage donor before saving."; } render(); return; }
+  if(e.target.closest("[data-sp-feedback-open]")){ const rec=spById(selSp); if(rec){ spFeedbackCompose={to:rec.email||""}; } render(); return; }
   if(e.target.closest("[data-sp-feedback-cancel]")){ spFeedbackCompose=null; render(); return; }
-  if(e.target.closest("[data-sp-feedback-send]")){ const rec=spById(selSp); const subjEl=document.querySelector("[data-sp-feedback-subject]"); if(rec){ rec.feedback=rec.feedback||{}; rec.feedback.sent=true; spLogEmail(rec,"System","Feedback form emailed to the POC"+(subjEl?' — "'+subjEl.value+'"':"")+".","feedback"); spMsg="Feedback form sent to "+(rec.email||"the POC")+". (Wireframe — no email is actually sent.)"; } spFeedbackCompose=null; render(); return; }
+  if(e.target.closest("[data-sp-feedback-send]")){ const rec=spById(selSp); const emEl=document.querySelector("[data-sp-feedback-email]"); if(rec){ const to=(emEl?emEl.value.trim():"")||rec.email||"the POC"; rec.feedback=rec.feedback||{}; rec.feedback.sent=true; spLogEmail(rec,"System","Feedback form emailed to the POC - "+to+' — "We\'d love your feedback — your MuSo visit"',"feedback"); spMsg="Feedback form sent to "+to+". (Wireframe — no email is actually sent.)"; } spFeedbackCompose=null; render(); return; }
   const spAck=e.target.closest("[data-sp-ackform]");
   if(spAck){ const rec=spById(selSp); const a=spAck.dataset.spAckform; spMsg="Acknowledgement form "+(a==="download"?"downloaded":"sent to the printer")+". (Wireframe)"; if(rec) spLog(rec,"CSR","Acknowledgement form "+(a==="download"?"downloaded":"printed")+"."); render(); return; }
   if(e.target.closest("[data-sp-complete]")){ const rec=spById(selSp); if(rec){ rec.status="Ended"; rec.invoice=rec.invoice||{}; rec.invoice.raised=true; rec.invoice.on=fmtDMY(new Date()); spLogEmail(rec,"Finance","Visit completed; e-invoice raised to "+(rec.sponsor||"the donor")+". Status → Completed.","invoice"); } render(); return; }
@@ -12015,8 +12427,8 @@ document.addEventListener("click",e=>{
 });
 document.addEventListener("change",e=>{
   if(e.target.matches&&e.target.matches("[data-sp-ackconsent]")){ const rec=spById(selSp); if(rec) rec.ackConsent=e.target.checked; return; }   // post-visit contact consent
-  if(e.target.matches&&e.target.matches("[data-sp-actual]")){ const rec=spById(selSp); if(rec){ const v=e.target.value.trim(); const k=e.target.dataset.spActual; if(k==="children") rec.actualChildren=v; else if(k==="adults") rec.actualAdults=v; else if(k==="days") rec.wastageDays=v; else rec.actualComp=v; } render(); return; }   // Vendor Invoices — actual attendance gate
-  if(e.target.matches&&e.target.matches("[data-sp-wastage-donor]")){ const rec=spById(selSp); if(rec) rec.wastageDonor=e.target.value; render(); return; }   // Vendor Invoices — food wastage donor
+  if(e.target.matches&&e.target.matches("[data-sp-actual]")){ const rec=spById(selSp); if(rec){ const v=e.target.value.trim(); const k=e.target.dataset.spActual; if(k==="children") rec.actualChildren=v; else if(k==="adults") rec.actualAdults=v; else if(k==="days") rec.wastageDays=v; else rec.actualComp=v; rec.checkinSaved=false; } render(); return; }   // Vendor Invoices — actual attendance gate; editing clears "Saved ✓" until re-saved
+  if(e.target.matches&&e.target.matches("[data-sp-wastage-donor]")){ const rec=spById(selSp); if(rec){ rec.wastageDonor=e.target.value; rec.checkinSaved=false; } render(); return; }   // Vendor Invoices — food wastage donor
   if(e.target.matches&&e.target.matches("[data-fb-donor-sel]")){ fbSyncDonorGroup(e.target.closest(".fb-opt-group")); return; }   // F&B options — keep donor rows duplicate-free
   if(e.target.matches&&e.target.matches("[data-apply-member]")){ syncDiscountForm(); render(); return; }   // show / hide the plan picker
   const oRowC=e.target.closest&&e.target.closest("[data-vorow],[data-spvorow]"); if(oRowC) syncOptCheckBtn(oRowC);
@@ -12068,10 +12480,11 @@ document.addEventListener("change",e=>{
   // ---- Credit note: settle as refund or voucher (shows the expiry box, no re-render) ----
   if(e.target.closest&&e.target.closest("[data-school-cn-settle]")){ const row=document.getElementById("schoolCNVoucherRow"); if(row) row.style.display=e.target.value==="Voucher"?"":"none"; return; }
   // ---- Credit note: Full/Partial toggle (no re-render, keeps typed values) ----
-  if(e.target.closest&&e.target.closest("[data-school-cn-type]")){ const rec=schoolById(selSchool); const grand=rec?schoolCompute(rec).grand:0; const amtEl=document.getElementById("schoolCNAmt"); const full=(e.target.value||"").indexOf("Full")===0; if(amtEl){ amtEl.disabled=full; if(full) amtEl.value=grand; } const a=full?grand:(+((amtEl||{}).value)||0), t=Math.round(a/1.18), g=a-t, cg=Math.round(g/2), sg=g-cg; const bd=document.getElementById("schoolCNBreakdown"); if(bd) bd.textContent="Of which GST (18%): "+money(g)+" (CGST "+money(cg)+" + SGST "+money(sg)+") · Taxable "+money(t); return; }
+  if(e.target.closest&&e.target.closest("[data-school-cn-type]")){ const amtEl=document.getElementById("schoolCNAmt"); const grand=+(amtEl&&amtEl.max)||0; const full=(e.target.value||"").indexOf("Full")===0; if(amtEl){ amtEl.disabled=full; if(full) amtEl.value=grand; } const a=full?grand:(+((amtEl||{}).value)||0), t=Math.round(a/1.18), g=a-t, cg=Math.round(g/2), sg=g-cg; const bd=document.getElementById("schoolCNBreakdown"); if(bd) bd.textContent="Of which GST (18%): "+money(g)+" (CGST "+money(cg)+" + SGST "+money(sg)+") · Taxable "+money(t); return; }
   // ---- School bookings ----
   if(e.target.closest&&e.target.closest("[data-school-filter]")){ schoolFStatus=e.target.value; render(); return; }
   if(e.target.closest&&e.target.closest("[data-bday-filter]")){ bdFStatus=e.target.value; render(); return; }
+  if(einvHandleChange(e)) return;
   if(e.target.closest&&e.target.closest("[data-school-status]")){ const rec=schoolById(selSchool); if(rec&&!schoolStatusLocked(rec)&&rec.status!==e.target.value){ const was=rec.status; rec.status=e.target.value; schoolLogEmail(rec,"Admin","Status changed "+was+" → "+rec.status+". Email sent to the POC.","status"); } render(); return; }
   if(e.target.closest&&e.target.closest("[data-school-preset]")){ schoolCaptureForm(); const p=ENTRY_PRICES.find(x=>x.name===e.target.value); if(p&&schoolDraft){ schoolDraft.entryStudent=p.student; schoolDraft.entryAdult=p.adult; } render(); return; }
   // ---- Sponsored School ----
@@ -12144,6 +12557,7 @@ document.addEventListener("input",e=>{
   if(e.target.matches&&e.target.matches("[data-career-search]")){ careerQ=e.target.value; syncCareerSearch(); return; }
   if(e.target.matches&&e.target.matches("[data-school-search]")){ schoolQ=e.target.value; syncSchoolSearch(); return; }
   if(e.target.matches&&e.target.matches("[data-bday-search]")){ bdayQ=e.target.value; syncBdaySearch(); return; }
+  if(einvHandleInput(e)) return;
   if(e.target.matches&&e.target.matches("[data-sp-search]")){ spQ=e.target.value; syncSpSearch(); return; }
   // School-name typeahead: build the suggestions menu in place (no re-render, keeps caret)
   if(e.target.matches&&e.target.matches("[data-school-typeahead]")){
