@@ -1382,43 +1382,43 @@ const M = {
     d:"The time slots a birthday party can be booked into — weekday and weekend each run their own independently-sized list, so a busier weekend can carry more slots than a weekday without affecting it.",
     view:"bdayslots",
     schema:[["Slot name|name","string","How it reads on the booking, e.g. Morning. Names can repeat across Weekday and Weekend — they're never shown mixed together."],
-            ["Start time|start","time","When this slot actually begins."],
-            ["End time|end","time","When this slot actually ends."],
+            ["Start time|start","time"],
+            ["End time|end","time"],
             ["Day type|dayType","enum","Weekday · Weekend","Which days this slot runs on — Monday to Friday, or Saturday and Sunday. Weekday and weekend each keep their own list."],
             ["Active|is_active","bool","Turn it off to retire this slot from new bookings."]]},
   bdaypartytypes:{g:0,n:"Birthday party types",owner:"Events & Experiences",perm:"master.bdaypartytype.manage",src:"Birthday booking",q:1,
     d:"The kinds of birthday party on offer — e.g. Regular, Mini. Birthday packages, extra-pax rates and the booking form all pick the party type from this list, so adding a new one doesn't need a code change.",
     view:"bdaypartytypes",
-    schema:[["Party type|name","string","As it reads on the booking, e.g. Regular Birthday Party."],
+    schema:[["Party type|name","string"],
             ["Venues|venues[]","fk[]","→ Venues. Which venues this party type can be held at. The booking form's Venue field only offers venues allowed for the party type picked."],
             ["Active|is_active","bool","Turn it off to retire this party type from new bookings."]]},
   bdaypackages:{g:0,n:"Birthday packages",owner:"Events & Experiences",perm:"master.bdaypackage.manage",src:"Birthday booking",q:1,
     d:"The package tiers a birthday booking picks from — by party type, weekday/weekend, and package tier — each with its own included headcount, kids/adults price (venue included) and extra-pax rates.",
     view:"bdaypackages",
-    schema:[["Party type|partyType","fk","→ Birthday party types"],
+    schema:[["Package|pkg","string","The package tier as it reads on the booking, e.g. Package A — typed directly here, same name reused across its other day type/party types."],
+            ["Party type|partyType","fk","→ Birthday party types"],
             ["Day type|dayType","enum","Weekday · Weekend","Which days this rate applies to — Monday to Friday, or Saturday and Sunday. Weekday and weekend each keep their own rate."],
-            ["Package|pkg","string","The package tier as it reads on the booking, e.g. Package A — typed directly here, same name reused across its other day type/party types."],
-            ["Kids included|kids","int","Number of children included before extra-pax charges apply."],
-            ["Adults included|adults","int","Number of adults included before extra-pax charges apply."],
+            ["Kids included|kids","int"],
+            ["Adults included|adults","int"],
             ["Kids price|kidsPrice","money","Portion of the package price covering the included kids, before GST. The venue is included in the package — there's no separate venue charge."],
             ["Adults price|adultsPrice","money","Portion of the package price covering the included adults, before GST. Package total = Kids price + Adults price."],
-            ["GST %|gst","decimal","GST rate applied to this package, e.g. 18."],
+            ["GST %|gst","decimal"],
             ["Extra child rate|extraChildRate","money","Per extra child beyond the included headcount, before GST (same GST % as the package)."],
             ["Extra adult rate|extraAdultRate","money","Per extra adult beyond the included headcount, before GST (same GST % as the package)."],
             ["Active|is_active","bool","Turn it off to retire this package from new bookings."]]},
   bdayworkshops:{g:0,n:"Birthday workshop add-ons",owner:"Events & Experiences",perm:"master.bdayworkshop.manage",src:"Birthday booking",q:1,
     d:"The workshop add-ons a birthday booking can multi-select — e.g. Pottery workshop. The booking form prices the line off this list.",
     view:"bdayworkshops",
-    schema:[["Workshop|name","string","As it reads on the booking, e.g. Pottery workshop."],
-            ["Price|price","money","Price for this add-on, before GST."],
-            ["GST %|gst","decimal","GST rate applied to this add-on."],
+    schema:[["Workshop|name","string"],
+            ["Price|price","money","Before GST."],
+            ["GST %|gst","decimal"],
             ["Active|is_active","bool","Turn it off to retire this add-on from new bookings."]]},
   bdayentertainment:{g:0,n:"Birthday entertainment add-ons",owner:"Events & Experiences",perm:"master.bdayentertainment.manage",src:"Birthday booking",q:1,
     d:"The entertainment add-ons a birthday booking can multi-select — e.g. Magician. The booking form prices the line off this list.",
     view:"bdayentertainment",
-    schema:[["Entertainment|name","string","As it reads on the booking, e.g. Magician."],
-            ["Price|price","money","Price for this add-on, before GST."],
-            ["GST %|gst","decimal","GST rate applied to this add-on."],
+    schema:[["Entertainment|name","string"],
+            ["Price|price","money","Before GST."],
+            ["GST %|gst","decimal"],
             ["Active|is_active","bool","Turn it off to retire this add-on from new bookings."]]},
   school:{g:8,n:"School",owner:"Visitor Experience",perm:"school.manage",src:"Scope §8",q:0,
     d:"School-visit enquiries and bookings in one place. A record starts as an enquiry and moves through its status to a confirmed, paid, completed visit — with its headcounts, food, schedule, proforma invoice, payments and email trail all on the booking.",
@@ -1887,6 +1887,42 @@ const BIRTHDAY_BOOKINGS = [
               {on:"05 Aug 2026", who:"Sneha Iyer", what:"Checked in — 11 kids, 6 adults on the day."},
               {on:"05 Aug 2026", who:"Shivam (Finance)", what:"Balance + extra-pax collected — ₹4,760 via Cash."},
               {on:"05 Aug 2026", who:"Admin", what:"Marked Completed."}] },
+
+  /* A finished party with everything filled in — per-head F&B, a discount, extra
+     pax and extra F&B counted at check-in, and the feedback form the client
+     filled in and sent back. It's the record to open to see the Post visit tab
+     with real content in it. */
+  { id:"BDAY-006", status:"Completed", created:"20 Sep 2026",
+    contactName:"Nandini Sharma", contactFirst:"Nandini", contactLast:"Sharma",
+    relation:"Mother", email:"nandini.sharma@gmail.com", phone:"+91 98201 33447",
+    childName:"Kabir Sharma",
+    prefDate:"11 Oct 2026", partyDate:"11 Oct 2026", ageGroup:"6-9 years", kidsCount:22, adultsCount:18,
+    partyType:"Regular Birthday Party", slotWindow:"Afternoon", venue:"Art Gallery", pkg:"Package B",
+    compKids:2, compAdults:0, extraKids:"", extraAdults:"",
+    workshops:["Pottery workshop"], entertainment:["Magician"], customAddons:[],
+    fnbRate:450, fnbPax:40, fnbCharge:"", fnbGst:5, discount:3000,
+    guestList:[],
+    payments:[{on:"22 Sep 2026", mode:"UPI", amount:25000, ref:"UPI-SHA-8841"},
+              {on:"11 Oct 2026", mode:"Card", amount:36971, ref:"POS-SHA-2290"}],
+    actualKids:26, actualAdults:20, actualCompKids:2, actualCompAdults:0,
+    postFnbKids:4, postFnbAdults:2,
+    feedback:{sent:true, emailSent:true, hostName:"Nandini Sharma", date:"11 Oct 2026",
+      overall:"Excellent", floors:["Floor 7","Floor 9"], exhibitName:"Sound Garden",
+      foodRating:"Good", foodComment:"Kids loved the pizza; a couple of adults asked for a lighter option.",
+      staffExp:"Yes", staffComment:"The floor team were wonderful with the younger children.",
+      coordination:"Yes", coordinationComment:"Sneha kept us updated through the whole week before.",
+      suggestions:"A shaded waiting area near the entrance for parents dropping off.",
+      additionalComments:"Kabir is still talking about the magician. Thank you!",
+      recommend:"Yes"},
+    assignee:"Sneha Iyer", comments:"Weekend Package B. 4 extra kids and 2 extra adults on the day, plus 6 extra F&B covers — all charged and collected before they left.",
+    timeline:[{on:"20 Sep 2026", who:"Admin", what:"Backend booking created; slot blocked."},
+              {on:"22 Sep 2026", who:"Shivam (Finance)", what:"Advance payment recorded — ₹25,000 via UPI. Status → Confirmed."},
+              {on:"09 Oct 2026", who:"System", what:"Function Process (FP) sent to all MuSo staff."},
+              {on:"11 Oct 2026", who:"Sneha Iyer", what:"Checked in — 26 kids, 20 adults on the day; 6 extra F&B covers."},
+              {on:"11 Oct 2026", who:"Shivam (Finance)", what:"Balance, extra pax and extra F&B collected — ₹36,971 via Card."},
+              {on:"11 Oct 2026", who:"Admin", what:"Marked Completed."},
+              {on:"12 Oct 2026", who:"System", what:"Feedback form emailed to nandini.sharma@gmail.com."},
+              {on:"14 Oct 2026", who:"Client", what:"Feedback form submitted — Excellent overall, would recommend: Yes."}] },
 
   { id:"BDAY-005", status:"Cancelled", created:"10 Sep 2026",
     contactName:"Kapoor family", relation:"Mother", email:"neha.kapoor@gmail.com", phone:"+91 98330 77889",
@@ -2391,6 +2427,9 @@ function venueDayBookings(venue,date,src,skip){
   }));
   return list.sort((a,b)=>(timeToMin(a.start)||0)-(timeToMin(b.start)||0));
 }
+/* Venue clashes listed inside a save-confirmation box — shared by the school
+   and birthday forms, which both block saving until they're resolved. */
+const clashBlock = cs => cs.length?`<div style="margin-top:12px;padding:8px 11px;border-radius:6px;font-size:12px;background:#fdeceb;border:1px solid #f2b8b5;color:#9b2c2c"><b>Venue ${cs.length>1?"issues":"issue"} detected</b><ul style="margin:6px 0 4px;padding-left:18px">${cs.map(c=>`<li>${escHtml(c)}</li>`).join("")}</ul><b>Change the venue, date or time to continue — the booking can't be created until these are fixed.</b></div>`:"";
 /* Inline verdict banner for the "Check availability" button. */
 function optCheckBanner(chk){
   if(!chk) return "";
@@ -4714,8 +4753,23 @@ const nq = v => v==="?" ? "&mdash;" : v;
 const rq = v => v==="?" ? "&mdash;" : v;
 const stripTags = s => String(s==null?"":s).replace(/<[^>]+>/g," ").replace(/\s{2,}/g," ").trim();
 const escAttr = s => String(s==null?"":s).replace(/&/g,"&amp;").replace(/"/g,"&quot;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+/* Which fields each birthday master genuinely needs before a record is usable. */
+const BDAY_MASTER_REQUIRED = {
+  bdaypartytypes:["name"],
+  bdayslots:["name","start","end","dayType"],
+  bdaypackages:["pkg","partyType","dayType","kids","adults","kidsPrice","adultsPrice","gst","extraChildRate","extraAdultRate"],
+  bdayworkshops:["name","price","gst"],
+  bdayentertainment:["name","price","gst"],
+  corpeventtypes:["name"]
+};
 function tipRich(desc,impact){
-  const d=stripTags(desc), i=stripTags(impact);
+  // An fk note starts with "→ Target" purely so the picker knows what to list.
+  // On its own that's not help text, so it doesn't earn an info icon — only
+  // whatever the note actually explains after it does.
+  let dsrc=String(desc==null?"":desc);
+  const arrow=dsrc.match(/^\s*→\s*[^.]+\.?\s*/);
+  if(arrow) dsrc=dsrc.slice(arrow[0].length);
+  const d=stripTags(dsrc), i=stripTags(impact);
   if(!d&&!i) return "";
   return `<span class="tip" tabindex="0" data-tip="${escAttr(d)}"${i?` data-impact="${escAttr(i)}"`:""}>i</span>`;
 }
@@ -6028,11 +6082,11 @@ const VIEWS = {
     <div class="card"><div class="card-head"><span class="card-title">Birthday packages</span>
       <span class="card-note">${BDAY_PACKAGES.length} on file</span></div>
       <div class="matrix-wrap"><table><thead><tr>
-        <th>Party type</th><th>Day type</th><th>Package</th><th class="ctr">Kids</th><th class="ctr">Adults</th><th class="ctr">Kids price</th><th class="ctr">Adults price</th><th class="ctr">GST %</th><th class="ctr">Extra child</th><th class="ctr">Extra adult</th><th>Status</th><th>Actions</th></tr></thead>
+        <th>Package</th><th>Party type</th><th>Day type</th><th class="ctr">Kids</th><th class="ctr">Adults</th><th class="ctr">Kids price</th><th class="ctr">Adults price</th><th class="ctr">GST %</th><th class="ctr">Extra child</th><th class="ctr">Extra adult</th><th>Status</th><th>Actions</th></tr></thead>
       <tbody>${BDAY_PACKAGES.map((p,i)=>`<tr>
+        <td><b style="font-weight:500">${escHtml(p.pkg)}</b></td>
         <td>${escHtml(p.partyType)}</td>
         <td>${escHtml(p.dayType)}</td>
-        <td><b style="font-weight:500">${escHtml(p.pkg)}</b></td>
         <td class="code" style="text-align:center">${p.kids}</td>
         <td class="code" style="text-align:center">${p.adults}</td>
         <td class="code" style="text-align:center">${money(p.kidsPrice)}</td>
@@ -6654,7 +6708,7 @@ function createForm(schema,label,footNote,values={},editing=false){
     headings=secs.map(s=>s[0]); groups=secs.map(s=>byName(s[1]));
   } else if(current==="bdaypackages"){   // Birthday package — Kids price & Adults price sit together with the headcounts in Schedule & booking, not split apart by the default 3-field chunking
     const byName=names=>names.map(n=>schema.find(f=>(f[0].split("|")[1]||f[0])===n)).filter(Boolean);
-    const secs=[["Basic information",["partyType","dayType","pkg"]],
+    const secs=[["Basic information",["pkg","partyType","dayType"]],
                 ["Schedule & booking",["kids","adults","kidsPrice","adultsPrice"]],
                 ["Extra-pax & tax",["extraChildRate","extraAdultRate","gst"]],
                 ["Status",["is_active"]]];
@@ -7252,7 +7306,14 @@ function field(f,values={}){
     if(name==="code") return "";   // generated, and shown on the role itself — never a form field
     return careerField(f,values,label,name,type,CAREER_REQ.includes(name));
   }
-  const req=(/^code$|^name$|^label$|^title$|^date$|^trigger$|^channel$|^price$|^percentage$|^min_age$|^start_time$|_id$/.test(name)||name==="valid_from / valid_to"||name==="start_time / end_time")&&type!=="bool"&&!/override/.test(name)?"Required":"Optional";
+  // The name-pattern below is a rough default across every master; the birthday
+  // masters say outright which of their fields a record can't do without — a
+  // package with no price, headcount or day type doesn't price anything, so
+  // "Optional" on those was simply wrong.
+  const reqList=BDAY_MASTER_REQUIRED[current];
+  const req = reqList
+    ? (reqList.includes(name)&&type!=="bool"?"Required":"Optional")
+    : ((/^code$|^name$|^label$|^title$|^date$|^trigger$|^channel$|^price$|^percentage$|^min_age$|^start_time$|_id$/.test(name)||name==="valid_from / valid_to"||name==="start_time / end_time")&&type!=="bool"&&!/override/.test(name)?"Required":"Optional");
   /* A value the panel writes itself. On a new record there is nothing to show yet and
      nothing to fill in, so the field stays off the form and only appears on the record. */
   if(type==="auto") return !val ? "" : `<div class="fld" data-df="${escAttr(name)}">
@@ -8222,7 +8283,6 @@ function schoolForm(editing){
   const title = editing ? "Edit school booking" : "New school booking";
   const saveLbl = editing ? "Save changes" : "Create booking";
   const schClashes = schoolSaveConfirm ? bookingClashes("school") : [];
-  const clashBlock = cs => cs.length?`<div style="margin-top:12px;padding:8px 11px;border-radius:6px;font-size:12px;background:#fdeceb;border:1px solid #f2b8b5;color:#9b2c2c"><b>Venue ${cs.length>1?"issues":"issue"} detected</b><ul style="margin:6px 0 4px;padding-left:18px">${cs.map(c=>`<li>${escHtml(c)}</li>`).join("")}</ul><b>Change the venue, date or time to continue — the booking can't be created until these are fixed.</b></div>`:"";
   const saveConfirm = schoolSaveConfirm?`<div class="confirm-layer"><button class="confirm-backdrop" data-school-save-cancel="1" aria-label="Cancel"></button>
     <div class="confirm-box" role="dialog" aria-modal="true"><div class="confirm-title">${editing?"Save changes?":"Create booking?"}</div>
     <div class="confirm-body">${editing?"Apply your edits to this booking and refresh its proforma invoice.":"This creates the school booking — its visits, headcounts, food and venue blocks — and generates the proforma invoice. It opens as a new booking and moves to confirmed once a payment is received."}
@@ -9168,9 +9228,7 @@ function syncSpSearch(){
 
 let selBday = "", bdFStatus = "", bdayQ = "",
     bdayDraft = null, bdayNewMode = "booking", bdayMsg = "",
-    bdayPayFlyout = false, bdayPayEdit = -1, bdayPayDel = -1,
-    bdayGuestFlyout = false, bdayGuestEdit = -1, bdayGuestDel = -1,
-    bdayFeedbackFlyout = false,
+    bdayPayFlyout = false, bdayPayEdit = -1, bdayPayDel = -1, bdaySaveConfirm = false,
     bdayCancelConfirm = false, bdsub = "overview";
 
 let selCorp = "", corpFStatus = "", corpQ = "",
@@ -9194,10 +9252,14 @@ function blankBday(){
     partyDate:"", partyType:"Regular Birthday Party", slotWindow:"", venue:"", pkg:"",
     compKids:0, compAdults:0, extraKids:"", extraAdults:"",
     workshops:[], entertainment:[], customAddons:[],
-    fnbCharge:"", fnbGst:5,
+    // F&B is priced per head — a rate and a pax count — and always at 5% GST.
+    // fnbCharge stays as the computed/legacy lump sum so older bookings that
+    // only ever had a flat amount keep pricing exactly as they did.
+    fnbRate:"", fnbPax:"", fnbCharge:"", fnbGst:5,
     discount:0,
     guestList:[], payments:[],
     actualKids:"", actualAdults:"", actualCompKids:"", actualCompAdults:"",
+    postFnbKids:"", postFnbAdults:"",
     feedback:{sent:false, emailSent:false, hostName:"", date:"", overall:"", floors:[], exhibitName:"",
       foodRating:"", foodComment:"", staffExp:"", staffComment:"", coordination:"", coordinationComment:"",
       suggestions:"", additionalComments:"", recommend:""},
@@ -9212,6 +9274,14 @@ function blankBday(){
 function bdayDayType(dateStr){
   const d=parseDMY(dateStr); if(!d) return "Weekday";
   const dow=d.getDay(); return (dow===0||dow===6)?"Weekend":"Weekday";
+}
+/* F&B carries its own fixed rate everywhere it's priced — never an input. */
+const BDAY_FNB_GST = 5;
+/* A flat ₹ discount, capped at what it's allowed to come off (the package and
+   extra-pax lines) so a booking can't discount into negative territory. */
+function bdayDiscountAmount(rec, discountable){
+  const v=+rec.discount||0; if(!v) return 0;
+  return Math.max(0, Math.min(v, Math.round(+discountable||0)));
 }
 function bdayPackageRow(rec){ return BDAY_PACKAGES.find(p=>p.is_active!==false && p.partyType===rec.partyType && p.dayType===bdayDayType(rec.partyDate) && p.pkg===rec.pkg); }
 /* Extra-pax rates live on the package row itself (no separate master) —
@@ -9253,9 +9323,12 @@ function bdayCompute(rec){
   // adult / F&B are now deliberately called with qty 0 to force a zeroed-out
   // placeholder row onto the proforma (see below); every other caller already
   // only calls addLine for things actually picked, so this is safe.
-  const addLine=(name,qty,rate,gst)=>{ qty=+qty||0; rate=+rate||0; const amount=qty*rate; const tax=Math.round(amount*(+gst||0))/100; lines.push({name,qty,rate,gst:+gst||0,amount,tax}); };
+  // "disc" marks the lines a discount is allowed to come off — the package and
+  // the extra child/adult lines. Add-ons and F&B are never discounted, so they
+  // join the total at full price after the discount has been taken.
+  const addLine=(name,qty,rate,gst,disc)=>{ qty=+qty||0; rate=+rate||0; const amount=qty*rate; const tax=Math.round(amount*(+gst||0))/100; lines.push({name,qty,rate,gst:+gst||0,amount,tax,disc:!!disc}); };
   const pkgRow=bdayPackageRow(rec)||{kids:0,adults:0,kidsPrice:0,adultsPrice:0,gst:0};
-  if(rec.pkg) addLine(`${rec.partyType} — ${rec.pkg}`, 1, (+pkgRow.kidsPrice||0)+(+pkgRow.adultsPrice||0), pkgRow.gst);
+  if(rec.pkg) addLine(`${rec.partyType} — ${rec.pkg}`, 1, (+pkgRow.kidsPrice||0)+(+pkgRow.adultsPrice||0), pkgRow.gst, true);
   const kidsCount=+rec.kidsCount||0, adultsCount=+rec.adultsCount||0;
   const compKids=+rec.compKids||0, compAdults=+rec.compAdults||0;
   // Extra pax is measured against the package's included headcount and nothing
@@ -9278,27 +9351,39 @@ function bdayCompute(rec){
   // get their own line, even at zero (shown dashed-out on the invoice), rather
   // than disappearing just because nothing happened to be owed on that line
   // for this particular booking.
-  if(rec.pkg || extraKids) addLine("Extra child", extraKids, exRow.childRate, exRow.gst);
-  if(rec.pkg || extraAdults) addLine("Extra adult", extraAdults, exRow.adultRate, exRow.gst);
+  if(rec.pkg || extraKids) addLine("Extra child", extraKids, exRow.childRate, exRow.gst, true);
+  if(rec.pkg || extraAdults) addLine("Extra adult", extraAdults, exRow.adultRate, exRow.gst, true);
   (rec.workshops||[]).forEach(nm=>{const w=BDAY_WORKSHOPS.find(x=>x.name===nm); if(w) addLine("Workshop — "+w.name,1,w.price,w.gst);});
   (rec.entertainment||[]).forEach(nm=>{const w=BDAY_ENTERTAINMENT.find(x=>x.name===nm); if(w) addLine("Entertainment — "+w.name,1,w.price,w.gst);});
   (rec.customAddons||[]).forEach(a=>{ if(a&&a.name) addLine((a.type?a.type+" — ":"")+a.name,1,+a.price||0,+a.gst||0); });
-  // F&B is always taxed at a flat 5% — not the 18% most other lines carry —
-  // so it ignores whatever rec.fnbGst holds rather than taking it as an input.
-  if(rec.pkg || +rec.fnbCharge) addLine("Food & beverage", +rec.fnbCharge?1:0, +rec.fnbCharge||0, 5);
+  // F&B is priced per head: a rate × the number of pax eating, always at a flat
+  // 5% GST — not the 18% most other lines carry, and not whatever rec.fnbGst
+  // holds. A booking from before per-head pricing only has the old lump sum, so
+  // that still prices as a single unit at the same 5%.
+  const fnbRate=+rec.fnbRate||0, fnbPax=+rec.fnbPax||0;
+  const perHeadFnb = fnbRate>0 && fnbPax>0;
+  if(perHeadFnb) addLine("Food & beverage", fnbPax, fnbRate, BDAY_FNB_GST);
+  else if(rec.pkg || +rec.fnbCharge) addLine("Food & beverage", +rec.fnbCharge?1:0, +rec.fnbCharge||0, BDAY_FNB_GST);
   const subtotal=lines.reduce((a,l)=>a+l.amount,0);
-  const discount=+rec.discount||0;
-  // The discount comes off the taxable value first, and GST is then charged on
-  // what's left — the order the calculation is read in, and the way a discount
-  // on the face of an invoice is actually treated. Each line's tax is worked
-  // out on its own discounted share, so the per-line CGST/SGST on the proforma
-  // still add up to the GST total, whatever mix of rates is in play.
-  const netTaxable=Math.max(0, subtotal-discount);
-  const discFactor = subtotal>0 ? netTaxable/subtotal : 0;
+  /* The calculation runs in this order:
+       package + extra child + extra adult      -> discountableSub
+       less the discount                        -> discountableNet
+       plus add-ons and F&B at full price       -> netTaxable
+       plus GST, charged on those post-discount amounts at each line's own rate
+       = grand total
+     The discount only ever touches the package and extra-pax lines; the
+     discount a line carries is spread across them in proportion, so the
+     per-line CGST/SGST on the proforma still add up to the GST total. */
+  const discountableSub=lines.filter(l=>l.disc).reduce((a,l)=>a+l.amount,0);
+  const otherSub=subtotal-discountableSub;
+  const discount=bdayDiscountAmount(rec, discountableSub);
+  const discountableNet=Math.max(0, discountableSub-discount);
+  const discFactor = discountableSub>0 ? discountableNet/discountableSub : 0;
   // Whole rupees per line — a line's share of the discount is fractional, and
   // half-paise on a CGST column helps nobody. The GST total is the sum of these
   // rounded line taxes, so the invoice's columns still add up to its own foot.
-  lines.forEach(l=>{ l.net=l.amount*discFactor; l.tax=Math.round(l.net*l.gst/100); });
+  lines.forEach(l=>{ l.net = l.disc ? l.amount*discFactor : l.amount; l.tax=Math.round(l.net*l.gst/100); });
+  const netTaxable=discountableNet+otherSub;
   const gst=lines.reduce((a,l)=>a+l.tax,0);
   const grand=Math.max(0, Math.round(netTaxable+gst));
   // No upfront "advance %" target any more — the real advance is just whatever's
@@ -9314,9 +9399,19 @@ function bdayCompute(rec){
     const pe=overKids*exRow.childRate + overAdults*exRow.adultRate;
     postExtra=Math.round(pe + pe*exRow.gst/100);
   }
+  // Extra F&B served on the day — how many extra kids and adults ate, counted
+  // at check-in and charged at the same per-head F&B rate and its fixed 5%.
+  const postFnbKids=+rec.postFnbKids||0, postFnbAdults=+rec.postFnbAdults||0;
+  const postFnbPax=postFnbKids+postFnbAdults;
+  const postFnbBase=postFnbPax*fnbRate;
+  const postFnb=Math.round(postFnbBase + postFnbBase*BDAY_FNB_GST/100);
   return {lines, pkgRow, exRow, kidsCount, adultsCount, extraKids, extraAdults, suggestedExtraKids, suggestedExtraAdults, compKids, compAdults,
+    fnbRate, fnbPax, perHeadFnb,
     subtotal:Math.round(subtotal), netTaxable:Math.round(netTaxable), gst:Math.round(gst), discount, grand, paid, balance,
-    hasActuals, overKids, overAdults, postExtra, dayType:bdayDayType(rec.partyDate)};
+    discountableSub:Math.round(discountableSub), discountableNet:Math.round(discountableNet), otherSub:Math.round(otherSub),
+    hasActuals, overKids, overAdults, postExtra,
+    postFnbKids, postFnbAdults, postFnbPax, postFnbBase, postFnb,
+    dayType:bdayDayType(rec.partyDate)};
 }
 function bdayLog(rec, who, what){ (rec.timeline=rec.timeline||[]).unshift({on:fmtDMY(new Date()), who, what}); }
 
@@ -9347,56 +9442,12 @@ function bdayFeedbackCard(rec){
         <tr><td style="color:var(--ink3)">6. Suggestions for improvement</td><td>${fb.suggestions?escHtml(fb.suggestions):'<span class="muted">—</span>'}</td></tr>
         <tr><td style="color:var(--ink3)">7. Additional comments</td><td>${fb.additionalComments?escHtml(fb.additionalComments):'<span class="muted">—</span>'}</td></tr>
         <tr><td style="color:var(--ink3)">8. Would you recommend us?</td><td>${fb.recommend?escHtml(fb.recommend):'<span class="muted">—</span>'}</td></tr>
-      </tbody></table></div>
-      <div class="card-body" style="padding-top:0"><button class="btn" data-bday-feedback-open="1">Edit feedback</button></div>`
-    : `<div class="card-body muted">No feedback captured yet.</div>
-      <div class="card-body" style="padding-top:0"><button class="btn btn-primary" data-bday-feedback-open="1">Fill feedback form</button></div>`;
-  return `<div class="card"><div class="card-head"><span class="card-title">Feedback form</span></div>${emailRow}${body}</div>`;
+      </tbody></table></div>`
+    : `<div class="card-body muted">The client hasn't submitted the feedback form yet.</div>`;
+  // Read-only: the form is filled in by the client off the emailed link, so
+  // this card shows what came back rather than offering to fill it in here.
+  return `<div class="card"><div class="card-head"><span class="card-title">Feedback form</span><span class="card-note">${fb.sent?"submitted by the client":"as submitted by the client"}</span></div>${emailRow}${body}</div>`;
 }
-function bdayFeedbackFlyoutHtml(rec){
-  if(!bdayFeedbackFlyout) return "";
-  const fb=rec.feedback||{};
-  // Each question here has a small, fixed, mutually-exclusive answer set
-  // (4 ratings or Yes/No), so — per the "where is a dropdown actually needed"
-  // review — these are radio buttons, not <select>s: every option is visible
-  // at a glance and picking one is a single tap, not two. A dropdown only
-  // earns its keep when the option list is long; nothing here is. The one
-  // question that allows more than one answer (exhibits liked) uses
-  // checkboxes instead, for the same reason — it's a multi-select, not a
-  // single choice.
-  const radioRow=(name,opts,val)=>`<div style="display:flex;gap:16px;flex-wrap:wrap;padding:2px 0 4px">${opts.map(o=>`<label style="display:flex;align-items:center;gap:6px;font-size:12.5px;cursor:pointer"><input type="radio" name="${name}" value="${escAttr(o)}"${val===o?" checked":""}> ${o}</label>`).join("")}</div>`;
-  const floors=["Floor 7","Floor 8","Floor 9"];
-  const checkRow=`<div style="display:flex;gap:16px;flex-wrap:wrap;padding:2px 0 4px">${floors.map(f=>`<label style="display:flex;align-items:center;gap:6px;font-size:12.5px;cursor:pointer"><input type="checkbox" name="bdayFbFloor" value="${escAttr(f)}"${(fb.floors||[]).includes(f)?" checked":""}> ${f}</label>`).join("")}</div>`;
-  const hostVal = fb.hostName!=null && fb.hostName!=="" ? fb.hostName : (rec.contactName||"");
-  const dateVal = fb.date!=null && fb.date!=="" ? fb.date : (rec.partyDate||"");
-  return `<div class="drawer-layer" id="bdayFeedbackCard">
-    <button class="drawer-backdrop" data-bday-feedback-close="1" aria-label="Close"></button>
-    <aside class="drawer-panel" role="dialog" aria-modal="true" aria-label="Feedback form">
-      <div class="card-head"><span class="card-title">Feedback form</span>
-        <button class="drawer-close" data-bday-feedback-close="1" aria-label="Close">&times;</button></div>
-      <div class="form-body" style="display:block">
-        <div class="fld" style="margin:0 0 14px"><div class="lab"><span class="lab-n">Host name</span></div><input class="inp" id="bdayFbHost" value="${escAttr(hostVal)}"></div>
-        <div class="fld" style="margin:0 0 14px"><div class="lab"><span class="lab-n">Date</span></div><input class="inp" id="bdayFbDate" value="${escAttr(dateVal)}"></div>
-        <div class="fld wide" style="margin:0 0 14px"><div class="lab"><span class="lab-n">1. Overall satisfaction</span></div>${radioRow("bdayFbOverall",["Excellent","Good","Average","Poor"],fb.overall)}</div>
-        <div class="fld wide" style="margin:0 0 14px"><div class="lab"><span class="lab-n">2. Most liked exhibits</span></div>${checkRow}
-          <input class="inp" id="bdayFbExhibitName" placeholder="Specify the exhibit name" style="margin-top:8px" value="${escAttr(fb.exhibitName||"")}"></div>
-        <div class="fld wide" style="margin:0 0 14px"><div class="lab"><span class="lab-n">3. Food service &amp; quality</span></div>${radioRow("bdayFbFoodRating",["Excellent","Good","Average","Poor"],fb.foodRating)}
-          <input class="inp" id="bdayFbFoodComment" placeholder="Comment (optional)" style="margin-top:8px" value="${escAttr(fb.foodComment||"")}"></div>
-        <div class="fld wide" style="margin:0 0 14px"><div class="lab"><span class="lab-n">4. Overall staff experience at MuSo</span></div>${radioRow("bdayFbStaffExp",["Yes","No"],fb.staffExp)}
-          <input class="inp" id="bdayFbStaffComment" placeholder="Comment (optional)" style="margin-top:8px" value="${escAttr(fb.staffComment||"")}"></div>
-        <div class="fld wide" style="margin:0 0 14px"><div class="lab"><span class="lab-n">5. Coordination with the Event Coordinator</span></div>${radioRow("bdayFbCoordination",["Yes","No"],fb.coordination)}
-          <input class="inp" id="bdayFbCoordinationComment" placeholder="Comment (optional)" style="margin-top:8px" value="${escAttr(fb.coordinationComment||"")}"></div>
-        <div class="fld wide" style="margin:0 0 14px"><div class="lab"><span class="lab-n">6. Suggestions for improvement</span></div><textarea class="inp" id="bdayFbSuggestions" rows="3" style="resize:vertical">${escHtml(fb.suggestions||"")}</textarea></div>
-        <div class="fld wide" style="margin:0 0 14px"><div class="lab"><span class="lab-n">7. Additional comments</span></div><textarea class="inp" id="bdayFbAdditional" rows="3" style="resize:vertical">${escHtml(fb.additionalComments||"")}</textarea></div>
-        <div class="fld wide" style="margin:0"><div class="lab"><span class="lab-n">8. Would you recommend us?</span></div>${radioRow("bdayFbRecommend",["Yes","No"],fb.recommend)}</div>
-      </div>
-      <div class="form-foot" style="display:flex;gap:8px;justify-content:flex-end;padding:14px 20px;border-top:1px solid var(--rule)">
-        <button class="btn" data-bday-feedback-close="1">Cancel</button>
-        <button class="btn btn-primary" data-bday-feedback-save="1">Save feedback</button>
-      </div>
-    </aside></div>`;
-}
-
 /* ---- Proforma invoice — row-for-row the format Events & Experiences already
    uses on paper (Sr.No / Heads / #Pax / Rate / GST% / Basic Amount / CGST /
    SGST / Grand Total per line, then Total / Advance-per-payment / Balance) —
@@ -9432,11 +9483,12 @@ function bdayProformaInvoice(rec){
       <div class="inv-buyer"><b>Buyer (Bill to)</b><div>${escHtml(rec.contactName||"—")}</div>${rec.phone?`<div>${escHtml(rec.phone)}</div>`:""}<div class="muted">B2C — no GSTIN on file.</div></div>
       <div class="inv-buyer"><b>Party details</b><div>Date: ${escHtml(rec.partyDate||"—")}${bdayTimingsLabel(rec)?` &nbsp;·&nbsp; Timings: ${bdayTimingsLabel(rec)}`:""}</div>
         <div>Venue: ${escHtml(rec.venue||"—")} &nbsp;·&nbsp; Party type: ${escHtml(rec.partyType||"—")} &nbsp;·&nbsp; Package: ${escHtml(rec.pkg||"—")}</div></div>
-      ${c.discount?`<div class="inv-note muted">A discount applies to this booking: Basic Amount below is what each line was ordered at, while its CGST/SGST and Grand Total are on the line's share after the discount — so the columns add up to the Grand Total at the foot.</div>`:""}
+      ${c.discount?`<div class="inv-note muted">A discount applies to this booking. It comes off the package and extra child/adult lines only — add-ons and F&amp;B are never discounted. Basic Amount below is what each line was ordered at, while its CGST/SGST and Grand Total are on the line's share after the discount, so the columns add up to the Grand Total at the foot.</div>`:""}
       <div class="matrix-wrap"><table class="reclist inv-table"><thead><tr><th>Sr. No.</th><th>Heads</th><th>#Pax</th><th>Rate</th><th>GST %</th><th>Basic Amount</th><th>CGST</th><th>SGST</th><th>Grand Total</th></tr></thead><tbody>${partRows||`<tr><td colspan="9" class="muted" style="text-align:center;padding:14px">No priced lines yet — pick a package.</td></tr>`}
-        <tr class="inv-tax"><td colspan="8" style="text-align:right">Taxable value</td><td class="code">${money(c.subtotal)}</td></tr>
-        ${c.discount?`<tr class="inv-tax"><td colspan="8" style="text-align:right">Discount</td><td class="code">− ${money(c.discount)}</td></tr>
-        <tr class="inv-tax"><td colspan="8" style="text-align:right">Total <span class="muted">after discount</span></td><td class="code">${money(c.netTaxable)}</td></tr>`:""}
+        ${c.discount?`<tr class="inv-tax"><td colspan="8" style="text-align:right">Package + extra pax</td><td class="code">${money(c.discountableSub)}</td></tr>
+        <tr class="inv-tax"><td colspan="8" style="text-align:right">Discount</td><td class="code">− ${money(c.discount)}</td></tr>
+        ${c.otherSub?`<tr class="inv-tax"><td colspan="8" style="text-align:right">Add-ons &amp; F&amp;B <span class="muted">not discounted</span></td><td class="code">${money(c.otherSub)}</td></tr>`:""}`:""}
+        <tr class="inv-tax"><td colspan="8" style="text-align:right">Taxable value${c.discount?` <span class="muted">after discount</span>`:""}</td><td class="code">${money(c.netTaxable)}</td></tr>
         <tr class="inv-tax"><td colspan="8" style="text-align:right">GST</td><td class="code">${money(c.gst)}</td></tr>
         <tr class="inv-total"><td colspan="8" style="text-align:right"><b>Grand Total</b></td><td class="code"><b>${money(c.grand)}</b></td></tr>
         ${advRows}
@@ -9474,9 +9526,10 @@ function bdayProformaPdf(rec){
   lines.forEach(l=>{ const cgst=Math.round(l.tax/2), sgst=l.tax-cgst, gtotal=Math.round(l.amount+l.tax);
     line(l.name,ML,8,false,INK);rt(l.qty?String(l.qty):"—",ML+210,8,false,INK);rt(pdfDash(l.rate),ML+265,8,false,INK);rt(l.gst+"%",ML+320,8,false,INK);rt(pdfDash(cgst),ML+395,8,false,INK);rt(pdfDash(sgst),ML+465,8,false,INK);rt(pdfDash(gtotal),W-MR,8,false,INK);y-=13; });
   y-=4;ops.push("q 0.878 0.898 0.918 RG 0.7 w "+ML+" "+y.toFixed(1)+" m "+(W-MR)+" "+y.toFixed(1)+" l S Q");y-=16;
-  rt("Taxable value: "+money(c.subtotal),W-MR,9,false,INK2);y-=13;
-  if(c.discount){ rt("Discount: -"+money(c.discount),W-MR,9,false,INK2);y-=13;
-    rt("Total (after discount): "+money(c.netTaxable),W-MR,9,false,INK2);y-=13; }
+  if(c.discount){ rt("Package + extra pax: "+money(c.discountableSub),W-MR,9,false,INK2);y-=13;
+    rt("Discount: -"+money(c.discount),W-MR,9,false,INK2);y-=13;
+    if(c.otherSub){ rt("Add-ons & F&B (not discounted): "+money(c.otherSub),W-MR,9,false,INK2);y-=13; } }
+  rt("Taxable value"+(c.discount?" (after discount)":"")+": "+money(c.netTaxable),W-MR,9,false,INK2);y-=13;
   rt("GST: "+money(c.gst),W-MR,9,false,INK2);y-=13;
   rt("Grand Total: "+money(c.grand),W-MR,10,true,INK);y-=14;
   (rec.payments||[]).forEach((p,i)=>{ rt("Advance "+(i+1)+(p.mode?" ("+p.mode+")":"")+": "+money(p.amount||0),W-MR,9,false,INK2); y-=13; });
@@ -9578,13 +9631,13 @@ function bdayForm(editing){
   const secContact=section("Booking contact &amp; visit details",
     fld("Contact first name",t("contactFirst",contactFirst,"e.g. Sneha"),"",true)+
     fld("Contact last name",t("contactLast",contactLast,"e.g. Iyer"),"",true)+
-    fld("Relation to birthday child",t("relation",d.relation,"e.g. Mother"),"Optional.")+
     fld("Email",t("email",d.email,"name@example.com"),"",true)+
     fld("Phone",t("phone",d.phone,"+91 98765 43210"),"",true)+
-    fld("Preferred date",t("prefDate",d.prefDate,"DD Mon YYYY"),"What the family first asked for — the firm Party date, below, is set once scheduling begins and can land on a different day.")+
-    fld("Age group",t("ageGroup",d.ageGroup,"e.g. 4-7 years"))+
-    fld("Expected kids",num("kidsCount",d.kidsCount,"e.g. 15"),"Tentative — can change nearer the date.",true)+
-    fld("Expected adults",num("adultsCount",d.adultsCount,"e.g. 12"),"Tentative — can change nearer the date.",true));
+    fld("Preferred date of party",t("prefDate",d.prefDate,"DD Mon YYYY"),"What the family first asked for — the firm Party date, below, is set once scheduling begins and can land on a different day.",true)+
+    fld("Age group",t("ageGroup",d.ageGroup,"e.g. 4-7 years"),"",true)+
+    fld("Expected kids",num("kidsCount",d.kidsCount,"e.g. 15"),"",true)+
+    fld("Expected adults",num("adultsCount",d.adultsCount,"e.g. 12"),"",true)+
+    fld("Relation to birthday child",t("relation",d.relation,"e.g. Mother")));
 
   const dayType=bdayDayType(d.partyDate);
   // The time-window choices are scoped to the party date's own day type, since a
@@ -9647,7 +9700,7 @@ function bdayForm(editing){
     // visit row uses, rather than a full-width button stacked underneath.
     fld("Party date",`<div style="display:flex;gap:8px"><input class="inp" data-bf="partyDate" value="${esc(d.partyDate)}" placeholder="DD Mon YYYY" style="flex:1"><button type="button" class="btn" data-bday-viewavail="1" style="white-space:nowrap">View availability</button></div>`,d.partyDate?`${dayType} — time windows, the package and extra-pax all price by ${dayType.toLowerCase()}. View availability shows everything already booked at MuSo that day.`:"View availability shows everything already booked at MuSo on that date.",true)
     +fld("Party type",sel("partyType",d.partyType,BDAY_PARTY_TYPES.filter(p=>p.is_active!==false).map(p=>p.name)),"Regular = 2 hrs exploration + 1 hr 6th-floor cake/F&B. Mini = 2.5 hrs exploration + 30 min 7th-floor cake/food-box.",true)
-    +fld("Venue",sel("venue",d.venue,bdayPartyTypeVenues(d.partyType),"— pick a venue —"),"The package price already covers the venue — no separate venue charge. Narrowed to the venues this party type allows — see Birthday party types.",true)
+    +fld("Venue",sel("venue",d.venue,bdayPartyTypeVenues(d.partyType),"— pick a venue —"),"Only the venues this party type allows — see Birthday party types. The package price already covers the venue.",true)
     +fld(d.partyDate?`Time window (${dayType})`:"Time window",`<div style="display:flex;gap:8px"><div style="flex:1">${slotCtl}</div><button type="button" class="btn btn-primary" data-bday-checkavail="1" style="white-space:nowrap"${bdVenueFilled?"":" disabled"}>Check availability</button></div>`,slotHint,true)
     +(bdVenueChk?`<div class="fld wide" style="margin-top:-6px">${optCheckBanner(bdVenueChk)}</div>`:"")
     +fld("Package",pkgCtl,pkgHint,true)
@@ -9670,7 +9723,14 @@ function bdayForm(editing){
     +((d.pkg&&pkgRow)?`<div class="fld wide" style="margin-top:-6px;padding:10px 12px;border-radius:8px;background:#FBFCFA;border:1px solid var(--rule2);font-size:12.5px">
         <div>Kids: <b>${live.kidsCount}</b> expected &minus; <b>${pkgRow.kids}</b> in ${escHtml(d.pkg)} = <b>${live.suggestedExtraKids}</b> extra${kidsOverridden?` <span class="muted">(overridden to ${live.extraKids})</span>`:""}</div>
         <div style="margin-top:3px">Adults: <b>${live.adultsCount}</b> expected &minus; <b>${pkgRow.adults}</b> in ${escHtml(d.pkg)} = <b>${live.suggestedExtraAdults}</b> extra${adultsOverridden?` <span class="muted">(overridden to ${live.extraAdults})</span>`:""}</div>
-        <div style="margin-top:6px;padding-top:6px;border-top:1px solid var(--rule2)">Extra pax charge: ${live.extraKids} &times; ${money(exRow?exRow.childRate:0)} + ${live.extraAdults} &times; ${money(exRow?exRow.adultRate:0)}${exRow?` + ${exRow.gst}% GST`:""} = <b>${money(extraPaxAmount)}</b></div></div>`:""));
+        <div style="margin-top:6px;padding-top:6px;border-top:1px solid var(--rule2)">Extra pax charge: ${live.extraKids} &times; ${money(exRow?exRow.childRate:0)} + ${live.extraAdults} &times; ${money(exRow?exRow.adultRate:0)}${exRow?` + ${exRow.gst}% GST`:""} = <b>${money(extraPaxAmount)}</b></div></div>`:"")
+    // Discount lives with the package it's being given against, not off in a
+    // charges section of its own. It comes off the package and extra-pax lines
+    // only — add-ons and F&B are never discounted — and GST is charged on
+    // what's left, so the hint is worth keeping here.
+    +fld("Discount",num("discount",d.discount),"Flat ₹ off the package and extra child/adult lines, before GST. Add-ons and F&amp;B aren't discounted.")
+    +(live.discount?`<div class="fld wide" style="margin-top:-6px;padding:10px 12px;border-radius:8px;background:#FBFCFA;border:1px solid var(--rule2);font-size:12.5px">
+        Package + extra pax ${money(live.discountableSub)} &minus; discount ${money(live.discount)} = <b>${money(live.discountableNet)}</b></div>`:""));
 
   // Chips stay plain names — the priced breakdown underneath is where the
   // money shows up, once something's actually picked.
@@ -9704,7 +9764,7 @@ function bdayForm(editing){
   const secAddons=section("Add-ons",
     addonRow("Workshop add-ons","workshops",BDAY_WORKSHOPS.filter(o=>o.is_active!==false))+
     addonRow("Entertainment add-ons","entertainment",BDAY_ENTERTAINMENT.filter(o=>o.is_active!==false))+
-    `<div class="fld wide" style="gap:10px"><div class="lab"><span class="lab-n">Custom add-ons</span>${tip("Free text — this changes too often to keep as a master list.")}</div>
+    `<div class="fld wide" style="gap:10px"><div class="lab"><span class="lab-n">Custom add-ons</span></div>
       <div style="display:flex;flex-direction:column;gap:10px">${(d.customAddons||[]).map(caCard).join("")}
       <button type="button" class="rep-add" data-bday-add-addon="1" style="border-radius:4px;align-self:flex-start">+ Add custom add-on</button></div></div>`
     +(addonLines.length?`<div class="fld wide" style="margin-top:-6px;padding:10px 12px;border-radius:8px;background:#FBFCFA;border:1px solid var(--rule2);font-size:12.5px">
@@ -9712,60 +9772,98 @@ function bdayForm(editing){
       <div style="display:flex;justify-content:space-between;gap:12px;margin-top:6px;padding-top:6px;border-top:1px solid var(--rule2)">
         <span>Add-ons total <span class="muted">(incl. GST)</span></span><span class="mono"><b>${money(addonsSub+addonsGst)}</b></span></div></div>`:""));
 
-  // What these two fields do to the total, with their working shown — F&B at
-  // its flat 5%, then the discount, which comes off the whole GST-inclusive
-  // booking and not just off the F&B line above it.
-  const fnbAmt=+d.fnbCharge||0, fnbGstAmt=Math.round(fnbAmt*5/100), fnbTotal=fnbAmt+fnbGstAmt;
-  const discAmt=+d.discount||0, chargesNet=fnbTotal-discAmt;
+  // F&B is a per-head rate times the number of pax eating, at a fixed 5% GST —
+  // the rate isn't an input, so it's stated rather than offered as a field.
+  const fnbRateIn=+d.fnbRate||0, fnbPaxIn=+d.fnbPax||0;
+  const fnbBase=fnbRateIn&&fnbPaxIn ? fnbRateIn*fnbPaxIn : (+d.fnbCharge||0);
+  const fnbGstAmt=Math.round(fnbBase*BDAY_FNB_GST/100), fnbTotal=fnbBase+fnbGstAmt;
   const chargeRow=(label,val)=>`<div style="display:flex;justify-content:space-between;gap:12px;margin-top:3px"><span>${label}</span><span class="mono">${val}</span></div>`;
-  const secCharges=section("Charges &amp; discount",
-    fld("F&amp;B charge",num("fnbCharge",d.fnbCharge),"Manual — extra food/beverage cost beyond the package, before GST. Always taxed at a flat 5% GST, not the 18% the rest of the booking carries.")+
-    fld("Discount",num("discount",d.discount),"Flat ₹ off the final (GST-incl.) total.")
-    +((fnbAmt||discAmt)?`<div class="fld wide" style="margin-top:-6px;padding:10px 12px;border-radius:8px;background:#FBFCFA;border:1px solid var(--rule2);font-size:12.5px">
-      ${fnbAmt?chargeRow(`Food &amp; beverage <span class="muted">${money(fnbAmt)} + 5% GST</span>`,money(fnbTotal)):""}
-      ${discAmt?chargeRow(`Discount <span class="muted">off the GST-inclusive total</span>`,`− ${money(discAmt)}`):""}
+  const secCharges=section("Food &amp; beverage",
+    fld("F&amp;B price per head",num("fnbRate",d.fnbRate,"e.g. 450"),`Per-person cost of food &amp; beverage beyond the package, before GST. F&amp;B is always taxed at a fixed ${BDAY_FNB_GST}% GST, not the 18% the rest of the booking carries.`)+
+    fld("Number of pax",num("fnbPax",d.fnbPax,"e.g. 30"))
+    +(fnbBase?`<div class="fld wide" style="margin-top:-6px;padding:10px 12px;border-radius:8px;background:#FBFCFA;border:1px solid var(--rule2);font-size:12.5px">
+      ${chargeRow(fnbRateIn&&fnbPaxIn?`${money(fnbRateIn)} per head &times; ${fnbPaxIn} pax`:`Food &amp; beverage <span class="muted">(entered as a lump sum)</span>`,money(fnbBase))}
+      ${chargeRow(`GST <span class="muted">fixed ${BDAY_FNB_GST}%</span>`,money(fnbGstAmt))}
       <div style="display:flex;justify-content:space-between;gap:12px;margin-top:6px;padding-top:6px;border-top:1px solid var(--rule2)">
-        <span>Effect on the grand total</span><span class="mono"><b>${chargesNet<0?`− ${money(Math.abs(chargesNet))}`:`+ ${money(chargesNet)}`}</b></span></div></div>`:""));
+        <span>F&amp;B total <span class="muted">(incl. GST)</span></span><span class="mono"><b>${money(fnbTotal)}</b></span></div></div>`:""));
 
   // Final calculation — every priced line on the booking (package, extra pax,
   // add-ons, F&B), then discount above GST and the grand total. Same lines and
   // same arithmetic the proforma invoice prints, shown on the form itself so
   // the number is settled before anyone saves.
-  const calcRow=(label,val,opts={})=>`<tr${opts.strong?' style="font-weight:600"':""}>
-      <td${opts.indent?' style="padding-left:18px"':""}>${label}</td>
-      <td class="code" style="text-align:right;white-space:nowrap">${val}</td></tr>`;
-  const calcLines=live.lines.map(l=>calcRow(
-    `${escHtml(l.name)}${l.qty>1?` <span class="muted">${l.qty} &times; ${money(l.rate)}</span>`:""}`,
-    `${l.amount?money(Math.round(l.amount)):"—"}${l.gst?` <span class="muted">+ ${l.gst}%</span>`:""}`)).join("");
+  // Each line carries its price, its GST and the two added up, so the total on
+  // every row can be checked without doing the percentage in your head. The
+  // per-line GST shown here is at the line's own rate, before any discount —
+  // the discount, and the GST actually charged on what's left, are the summary
+  // rows underneath.
+  const calcRow=(label,price,gstCell,total)=>`<tr>
+      <td>${label}</td>
+      <td class="code" style="text-align:right;white-space:nowrap">${price}</td>
+      <td class="code" style="text-align:right;white-space:nowrap">${gstCell}</td>
+      <td class="code" style="text-align:right;white-space:nowrap">${total}</td></tr>`;
+  const sumRow=(label,val,opts={})=>`<tr><td colspan="3"${opts.top?' style="border-top:1px solid var(--rule2)"':""}>${label}</td>
+      <td class="code" style="text-align:right;white-space:nowrap${opts.top?";border-top:1px solid var(--rule2)":""}">${val}</td></tr>`;
+  // Laid out in the order the money is actually worked out: the discountable
+  // lines first (package, extra child, extra adult), then the discount against
+  // their subtotal, then the lines a discount never touches — add-ons and F&B —
+  // and finally one GST figure, charged on everything post-discount.
+  const lineRow=l=>{
+    const amt=Math.round(l.amount), g=Math.round(l.net*(l.gst||0)/100);
+    // On a discounted line the GST — and so the total — is on the line's share
+    // of the discount, not on the price in the column beside it. Say so on the
+    // row rather than leaving ₹12,000 to silently total ₹12,417.
+    const cut = l.disc && live.discount;
+    return calcRow(
+      `${escHtml(l.name)}${l.qty>1?` <span class="muted">${l.qty} &times; ${money(l.rate)}</span>`:""}`,
+      amt?money(amt):"—",
+      amt?`${money(g)} <span class="muted">${l.gst}%${cut?" after disc.":""}</span>`:"—",
+      amt?`<b>${money(Math.round(l.net)+g)}</b>${cut?` <span class="muted">incl. &minus;${money(amt-Math.round(l.net))}</span>`:""}`:"—");
+  };
+  const discLines=live.lines.filter(l=>l.disc).map(lineRow).join("");
+  const otherLines=live.lines.filter(l=>!l.disc).map(lineRow).join("");
   const secTotal=section("Final calculation",
-    `<div class="fld wide" style="margin:0"><div class="matrix-wrap"><table class="reclist"><tbody>
-      ${calcLines||`<tr><td colspan="2" class="muted" style="text-align:center;padding:12px">Nothing priced yet — pick a package to start the calculation.</td></tr>`}
-      <tr><td style="border-top:1px solid var(--rule2)">Taxable value</td><td class="code" style="text-align:right;border-top:1px solid var(--rule2)">${money(live.subtotal)}</td></tr>
-      ${calcRow("Discount", live.discount?`− ${money(live.discount)}`:"—")}
-      ${calcRow("Total <span class=\"muted\">after discount, before GST</span>", money(live.netTaxable))}
-      ${calcRow("GST <span class=\"muted\">on the discounted total</span>", money(live.gst))}
-      ${calcRow("<b>Grand total</b> <span class=\"muted\">(incl. GST)</span>", `<b>${money(live.grand)}</b>`)}
-      ${live.paid?calcRow("Paid so far", money(live.paid))+calcRow("<b>Balance</b>", `<b>${money(live.balance)}</b>`):""}
+    `<div class="fld wide" style="margin:0"><div class="matrix-wrap"><table class="reclist">
+      <thead><tr><th>Line</th><th class="ctr" style="text-align:right">Price</th><th class="ctr" style="text-align:right">GST</th><th class="ctr" style="text-align:right">Total</th></tr></thead><tbody>
+      ${(discLines||otherLines)?"":`<tr><td colspan="4" class="muted" style="text-align:center;padding:12px">Nothing priced yet — pick a package to start the calculation.</td></tr>`}
+      ${discLines}
+      ${discLines?sumRow(`Package + extra pax`, money(live.discountableSub), {top:true})
+        +sumRow(`Discount`, live.discount?`− ${money(live.discount)}`:"—")
+        +sumRow(`<b>After discount</b>`, `<b>${money(live.discountableNet)}</b>`):""}
+      ${otherLines?`<tr><td colspan="4" class="muted" style="border-top:1px solid var(--rule2);padding-top:8px">Add-ons and F&amp;B &mdash; not discounted</td></tr>`+otherLines:""}
+      ${sumRow(`Taxable value <span class="muted">after discount</span>`, money(live.netTaxable), {top:true})}
+      ${sumRow(`GST <span class="muted">on the amounts above</span>`, money(live.gst))}
+      ${sumRow(`<b>Grand total</b> <span class="muted">(incl. GST)</span>`, `<b>${money(live.grand)}</b>`)}
+      ${live.paid?sumRow("Paid so far", money(live.paid))+sumRow("<b>Balance</b>", `<b>${money(live.balance)}</b>`):""}
     </tbody></table></div></div>`);
 
   const statusOpts = BDAY_MANUAL_STATUSES.includes(d.status) ? BDAY_MANUAL_STATUSES : BDAY_MANUAL_STATUSES.concat([d.status]);
   const statusLocked = !BDAY_MANUAL_STATUSES.includes(d.status);
   const statusCtl = statusLocked ? bdayStatusPill(d) : sel("status",d.status,statusOpts);
   const secStatus=section("Status &amp; comments",
-    fld("Assignee",t("assignee",d.assignee,"e.g. Sneha Iyer"),"Optional — the MuSo staff member handling this party.")+
+    fld("Assignee",t("assignee",d.assignee,"e.g. Sneha Iyer"))+
     fld("Status",statusCtl,statusLocked?"Confirmed and Completed are set automatically (payment received / marked completed).":"")+
     fld("Comments",ta("comments",d.comments),"","",true));
 
   const body=secContact+secVisit+secAddons+secCharges+secStatus+secTotal;
   const title=editing?"Edit birthday booking":"New birthday booking";
   const saveLbl=editing?"Save changes":"Create booking";
+  /* Saving goes through a confirmation, the same way a school booking does —
+     it's the step where the client gets told what changed, so the email is
+     offered here rather than as a separate action someone has to remember. */
+  const bdClashes = bdaySaveConfirm ? bookingClashes("birthday") : [];
+  const saveConfirm = bdaySaveConfirm?`<div class="confirm-layer"><button class="confirm-backdrop" data-bday-save-cancel="1" aria-label="Cancel"></button>
+    <div class="confirm-box" role="dialog" aria-modal="true"><div class="confirm-title">${editing?"Save changes?":"Create booking?"}</div>
+    <div class="confirm-body">${editing?"Apply your edits to this booking and refresh its proforma invoice.":"This creates the birthday booking — its date, venue, package and headcount — and generates the proforma invoice. It opens as a new booking and moves to confirmed once a payment is received."}
+      ${clashBlock(bdClashes)}
+      <label style="display:flex;gap:8px;align-items:flex-start;margin-top:12px;font-size:12.5px;cursor:pointer"><input type="checkbox" id="bdayNotify" checked style="margin-top:2px"><span>${editing?"Email the client about this update.":"Email the client — booking confirmation and proforma."}</span></label></div>
+    <div class="confirm-actions"><button class="btn" data-bday-save-cancel="1">Cancel</button><button class="btn btn-primary" data-bday-save-confirm="1"${bdClashes.length?" disabled":""}>${saveLbl}</button></div></div></div>`:"";
   return `<div><div class="card">
       <div class="card-head"><span class="card-title">${title}</span></div>
       <div class="form-body product-form">${body}</div>
       <div class="form-foot"><span class="form-err" id="bdayErr"></span>
         <button class="btn" data-bday-cancel="1">Cancel</button>
         <button class="btn btn-primary" data-bday-save="1">${saveLbl}</button></div>
-    </div></div>${venueAvailCard()}${musoAvailCard()}`;
+    </div></div>${saveConfirm}${venueAvailCard()}${musoAvailCard()}`;
 }
 function bdayCaptureForm(){
   const d=bdayDraft; if(!d) return;
@@ -9776,7 +9874,7 @@ function bdayCaptureForm(){
   // types) — drop a venue that no longer belongs to the newly-picked party
   // type rather than silently keep a choice the form wouldn't offer any more.
   if(d.venue && !bdayPartyTypeVenues(d.partyType).includes(d.venue)) d.venue="";
-  ["kidsCount","adultsCount","compKids","compAdults","fnbCharge","discount"].forEach(k=>{const v=g(k);if(v!==undefined)d[k]=v===""?"":+v||0;});
+  ["kidsCount","adultsCount","compKids","compAdults","fnbRate","fnbPax","fnbCharge","discount"].forEach(k=>{const v=g(k);if(v!==undefined)d[k]=v===""?"":+v||0;});
   // Extra kids / adults: each input carries the number it was auto-filled with
   // (data-auto). A value that still matches it is just the suggestion sitting
   // there untouched, so the field stays on auto and keeps tracking Expected /
@@ -9807,23 +9905,29 @@ function bdayCaptureForm(){
     const nm=cg("name"),ty=cg("type"),pr=cg("price"),gs=cg("gst");
     if(nm!==undefined)a.name=nm; if(ty!==undefined)a.type=ty; if(pr!==undefined)a.price=+pr||0; if(gs!==undefined)a.gst=+gs||0;});
 }
-function bdayValidate(){ const d=bdayDraft; if(!d) return ""; if(!d.contactName||!d.contactName.trim()) return "Contact first and last name are required."; const cl=bookingClashes("birthday"); if(cl.length) return cl[0]; return ""; }
-function bdayCommit(){
+function bdayValidate(){ const d=bdayDraft; if(!d) return "";
+  if(!d.contactName||!d.contactName.trim()) return "Contact first and last name are required.";
+  if(!d.prefDate||!d.prefDate.trim()) return "Preferred date of party is required.";
+  if(!d.ageGroup||!d.ageGroup.trim()) return "Age group is required.";
+  const cl=bookingClashes("birthday"); if(cl.length) return cl[0]; return ""; }
+function bdayCommit(notify){
   bdayCaptureForm(); const d=bdayDraft; if(!d) return;
   const err=bdayValidate(); if(err){ const e=document.getElementById("bdayErr"); if(e)e.textContent=err; return; }
   const existing=bdayById(d.id);
   const wasBlocked = existing && ["Confirmed","Completed"].includes(existing.status);
   if(existing){ Object.assign(existing,d); selBday=existing.id;
     bdayLog(existing,"Admin","Booking details edited.");
+    if(notify) bdayLog(existing,"System","Update emailed to "+(existing.email||"the client")+" — revised booking details and proforma.");
     if(!wasBlocked && ["Confirmed","Completed"].includes(existing.status)) bdayLog(existing,"System","Function Process (FP) sent to all MuSo staff.");
   } else {
     if(!d.timeline) d.timeline=[];
     BIRTHDAY_BOOKINGS.unshift(d);
     bdayLog(d,"Admin","Backend booking created.");
+    if(notify) bdayLog(d,"System","Booking confirmation and proforma emailed to "+(d.email||"the client")+".");
     if(["Confirmed","Completed"].includes(d.status)) bdayLog(d,"System","Function Process (FP) sent to all MuSo staff.");
     selBday=d.id;
   }
-  bdayDraft=null; tab="detail"; bdsub="overview"; render(); $(".stage").scrollTop=0;
+  bdayDraft=null; bdaySaveConfirm=false; tab="detail"; bdsub="overview"; render(); $(".stage").scrollTop=0;
 }
 
 /* ============================================================================
@@ -10113,40 +10217,6 @@ function bdayDetail(){
     <div class="confirm-actions"><button class="btn" data-bday-paydel-cancel="1">Cancel</button><button class="btn btn-danger" data-bday-paydel-confirm="1">Remove payment</button></div></div></div>`:"";
   const paymentsTab = payments + payFlyout + payDelConfirm;
 
-  /* Guest list */
-  // Columns match the paper guest-list sheet: Kids Name / Adults Attending the
-  // Event / Nanny (IF) / Contact Number of Parent / Child's Parent Name — one
-  // row per invited child, not a generic kid-or-adult headcount list.
-  const guestRows=(rec.guestList||[]).map((gu,gi)=>`<tr><td>${escHtml(gu.kidsName)}</td><td class="code">${gu.adultsAttending||"—"}</td><td>${gu.nanny?escHtml(gu.nanny):"—"}</td><td class="code">${gu.parentContact?escHtml(gu.parentContact):"—"}</td><td>${gu.parentName?escHtml(gu.parentName):"—"}</td><td><div style="display:flex;gap:6px;justify-content:flex-end"><button class="btn" data-bday-guestedit="${gi}">Edit</button><button class="btn" data-bday-guestdel="${gi}">Remove</button></div></td></tr>`).join("")||`<tr><td colspan="6" class="muted" style="text-align:center;padding:12px">No guests added yet.</td></tr>`;
-  const guestTab=`<div class="card"><div class="card-head"><span class="card-title">Guest list</span><span class="card-note">optional — used for POS wristbands · edit access: birthday team only</span></div>
-    <div class="matrix-wrap"><table class="reclist"><thead><tr><th>Kids Name</th><th>Adults Attending the Event</th><th>Nanny (IF)</th><th>Contact Number of Parent</th><th>Child's Parent Name</th><th></th></tr></thead><tbody>${guestRows}
-      <tr><td colspan="6"><div style="display:flex;gap:8px"><button class="rep-add" data-bday-guestopen="1" style="border-radius:4px">+ Add guest</button>
-        <label class="btn" style="cursor:pointer;position:relative;overflow:hidden;font-weight:400">Upload guest list (XLS)<input type="file" accept=".xls,.xlsx" data-bday-guestupload style="position:absolute;inset:0;opacity:0;cursor:pointer"></label></div></td></tr>
-    </tbody></table></div></div>`;
-  const guestEditing = bdayGuestEdit>=0 ? (rec.guestList||[])[bdayGuestEdit] : null;
-  const guestFlyout = bdayGuestFlyout?`<div class="drawer-layer" id="bdayGuestCard">
-    <button class="drawer-backdrop" data-bday-guestclose="1" aria-label="Close"></button>
-    <aside class="drawer-panel" role="dialog" aria-modal="true" aria-label="${guestEditing?"Edit guest":"Add guest"}">
-      <div class="card-head"><span class="card-title">${guestEditing?"Edit guest":"Add guest"}</span>
-        <button class="drawer-close" data-bday-guestclose="1" aria-label="Close">&times;</button></div>
-      <div class="form-body" style="display:block"><div style="display:grid;grid-template-columns:1fr 1fr;gap:14px 16px">
-        <div class="fld wide" style="margin:0;grid-column:1/-1"><div class="lab"><span class="lab-n">Kids Name</span></div><input class="inp" id="bdayGuestKidsName" autocomplete="off" value="${guestEditing?escAttr(guestEditing.kidsName):""}"></div>
-        <div class="fld" style="margin:0"><div class="lab"><span class="lab-n">Adults Attending the Event</span></div><input class="inp mono" id="bdayGuestAdults" type="number" min="0" value="${guestEditing?escAttr(guestEditing.adultsAttending):""}"></div>
-        <div class="fld" style="margin:0"><div class="lab"><span class="lab-n">Nanny (IF)</span></div><input class="inp" id="bdayGuestNanny" autocomplete="off" placeholder="Name, if bringing one" value="${guestEditing?escAttr(guestEditing.nanny):""}"></div>
-        <div class="fld" style="margin:0"><div class="lab"><span class="lab-n">Contact Number of Parent</span></div><input class="inp" id="bdayGuestParentContact" autocomplete="off" placeholder="+91 98765 43210" value="${guestEditing?escAttr(guestEditing.parentContact):""}"></div>
-        <div class="fld" style="margin:0"><div class="lab"><span class="lab-n">Child's Parent Name</span></div><input class="inp" id="bdayGuestParentName" autocomplete="off" value="${guestEditing?escAttr(guestEditing.parentName):""}"></div>
-      </div></div>
-      <div class="form-foot" style="display:flex;gap:8px;justify-content:flex-end;padding:14px 20px;border-top:1px solid var(--rule)">
-        <button class="btn" data-bday-guestclose="1">Cancel</button>
-        <button class="btn btn-primary" data-bday-addguest="1">${guestEditing?"Save changes":"Add guest"}</button>
-      </div>
-    </aside></div>`:"";
-  const guestDelG = bdayGuestDel>=0 ? (rec.guestList||[])[bdayGuestDel] : null;
-  const guestDelConfirm = guestDelG?`<div class="confirm-layer"><button class="confirm-backdrop" data-bday-guestdel-cancel="1" aria-label="Cancel"></button>
-    <div class="confirm-box" role="dialog" aria-modal="true"><div class="confirm-title">Remove this guest?</div>
-    <div class="confirm-body">Removes <b>${escHtml(guestDelG.kidsName)}</b> from the guest list.</div>
-    <div class="confirm-actions"><button class="btn" data-bday-guestdel-cancel="1">Cancel</button><button class="btn btn-danger" data-bday-guestdel-confirm="1">Remove guest</button></div></div></div>`:"";
-  const guestBody = guestTab + guestFlyout + guestDelConfirm;
 
   /* Timeline */
   const tl=(rec.timeline||[]).slice().sort((a,b)=>{const da=parseDMY(a.on),db=parseDMY(b.on);return (db?db.getTime():0)-(da?da.getTime():0);});
@@ -10162,12 +10232,15 @@ function bdayDetail(){
       <div class="fld" style="margin:0"><div class="lab"><span class="lab-n">Extra adults</span></div><input class="inp mono" type="number" min="0" id="bdayActualAdults" value="${escAttr(rec.actualAdults)}"></div>
       <div class="fld" style="margin:0"><div class="lab"><span class="lab-n">Extra complimentary kids</span></div><input class="inp mono" type="number" min="0" id="bdayActualCompKids" value="${escAttr(rec.actualCompKids)}"></div>
       <div class="fld" style="margin:0"><div class="lab"><span class="lab-n">Extra complimentary adults</span></div><input class="inp mono" type="number" min="0" id="bdayActualCompAdults" value="${escAttr(rec.actualCompAdults)}"></div>
+      <div class="fld" style="margin:0"><div class="lab"><span class="lab-n">Extra kids F&amp;B</span></div><input class="inp mono" type="number" min="0" id="bdayPostFnbKids" value="${escAttr(rec.postFnbKids)}"></div>
+      <div class="fld" style="margin:0"><div class="lab"><span class="lab-n">Extra adults F&amp;B</span></div><input class="inp mono" type="number" min="0" id="bdayPostFnbAdults" value="${escAttr(rec.postFnbAdults)}"></div>
     </div>
     ${c.hasActuals?`<div class="card-body" style="padding-top:0;font-size:12.5px">Extra-pax charge: <b>${money(c.postExtra)}</b> <span class="muted">(${c.overKids} kids · ${c.overAdults} adults beyond booked + extra)</span></div>`:""}
+    ${c.postFnbPax?`<div class="card-body" style="padding-top:0;font-size:12.5px">Extra F&amp;B charge: <b>${money(c.postFnb)}</b> <span class="muted">(${c.postFnbKids} kids · ${c.postFnbAdults} adults &times; ${money(c.fnbRate)} per head + ${BDAY_FNB_GST}% GST)</span>${c.fnbRate?"":' <span style="color:#9b2c2c">— no F&amp;B per-head price on the booking, so this prices at ₹0.</span>'}</div>`:""}
     <div class="card-body" style="padding-top:0"><button class="btn" data-bday-checkin="1">Save check-in numbers</button></div></div>
     ${bdayFeedbackCard(rec)}`
     : `<div class="card"><div class="card-body muted">Post-visit check-in opens once the booking is Confirmed.</div></div>`;
-  const postEventWithFlyouts = postEvent + bdayFeedbackFlyoutHtml(rec);
+  const postEventWithFlyouts = postEvent;
 
   /* Proforma invoice */
   const proformaTab = bdayProformaInvoice(rec);
@@ -10185,10 +10258,10 @@ function bdayDetail(){
       ${rec.status!=="Cancelled"&&rec.status!=="Completed"?`<button class="btn btn-danger" data-bday-cancelbtn="1">Cancel booking</button>`:""}
     </div></div></aside>`;
 
-  const subs=[["overview","Overview"],["payments","Payments"],["proforma","Proforma invoice"],["guests","Guest list"],["after","Post visit"],["timeline",`Timeline · ${tl.length}`]];
+  const subs=[["overview","Overview"],["payments","Payments"],["proforma","Proforma invoice"],["after","Post visit"],["timeline",`Timeline · ${tl.length}`]];
   if(!subs.some(([k])=>k===bdsub)) bdsub="overview";
   const tabs=`<div class="subs">${subs.map(([k,l])=>`<button class="sub-tab" data-bdsub="${k}" aria-selected="${bdsub===k}">${l}</button>`).join("")}</div>`;
-  const bodyByTab = bdsub==="payments"?paymentsTab : bdsub==="proforma"?proformaTab : bdsub==="guests"?guestBody : bdsub==="after"?postEventWithFlyouts : bdsub==="timeline"?timeline : overview;
+  const bodyByTab = bdsub==="payments"?paymentsTab : bdsub==="proforma"?proformaTab : bdsub==="after"?postEventWithFlyouts : bdsub==="timeline"?timeline : overview;
   const cancelConfirm = bdayCancelConfirm?`<div class="confirm-layer"><button class="confirm-backdrop" data-bday-cancel-cancel="1" aria-label="Cancel"></button>
     <div class="confirm-box" role="dialog" aria-modal="true"><div class="confirm-title">Cancel this booking?</div>
     <div class="confirm-body">This marks ${escHtml(rec.id)} as Cancelled and frees its slot. This can't be undone from here.</div>
@@ -11243,7 +11316,7 @@ document.addEventListener("click",e=>{
     if(a&&a.cv) careerOpenPdf(careerCvPdf(a), a.cv.name); return; }
   if(e.target.closest("[data-career-clear]")){ careerFDept=""; careerFType=""; careerFStatus="all"; render(); return; }
   const nav=e.target.closest(".mitem");
-  if(nav){ current=nav.dataset.k; mEdit=-1; ruleDel=null; venueAvail=null; venueCheck=null; musoAvail=null; musoCheck=null; selP=0; selW=0; selB=0; selE=0; esub="details"; eventCats=new Set(); selBooking=0; tab="list"; sub="details"; csub="details"; editD=-1; selD=0; dsub="summary"; editCond=-1; condDraft=null; draftDiscount=null; addOpen=null; progKind="event"; progCat="Event"; schoolDraft=null; schtab="records"; schoolEmailView=null; schoolMsg=""; schoolEInvView=false; schoolEInvConfirm=false; schoolSaveConfirm=false; schoolBulk=null; schoolPayFlyout=false; schoolPayEdit=-1; schoolPayDel=-1; schoolCNFlyout=false; schoolCNView=false; spDraft=null; sptab="records"; spEmailView=null; spMsg=""; spSaveConfirm=false; spBulk=null; spInvoiceEdit=null; moveScans=[]; moveMsg=""; couponProds=[]; couponProdsOpen=false; bdayDraft=null; bdsub="overview"; bdFStatus=""; bdayMsg=""; bdayPayFlyout=false; bdayPayEdit=-1; bdayPayDel=-1; bdayGuestFlyout=false; bdayGuestEdit=-1; bdayGuestDel=-1; bdayCancelConfirm=false; corpDraft=null; corpsub="overview"; corpFStatus=""; corpPayFlyout=false; corpPayEdit=-1; corpPayDel=-1; corpCancelConfirm=false; render(); $(".stage").scrollTop=0; return; }
+  if(nav){ current=nav.dataset.k; mEdit=-1; ruleDel=null; venueAvail=null; venueCheck=null; musoAvail=null; musoCheck=null; selP=0; selW=0; selB=0; selE=0; esub="details"; eventCats=new Set(); selBooking=0; tab="list"; sub="details"; csub="details"; editD=-1; selD=0; dsub="summary"; editCond=-1; condDraft=null; draftDiscount=null; addOpen=null; progKind="event"; progCat="Event"; schoolDraft=null; schtab="records"; schoolEmailView=null; schoolMsg=""; schoolEInvView=false; schoolEInvConfirm=false; schoolSaveConfirm=false; schoolBulk=null; schoolPayFlyout=false; schoolPayEdit=-1; schoolPayDel=-1; schoolCNFlyout=false; schoolCNView=false; spDraft=null; sptab="records"; spEmailView=null; spMsg=""; spSaveConfirm=false; spBulk=null; spInvoiceEdit=null; moveScans=[]; moveMsg=""; couponProds=[]; couponProdsOpen=false; bdayDraft=null; bdsub="overview"; bdFStatus=""; bdayMsg=""; bdayPayFlyout=false; bdayPayEdit=-1; bdayPayDel=-1; bdaySaveConfirm=false; bdayCancelConfirm=false; corpDraft=null; corpsub="overview"; corpFStatus=""; corpPayFlyout=false; corpPayEdit=-1; corpPayDel=-1; corpCancelConfirm=false; render(); $(".stage").scrollTop=0; return; }
   const goto=e.target.closest("[data-goto]");
   if(goto){ current=goto.dataset.goto; mEdit=-1; selP=0; selW=0; selB=0; selE=0; selD=0; selBooking=0; tab="list"; sub="details"; csub="details"; dsub="summary"; addOpen=null; render(); $(".stage").scrollTop=0; return; }
   const t=e.target.closest("[data-tab]");
@@ -11421,7 +11494,7 @@ document.addEventListener("click",e=>{
     return; }
   const od=e.target.closest("[data-open]");
   if(od){ const [kind,i]=od.dataset.open.split(":"); const idx=+i;
-    if(kind==="prod") selP=idx; else if(kind==="camp"){ selW=idx; selB=0; progKind="camp"; } else if(kind==="event"){ selE=idx; progKind="event"; } else if(kind==="disc"){ selD=idx; dsub="summary"; } else if(kind==="member"){ selMember=idx; msub="summary"; } else if(kind==="tier"){ selTier=idx; } else if(kind==="shopitem"){ selShopItem=idx; sitab="details"; } else if(kind==="shopsale"){ selShopSale=idx; ssub="details"; } else if(kind==="shopcoupon"){ selShopCoupon=idx; } else if(kind==="school"){ selSchool=(SCHOOL_BOOKINGS[idx]||{}).id||""; schsub="overview"; schoolEmailView=null; schoolMsg=""; schoolEInvView=false; schoolEInvConfirm=false; schoolPayFlyout=false; schoolPayEdit=-1; schoolPayDel=-1; schoolCNFlyout=false; schoolCNView=false; } else if(kind==="sponsored"){ selSp=(SPONSORED_BOOKINGS[idx]||{}).id||""; spsub="overview"; spEmailView=null; spMsg=""; spInvoiceEdit=null; } else if(kind==="birthday"){ selBday=(BIRTHDAY_BOOKINGS[idx]||{}).id||""; bdsub="overview"; bdayMsg=""; bdayPayFlyout=false; bdayPayEdit=-1; bdayPayDel=-1; bdayGuestFlyout=false; bdayGuestEdit=-1; bdayGuestDel=-1; bdayCancelConfirm=false; } else if(kind==="corporate"){ selCorp=(CORPORATE_BOOKINGS[idx]||{}).id||""; corpsub="overview"; corpPayFlyout=false; corpPayEdit=-1; corpPayDel=-1; corpCancelConfirm=false; }
+    if(kind==="prod") selP=idx; else if(kind==="camp"){ selW=idx; selB=0; progKind="camp"; } else if(kind==="event"){ selE=idx; progKind="event"; } else if(kind==="disc"){ selD=idx; dsub="summary"; } else if(kind==="member"){ selMember=idx; msub="summary"; } else if(kind==="tier"){ selTier=idx; } else if(kind==="shopitem"){ selShopItem=idx; sitab="details"; } else if(kind==="shopsale"){ selShopSale=idx; ssub="details"; } else if(kind==="shopcoupon"){ selShopCoupon=idx; } else if(kind==="school"){ selSchool=(SCHOOL_BOOKINGS[idx]||{}).id||""; schsub="overview"; schoolEmailView=null; schoolMsg=""; schoolEInvView=false; schoolEInvConfirm=false; schoolPayFlyout=false; schoolPayEdit=-1; schoolPayDel=-1; schoolCNFlyout=false; schoolCNView=false; } else if(kind==="sponsored"){ selSp=(SPONSORED_BOOKINGS[idx]||{}).id||""; spsub="overview"; spEmailView=null; spMsg=""; spInvoiceEdit=null; } else if(kind==="birthday"){ selBday=(BIRTHDAY_BOOKINGS[idx]||{}).id||""; bdsub="overview"; bdayMsg=""; bdayPayFlyout=false; bdayPayEdit=-1; bdayPayDel=-1; bdaySaveConfirm=false; bdayCancelConfirm=false; } else if(kind==="corporate"){ selCorp=(CORPORATE_BOOKINGS[idx]||{}).id||""; corpsub="overview"; corpPayFlyout=false; corpPayEdit=-1; corpPayDel=-1; corpCancelConfirm=false; }
     tab="detail"; sub="details"; esub="details"; csub="details"; addOpen=null; render(); $(".stage").scrollTop=0; return; }
   // ---- Bulk CSV import (School & Sponsored) ----
   const bulkOpen=e.target.closest("[data-bulk-open]");
@@ -11594,8 +11667,10 @@ document.addEventListener("click",e=>{
   const bdNew=e.target.closest("[data-bday-new]");
   if(bdNew){ bdayDraft=blankBday(); tab="new"; render(); $(".stage").scrollTop=0; return; }
   if(e.target.closest("[data-bday-edit]")){ const rec=bdayById(selBday); bdayDraft=rec?JSON.parse(JSON.stringify(rec)):blankBday(); tab="edit"; render(); $(".stage").scrollTop=0; return; }
-  if(e.target.closest("[data-bday-cancel]")){ const editing=bdayById((bdayDraft||{}).id); bdayDraft=null; tab=editing?"detail":"list"; render(); $(".stage").scrollTop=0; return; }
-  if(e.target.closest("[data-bday-save]")){ bdayCommit(); return; }
+  if(e.target.closest("[data-bday-cancel]")){ const editing=bdayById((bdayDraft||{}).id); bdayDraft=null; bdaySaveConfirm=false; tab=editing?"detail":"list"; render(); $(".stage").scrollTop=0; return; }
+  if(e.target.closest("[data-bday-save]")){ bdayCaptureForm(); const err=bdayValidate(); if(err){ render(); const el=document.getElementById("bdayErr"); if(el) el.textContent=err; return; } bdaySaveConfirm=true; render(); return; }
+  if(e.target.closest("[data-bday-save-cancel]")){ bdaySaveConfirm=false; render(); return; }
+  if(e.target.closest("[data-bday-save-confirm]")){ if(bookingClashes("birthday").length) return; const cb=document.getElementById("bdayNotify"); const notify=cb?cb.checked:true; bdaySaveConfirm=false; bdayCommit(notify); return; }
   const bdDsub=e.target.closest("[data-bdsub]");
   if(bdDsub){ bdsub=bdDsub.dataset.bdsub; render(); return; }
   if(e.target.closest("[data-bday-add-addon]")){ bdayCaptureForm(); (bdayDraft.customAddons=bdayDraft.customAddons||[]).push({name:"",type:"",price:"",gst:18}); render(); return; }
@@ -11615,26 +11690,13 @@ document.addEventListener("click",e=>{
         else { (rec.payments=rec.payments||[]).push({on:fmtDMY(new Date()),mode,amount:amt,ref:ref||("RCPT-"+String(Date.now()).slice(-6)),proof}); bdayLog(rec,"Finance","Payment recorded — "+money(amt)+" via "+mode+(ref?" (ref "+ref+")":"")+(proof?" · screenshot attached":"")+"."); }
         bdayAdvanceOnPayment(rec); bdayPayFlyout=false; bdayPayEdit=-1;
       } } render(); return; }
-  if(e.target.closest("[data-bday-guestopen]")){ bdayGuestEdit=-1; bdayGuestFlyout=true; render(); return; }
-  const bdGuestEdit=e.target.closest("[data-bday-guestedit]");
-  if(bdGuestEdit){ bdayGuestEdit=+bdGuestEdit.dataset.bdayGuestedit; bdayGuestFlyout=true; render(); return; }
-  const bdGuestDel=e.target.closest("[data-bday-guestdel]");
-  if(bdGuestDel){ bdayGuestDel=+bdGuestDel.dataset.bdayGuestdel; render(); return; }
-  if(e.target.closest("[data-bday-guestdel-cancel]")){ bdayGuestDel=-1; render(); return; }
-  if(e.target.closest("[data-bday-guestdel-confirm]")){ const rec=bdayById(selBday); const i=bdayGuestDel; if(rec&&rec.guestList&&rec.guestList[i]){ rec.guestList.splice(i,1); } bdayGuestDel=-1; render(); return; }
-  if(e.target.closest("[data-bday-guestclose]")){ bdayGuestFlyout=false; bdayGuestEdit=-1; render(); return; }
-  if(e.target.closest("[data-bday-addguest]")){ const rec=bdayById(selBday); if(rec){
-      const kidsName=((document.getElementById("bdayGuestKidsName")||{}).value||"").trim();
-      const adultsAttending=((document.getElementById("bdayGuestAdults")||{}).value||"").trim();
-      const nanny=((document.getElementById("bdayGuestNanny")||{}).value||"").trim();
-      const parentContact=((document.getElementById("bdayGuestParentContact")||{}).value||"").trim();
-      const parentName=((document.getElementById("bdayGuestParentName")||{}).value||"").trim();
-      if(kidsName){ if(bdayGuestEdit>=0 && rec.guestList && rec.guestList[bdayGuestEdit]){ Object.assign(rec.guestList[bdayGuestEdit],{kidsName,adultsAttending,nanny,parentContact,parentName}); } else { (rec.guestList=rec.guestList||[]).push({kidsName,adultsAttending,nanny,parentContact,parentName}); } bdayGuestFlyout=false; bdayGuestEdit=-1; } } render(); return; }
   if(e.target.closest("[data-bday-checkin]")){ const rec=bdayById(selBday); if(rec){ const g=id=>{const el=document.getElementById(id);return el?el.value:"";};
       rec.actualKids=g("bdayActualKids")===""?"":+g("bdayActualKids")||0;
       rec.actualAdults=g("bdayActualAdults")===""?"":+g("bdayActualAdults")||0;
       rec.actualCompKids=+g("bdayActualCompKids")||0;
       rec.actualCompAdults=+g("bdayActualCompAdults")||0;
+      rec.postFnbKids=g("bdayPostFnbKids")===""?"":+g("bdayPostFnbKids")||0;
+      rec.postFnbAdults=g("bdayPostFnbAdults")===""?"":+g("bdayPostFnbAdults")||0;
       bdayLog(rec,"Admin","Checked in — "+(rec.actualKids||0)+" kids, "+(rec.actualAdults||0)+" adults on the day."); } render(); return; }
   if(e.target.closest("[data-bday-complete]")){ const rec=bdayById(selBday); if(rec){ rec.status="Completed"; bdayLog(rec,"Admin","Marked Completed."); } render(); return; }
   if(e.target.closest("[data-bday-cancelbtn]")){ bdayCancelConfirm=true; render(); return; }
@@ -11647,28 +11709,6 @@ document.addEventListener("click",e=>{
       rec.feedback=rec.feedback||{}; rec.feedback.emailSent=true;
       bdayLog(rec,"System","Feedback form emailed to "+(rec.email||"the contact")+".");
       bdayMsg="Feedback form sent to "+(rec.email||"the contact")+". (Wireframe — no email is actually sent.)";
-    } render(); return; }
-  if(e.target.closest("[data-bday-feedback-open]")){ bdayFeedbackFlyout=true; render(); return; }
-  if(e.target.closest("[data-bday-feedback-close]")){ bdayFeedbackFlyout=false; render(); return; }
-  if(e.target.closest("[data-bday-feedback-save]")){ const rec=bdayById(selBday); if(rec){
-      const g=id=>{const el=document.getElementById(id); return el?el.value:"";};
-      const radioVal=name=>{const el=document.querySelector(`input[name="${name}"]:checked`); return el?el.value:"";};
-      const hostName=g("bdayFbHost").trim(), date=g("bdayFbDate").trim();
-      const overall=radioVal("bdayFbOverall");
-      const floors=[...document.querySelectorAll('input[name="bdayFbFloor"]:checked')].map(c=>c.value);
-      const exhibitName=g("bdayFbExhibitName").trim();
-      const foodRating=radioVal("bdayFbFoodRating"), foodComment=g("bdayFbFoodComment").trim();
-      const staffExp=radioVal("bdayFbStaffExp"), staffComment=g("bdayFbStaffComment").trim();
-      const coordination=radioVal("bdayFbCoordination"), coordinationComment=g("bdayFbCoordinationComment").trim();
-      const suggestions=g("bdayFbSuggestions").trim(), additionalComments=g("bdayFbAdditional").trim();
-      const recommend=radioVal("bdayFbRecommend");
-      const already=rec.feedback&&rec.feedback.sent;
-      const emailSent=!!(rec.feedback&&rec.feedback.emailSent);
-      rec.feedback={sent:true, emailSent, hostName, date, overall, floors, exhibitName,
-        foodRating, foodComment, staffExp, staffComment, coordination, coordinationComment,
-        suggestions, additionalComments, recommend};
-      bdayLog(rec,"Admin",(already?"Feedback form updated":"Feedback form filled in")+(overall?" — "+overall:"")+(recommend?", would recommend: "+recommend:"")+".");
-      bdayFeedbackFlyout=false;
     } render(); return; }
   if(e.target.closest("[data-bday-msg-dismiss]")){ bdayMsg=""; render(); return; }
   // ---- Corporate booking handlers ----
@@ -12014,7 +12054,6 @@ document.addEventListener("change",e=>{
   // ---- Payment screenshot chosen: update the button label without re-rendering (keeps typed amount/ref) ----
   if(e.target.closest&&e.target.closest("#schoolPayProof")){ const f=e.target.files&&e.target.files[0]; const lbl=document.getElementById("schoolPayProofName"); if(lbl) lbl.textContent=f?f.name:"Attach screenshot…"; return; }
   if(e.target.closest&&e.target.closest("#bdayPayProof")){ const f=e.target.files&&e.target.files[0]; const lbl=document.getElementById("bdayPayProofName"); if(lbl) lbl.textContent=f?f.name:"Attach screenshot…"; return; }
-  if(e.target.closest&&e.target.closest("[data-bday-guestupload]")){ const rec=bdayById(selBday); const f=e.target.files&&e.target.files[0]; if(rec&&f){ bdayLog(rec,"Admin","Guest list uploaded via XLS — "+f.name+" (wireframe, not parsed)."); } render(); return; }
   if(e.target.closest&&e.target.closest("[data-corp-mouupload]")){ const rec=corpById(selCorp); const f=e.target.files&&e.target.files[0]; if(rec&&f){ rec.mouUpload=f.name; rec.status="MOU Signed"; corpLog(rec,"Admin","Signed MOU uploaded — "+f.name+". Status → MOU Signed."); } render(); return; }
   // Birthday form: re-render on the fields that drive the package lookup and estimated
   // total, so they stay current without a separate "recompute" button. Changing the
@@ -12023,7 +12062,7 @@ document.addEventListener("change",e=>{
   // A custom add-on's name/price/GST feeds the priced Add-ons breakdown under
   // it, so re-price when the field is left, same as the add-on chips above.
   if(e.target.matches&&e.target.matches("[data-caf]")&&bdayDraft){ bdayCaptureForm(); render(); return; }
-  if(e.target.matches&&e.target.matches('[data-bf="partyType"],[data-bf="partyDate"],[data-bf="slotWindow"],[data-bf="venue"],[data-bf="pkg"],[data-bf="kidsCount"],[data-bf="adultsCount"],[data-bf="compKids"],[data-bf="compAdults"],[data-bf="extraKids"],[data-bf="extraAdults"],[data-bf="fnbCharge"],[data-bf="discount"]')){
+  if(e.target.matches&&e.target.matches('[data-bf="partyType"],[data-bf="partyDate"],[data-bf="slotWindow"],[data-bf="venue"],[data-bf="pkg"],[data-bf="kidsCount"],[data-bf="adultsCount"],[data-bf="compKids"],[data-bf="compAdults"],[data-bf="extraKids"],[data-bf="extraAdults"],[data-bf="fnbRate"],[data-bf="fnbPax"],[data-bf="fnbCharge"],[data-bf="discount"]')){
     if(e.target.matches('[data-bf="partyType"],[data-bf="partyDate"],[data-bf="slotWindow"],[data-bf="venue"]') && venueCheck && venueCheck.src==="birthday") venueCheck=null;
     bdayCaptureForm(); render(); return; }
   // ---- Credit note: settle as refund or voucher (shows the expiry box, no re-render) ----
