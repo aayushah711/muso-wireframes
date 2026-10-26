@@ -1857,7 +1857,7 @@ const BIRTHDAY_BOOKINGS = [
   { id:"BDAY-001", status:"Open", created:"02 Oct 2026",
     contactName:"Sneha Iyer", relation:"Mother", email:"sneha.iyer@gmail.com", phone:"+91 98200 55667",
     childName:"Aarav Iyer",
-    prefDate:"", partyDate:"", ageGroup:"4-7 years", kidsCount:12, adultsCount:10,
+    prefDate:"24 Oct 2026", partyDate:"", ageGroup:"4-7 years", kidsCount:12, adultsCount:10,
     partyType:"Regular Birthday Party", slotWindow:"", venue:"", pkg:"",
     compKids:0, compAdults:0, workshops:[], entertainment:[], customAddons:[],
     fnbCharge:"", fnbGst:5, discount:0,
@@ -1884,7 +1884,7 @@ const BIRTHDAY_BOOKINGS = [
     prefDate:"15 Oct 2026", partyDate:"17 Oct 2026", ageGroup:"6-9 years", kidsCount:18, adultsCount:16,
     partyType:"Regular Birthday Party", slotWindow:"Evening", venue:"Art Gallery", pkg:"Package B",
     compKids:1, compAdults:1, workshops:["Pottery workshop"], entertainment:["Magician"], customAddons:[{name:"Custom theme decor",type:"Decor",price:5000,gst:18}],
-    fnbCharge:"", fnbGst:5, discount:1000,
+    fnbCharge:"", fnbGst:5, discount:5,
     guestList:[], payments:[{on:"20 Sep 2026", mode:"UPI", amount:15000, ref:"UPI-MEH-7741"}],
     actualKids:"", actualAdults:"", actualCompKids:"", actualCompAdults:"",
     assignee:"Sneha Iyer", comments:"Advance received; balance due 48 hours before the party.",
@@ -1921,7 +1921,7 @@ const BIRTHDAY_BOOKINGS = [
     partyType:"Regular Birthday Party", slotWindow:"Afternoon", venue:"Art Gallery", pkg:"Package B",
     compKids:2, compAdults:0, extraKids:"", extraAdults:"",
     workshops:["Pottery workshop"], entertainment:["Magician"], customAddons:[],
-    fnbRate:450, fnbPax:40, fnbCharge:"", fnbGst:5, discount:3000,
+    fnbRate:450, fnbPax:40, fnbCharge:"", fnbGst:5, discount:10,
     guestList:[],
     payments:[{on:"22 Sep 2026", mode:"UPI", amount:25000, ref:"UPI-SHA-8841"},
               {on:"11 Oct 2026", mode:"Card", amount:36971, ref:"POS-SHA-2290"}],
@@ -9307,13 +9307,16 @@ function bdayDayType(dateStr){
   const d=parseDMY(dateStr); if(!d) return "Weekday";
   const dow=d.getDay(); return (dow===0||dow===6)?"Weekend":"Weekday";
 }
-/* F&B carries its own fixed rate everywhere it's priced — never an input. */
+/* F&B's GST defaults to 5% and is editable per booking; this is the default a
+   new booking starts from and the fallback for anything that never set it. */
 const BDAY_FNB_GST = 5;
-/* A flat ₹ discount, capped at what it's allowed to come off (the package and
-   extra-pax lines) so a booking can't discount into negative territory. */
+const bdayFnbGst = rec => (rec && rec.fnbGst!==""&&rec.fnbGst!=null) ? (+rec.fnbGst||0) : BDAY_FNB_GST;
+/* The discount is a percentage of the lines it's allowed to come off — the
+   package and the extra child/adult lines — capped at 100% so a booking can't
+   discount into negative territory. */
 function bdayDiscountAmount(rec, discountable){
-  const v=+rec.discount||0; if(!v) return 0;
-  return Math.max(0, Math.min(v, Math.round(+discountable||0)));
+  const pct=Math.max(0, Math.min(100, +rec.discount||0)); if(!pct) return 0;
+  return Math.round((+discountable||0)*pct/100);
 }
 function bdayPackageRow(rec){ return BDAY_PACKAGES.find(p=>p.is_active!==false && p.partyType===rec.partyType && p.dayType===bdayDayType(rec.partyDate) && p.pkg===rec.pkg); }
 /* Extra-pax rates live on the package row itself (no separate master) —
@@ -9392,10 +9395,10 @@ function bdayCompute(rec){
   // 5% GST — not the 18% most other lines carry, and not whatever rec.fnbGst
   // holds. A booking from before per-head pricing only has the old lump sum, so
   // that still prices as a single unit at the same 5%.
-  const fnbRate=+rec.fnbRate||0, fnbPax=+rec.fnbPax||0;
+  const fnbRate=+rec.fnbRate||0, fnbPax=+rec.fnbPax||0, fnbGst=bdayFnbGst(rec);
   const perHeadFnb = fnbRate>0 && fnbPax>0;
-  if(perHeadFnb) addLine("Food & beverage", fnbPax, fnbRate, BDAY_FNB_GST);
-  else if(rec.pkg || +rec.fnbCharge) addLine("Food & beverage", +rec.fnbCharge?1:0, +rec.fnbCharge||0, BDAY_FNB_GST);
+  if(perHeadFnb) addLine("Food & beverage", fnbPax, fnbRate, fnbGst);
+  else if(rec.pkg || +rec.fnbCharge) addLine("Food & beverage", +rec.fnbCharge?1:0, +rec.fnbCharge||0, fnbGst);
   const subtotal=lines.reduce((a,l)=>a+l.amount,0);
   /* The calculation runs in this order:
        package + extra child + extra adult      -> discountableSub
@@ -9436,11 +9439,12 @@ function bdayCompute(rec){
   const postFnbKids=+rec.postFnbKids||0, postFnbAdults=+rec.postFnbAdults||0;
   const postFnbPax=postFnbKids+postFnbAdults;
   const postFnbBase=postFnbPax*fnbRate;
-  const postFnb=Math.round(postFnbBase + postFnbBase*BDAY_FNB_GST/100);
+  const postFnb=Math.round(postFnbBase + postFnbBase*fnbGst/100);
   return {lines, pkgRow, exRow, kidsCount, adultsCount, extraKids, extraAdults, suggestedExtraKids, suggestedExtraAdults, compKids, compAdults,
-    fnbRate, fnbPax, perHeadFnb,
+    fnbRate, fnbPax, fnbGst, perHeadFnb,
     subtotal:Math.round(subtotal), netTaxable:Math.round(netTaxable), gst:Math.round(gst), discount, grand, paid, balance,
     discountableSub:Math.round(discountableSub), discountableNet:Math.round(discountableNet), otherSub:Math.round(otherSub),
+    discountPct:Math.max(0, Math.min(100, +rec.discount||0)),
     hasActuals, overKids, overAdults, postExtra,
     postFnbKids, postFnbAdults, postFnbPax, postFnbBase, postFnb,
     dayType:bdayDayType(rec.partyDate)};
@@ -9515,12 +9519,11 @@ function bdayProformaInvoice(rec){
       <div class="inv-buyer"><b>Buyer (Bill to)</b><div>${escHtml(rec.contactName||"—")}</div>${rec.phone?`<div>${escHtml(rec.phone)}</div>`:""}<div class="muted">B2C — no GSTIN on file.</div></div>
       <div class="inv-buyer"><b>Party details</b><div>Date: ${escHtml(rec.partyDate||"—")}${bdayTimingsLabel(rec)?` &nbsp;·&nbsp; Timings: ${bdayTimingsLabel(rec)}`:""}</div>
         <div>Venue: ${escHtml(rec.venue||"—")} &nbsp;·&nbsp; Party type: ${escHtml(rec.partyType||"—")} &nbsp;·&nbsp; Package: ${escHtml(rec.pkg||"—")}</div></div>
-      ${c.discount?`<div class="inv-note muted">A discount applies to this booking. It comes off the package and extra child/adult lines only — add-ons and F&amp;B are never discounted. Basic Amount below is what each line was ordered at, while its CGST/SGST and Grand Total are on the line's share after the discount, so the columns add up to the Grand Total at the foot.</div>`:""}
+      ${c.discount?`<div class="inv-note muted">A discount applies to this booking. It comes off the package and extra child/adult lines only (as a percentage) — add-ons and F&amp;B are never discounted. Basic Amount below is what each line was ordered at, while its CGST/SGST and Grand Total are on the line's share after the discount, so the columns add up to the Grand Total at the foot.</div>`:""}
       <div class="matrix-wrap"><table class="reclist inv-table"><thead><tr><th>Sr. No.</th><th>Heads</th><th>#Pax</th><th>Rate</th><th>GST %</th><th>Basic Amount</th><th>CGST</th><th>SGST</th><th>Grand Total</th></tr></thead><tbody>${partRows||`<tr><td colspan="9" class="muted" style="text-align:center;padding:14px">No priced lines yet — pick a package.</td></tr>`}
-        ${c.discount?`<tr class="inv-tax"><td colspan="8" style="text-align:right">Package + extra pax</td><td class="code">${money(c.discountableSub)}</td></tr>
-        <tr class="inv-tax"><td colspan="8" style="text-align:right">Discount</td><td class="code">− ${money(c.discount)}</td></tr>
-        ${c.otherSub?`<tr class="inv-tax"><td colspan="8" style="text-align:right">Add-ons &amp; F&amp;B <span class="muted">not discounted</span></td><td class="code">${money(c.otherSub)}</td></tr>`:""}`:""}
-        <tr class="inv-tax"><td colspan="8" style="text-align:right">Taxable value${c.discount?` <span class="muted">after discount</span>`:""}</td><td class="code">${money(c.netTaxable)}</td></tr>
+        <tr class="inv-tax"><td colspan="8" style="text-align:right">Taxable value</td><td class="code">${money(c.subtotal)}</td></tr>
+        ${c.discount?`<tr class="inv-tax"><td colspan="8" style="text-align:right">Discount <span class="muted">on the package and extra pax</span></td><td class="code">− ${money(c.discount)}</td></tr>
+        <tr class="inv-tax"><td colspan="8" style="text-align:right">Total <span class="muted">after discount</span></td><td class="code">${money(c.netTaxable)}</td></tr>`:""}
         <tr class="inv-tax"><td colspan="8" style="text-align:right">GST</td><td class="code">${money(c.gst)}</td></tr>
         <tr class="inv-total"><td colspan="8" style="text-align:right"><b>Grand Total</b></td><td class="code"><b>${money(c.grand)}</b></td></tr>
         ${advRows}
@@ -9558,10 +9561,9 @@ function bdayProformaPdf(rec){
   lines.forEach(l=>{ const cgst=Math.round(l.tax/2), sgst=l.tax-cgst, gtotal=Math.round(l.amount+l.tax);
     line(l.name,ML,8,false,INK);rt(l.qty?String(l.qty):"—",ML+210,8,false,INK);rt(pdfDash(l.rate),ML+265,8,false,INK);rt(l.gst+"%",ML+320,8,false,INK);rt(pdfDash(cgst),ML+395,8,false,INK);rt(pdfDash(sgst),ML+465,8,false,INK);rt(pdfDash(gtotal),W-MR,8,false,INK);y-=13; });
   y-=4;ops.push("q 0.878 0.898 0.918 RG 0.7 w "+ML+" "+y.toFixed(1)+" m "+(W-MR)+" "+y.toFixed(1)+" l S Q");y-=16;
-  if(c.discount){ rt("Package + extra pax: "+money(c.discountableSub),W-MR,9,false,INK2);y-=13;
-    rt("Discount: -"+money(c.discount),W-MR,9,false,INK2);y-=13;
-    if(c.otherSub){ rt("Add-ons & F&B (not discounted): "+money(c.otherSub),W-MR,9,false,INK2);y-=13; } }
-  rt("Taxable value"+(c.discount?" (after discount)":"")+": "+money(c.netTaxable),W-MR,9,false,INK2);y-=13;
+  rt("Taxable value: "+money(c.subtotal),W-MR,9,false,INK2);y-=13;
+  if(c.discount){ rt("Discount (package & extra pax): -"+money(c.discount),W-MR,9,false,INK2);y-=13;
+    rt("Total (after discount): "+money(c.netTaxable),W-MR,9,false,INK2);y-=13; }
   rt("GST: "+money(c.gst),W-MR,9,false,INK2);y-=13;
   rt("Grand Total: "+money(c.grand),W-MR,10,true,INK);y-=14;
   (rec.payments||[]).forEach((p,i)=>{ rt("Advance "+(i+1)+(p.mode?" ("+p.mode+")":"")+": "+money(p.amount||0),W-MR,9,false,INK2); y-=13; });
@@ -9760,9 +9762,11 @@ function bdayForm(editing){
     // charges section of its own. It comes off the package and extra-pax lines
     // only — add-ons and F&B are never discounted — and GST is charged on
     // what's left, so the hint is worth keeping here.
-    +fld("Discount",num("discount",d.discount),"Flat ₹ off the package and extra child/adult lines, before GST. Add-ons and F&amp;B aren't discounted.")
+    +fld("Discount",`<div style="display:flex;gap:8px;align-items:center">
+        <input class="inp mono" type="number" min="0" max="100" data-bf="discount" value="${esc(d.discount)}" style="flex:1">
+        <span class="muted" style="font-size:12.5px">%</span></div>`,"Percentage off the package and extra child/adult lines, before GST. Add-ons and F&amp;B aren't discounted.")
     +(live.discount?`<div class="fld wide" style="margin-top:-6px;padding:10px 12px;border-radius:8px;background:#FBFCFA;border:1px solid var(--rule2);font-size:12.5px">
-        Package + extra pax ${money(live.discountableSub)} &minus; discount ${money(live.discount)} = <b>${money(live.discountableNet)}</b></div>`:""));
+        ${live.discountPct}% of ${money(live.discountableSub)} <span class="muted">(package + extra pax)</span> = <b>&minus; ${money(live.discount)}</b></div>`:""));
 
   // Chips stay plain names — the priced breakdown underneath is where the
   // money shows up, once something's actually picked.
@@ -9806,16 +9810,19 @@ function bdayForm(editing){
 
   // F&B is a per-head rate times the number of pax eating, at a fixed 5% GST —
   // the rate isn't an input, so it's stated rather than offered as a field.
-  const fnbRateIn=+d.fnbRate||0, fnbPaxIn=+d.fnbPax||0;
+  const fnbRateIn=+d.fnbRate||0, fnbPaxIn=+d.fnbPax||0, fnbGstIn=bdayFnbGst(d);
   const fnbBase=fnbRateIn&&fnbPaxIn ? fnbRateIn*fnbPaxIn : (+d.fnbCharge||0);
-  const fnbGstAmt=Math.round(fnbBase*BDAY_FNB_GST/100), fnbTotal=fnbBase+fnbGstAmt;
+  const fnbGstAmt=Math.round(fnbBase*fnbGstIn/100), fnbTotal=fnbBase+fnbGstAmt;
   const chargeRow=(label,val)=>`<div style="display:flex;justify-content:space-between;gap:12px;margin-top:3px"><span>${label}</span><span class="mono">${val}</span></div>`;
   const secCharges=section("Food &amp; beverage",
-    fld("F&amp;B price per head",num("fnbRate",d.fnbRate,"e.g. 450"),`Per-person cost of food &amp; beverage beyond the package, before GST. F&amp;B is always taxed at a fixed ${BDAY_FNB_GST}% GST, not the 18% the rest of the booking carries.`)+
-    fld("Number of pax",num("fnbPax",d.fnbPax,"e.g. 30"))
+    fld("F&amp;B price per head",num("fnbRate",d.fnbRate,"e.g. 450"))+
+    fld("Number of pax",num("fnbPax",d.fnbPax,"e.g. 30"))+
+    fld("GST %",`<div style="display:flex;gap:8px;align-items:center">
+        <input class="inp mono" type="number" min="0" max="100" data-bf="fnbGst" value="${esc(d.fnbGst===""||d.fnbGst==null?BDAY_FNB_GST:d.fnbGst)}" style="flex:1">
+        <span class="muted" style="font-size:12.5px">%</span></div>`,`F&amp;B is normally ${BDAY_FNB_GST}% — not the 18% the rest of the booking carries — but it can be changed on a booking.`)
     +(fnbBase?`<div class="fld wide" style="margin-top:-6px;padding:10px 12px;border-radius:8px;background:#FBFCFA;border:1px solid var(--rule2);font-size:12.5px">
       ${chargeRow(fnbRateIn&&fnbPaxIn?`${money(fnbRateIn)} per head &times; ${fnbPaxIn} pax`:`Food &amp; beverage <span class="muted">(entered as a lump sum)</span>`,money(fnbBase))}
-      ${chargeRow(`GST <span class="muted">fixed ${BDAY_FNB_GST}%</span>`,money(fnbGstAmt))}
+      ${chargeRow(`GST <span class="muted">${fnbGstIn}%</span>`,money(fnbGstAmt))}
       <div style="display:flex;justify-content:space-between;gap:12px;margin-top:6px;padding-top:6px;border-top:1px solid var(--rule2)">
         <span>F&amp;B total <span class="muted">(incl. GST)</span></span><span class="mono"><b>${money(fnbTotal)}</b></span></div></div>`:""));
 
@@ -9851,19 +9858,19 @@ function bdayForm(editing){
       amt?`${money(g)} <span class="muted">${l.gst}%${cut?" after disc.":""}</span>`:"—",
       amt?`<b>${money(Math.round(l.net)+g)}</b>${cut?` <span class="muted">incl. &minus;${money(amt-Math.round(l.net))}</span>`:""}`:"—");
   };
-  const discLines=live.lines.filter(l=>l.disc).map(lineRow).join("");
-  const otherLines=live.lines.filter(l=>!l.disc).map(lineRow).join("");
+  // One straight run of lines, then the summary: taxable value, the discount,
+  // the total it leaves, GST, grand total. The discount still only comes off
+  // the package and extra child/adult lines — that's said next to the Discount
+  // field and on the row itself, rather than by splitting the table in two.
+  const allLines=live.lines.map(lineRow).join("");
   const secTotal=section("Final calculation",
     `<div class="fld wide" style="margin:0"><div class="matrix-wrap"><table class="reclist">
       <thead><tr><th>Line</th><th class="ctr" style="text-align:right">Price</th><th class="ctr" style="text-align:right">GST</th><th class="ctr" style="text-align:right">Total</th></tr></thead><tbody>
-      ${(discLines||otherLines)?"":`<tr><td colspan="4" class="muted" style="text-align:center;padding:12px">Nothing priced yet — pick a package to start the calculation.</td></tr>`}
-      ${discLines}
-      ${discLines?sumRow(`Package + extra pax`, money(live.discountableSub), {top:true})
-        +sumRow(`Discount`, live.discount?`− ${money(live.discount)}`:"—")
-        +sumRow(`<b>After discount</b>`, `<b>${money(live.discountableNet)}</b>`):""}
-      ${otherLines?`<tr><td colspan="4" class="muted" style="border-top:1px solid var(--rule2);padding-top:8px">Add-ons and F&amp;B &mdash; not discounted</td></tr>`+otherLines:""}
-      ${sumRow(`Taxable value <span class="muted">after discount</span>`, money(live.netTaxable), {top:true})}
-      ${sumRow(`GST <span class="muted">on the amounts above</span>`, money(live.gst))}
+      ${allLines||`<tr><td colspan="4" class="muted" style="text-align:center;padding:12px">Nothing priced yet — pick a package to start the calculation.</td></tr>`}
+      ${sumRow(`Taxable value`, money(live.subtotal), {top:true})}
+      ${sumRow(`Discount${live.discount?` <span class="muted">${live.discountPct}% on the package and extra pax</span>`:""}`, live.discount?`− ${money(live.discount)}`:"—")}
+      ${sumRow(`Total <span class="muted">after discount, before GST</span>`, money(live.netTaxable))}
+      ${sumRow(`Total GST <span class="muted">sum of the GST column above</span>`, money(live.gst))}
       ${sumRow(`<b>Grand total</b> <span class="muted">(incl. GST)</span>`, `<b>${money(live.grand)}</b>`)}
       ${live.paid?sumRow("Paid so far", money(live.paid))+sumRow("<b>Balance</b>", `<b>${money(live.balance)}</b>`):""}
     </tbody></table></div></div>`);
@@ -9887,7 +9894,8 @@ function bdayForm(editing){
     <div class="confirm-box" role="dialog" aria-modal="true"><div class="confirm-title">${editing?"Save changes?":"Create booking?"}</div>
     <div class="confirm-body">${editing?"Apply your edits to this booking and refresh its proforma invoice.":"This creates the birthday booking — its date, venue, package and headcount — and generates the proforma invoice. It opens as a new booking and moves to confirmed once a payment is received."}
       ${clashBlock(bdClashes)}
-      <label style="display:flex;gap:8px;align-items:flex-start;margin-top:12px;font-size:12.5px;cursor:pointer"><input type="checkbox" id="bdayNotify" checked style="margin-top:2px"><span>${editing?"Email the client about this update.":"Email the client — booking confirmation and proforma."}</span></label></div>
+      <label style="display:flex;gap:8px;align-items:flex-start;margin-top:12px;font-size:12.5px;cursor:pointer"><input type="checkbox" id="bdayNotify" checked style="margin-top:2px"><span>${editing?"Email the client about this update.":"Email the client — booking confirmation and proforma."}</span></label>
+      <label style="display:flex;gap:8px;align-items:flex-start;margin-top:8px;font-size:12.5px;cursor:pointer"><input type="checkbox" id="bdayFP" checked style="margin-top:2px"><span>Send FP to all MuSo staff.</span></label></div>
     <div class="confirm-actions"><button class="btn" data-bday-save-cancel="1">Cancel</button><button class="btn btn-primary" data-bday-save-confirm="1"${bdClashes.length?" disabled":""}>${saveLbl}</button></div></div></div>`:"";
   return `<div><div class="card">
       <div class="card-head"><span class="card-title">${title}</span></div>
@@ -9906,7 +9914,7 @@ function bdayCaptureForm(){
   // types) — drop a venue that no longer belongs to the newly-picked party
   // type rather than silently keep a choice the form wouldn't offer any more.
   if(d.venue && !bdayPartyTypeVenues(d.partyType).includes(d.venue)) d.venue="";
-  ["kidsCount","adultsCount","compKids","compAdults","fnbRate","fnbPax","fnbCharge","discount"].forEach(k=>{const v=g(k);if(v!==undefined)d[k]=v===""?"":+v||0;});
+  ["kidsCount","adultsCount","compKids","compAdults","fnbRate","fnbPax","fnbGst","fnbCharge","discount"].forEach(k=>{const v=g(k);if(v!==undefined)d[k]=v===""?"":+v||0;});
   // Extra kids / adults: each input carries the number it was auto-filled with
   // (data-auto). A value that still matches it is just the suggestion sitting
   // there untouched, so the field stays on auto and keeps tracking Expected /
@@ -9942,23 +9950,25 @@ function bdayValidate(){ const d=bdayDraft; if(!d) return "";
   if(!d.prefDate||!d.prefDate.trim()) return "Preferred date of party is required.";
   if(!d.ageGroup||!d.ageGroup.trim()) return "Age group is required.";
   const cl=bookingClashes("birthday"); if(cl.length) return cl[0]; return ""; }
-function bdayCommit(notify){
+function bdayCommit(notify, sendFP){
   bdayCaptureForm(); const d=bdayDraft; if(!d) return;
   const err=bdayValidate(); if(err){ const e=document.getElementById("bdayErr"); if(e)e.textContent=err; return; }
   const existing=bdayById(d.id);
-  const wasBlocked = existing && ["Confirmed","Completed"].includes(existing.status);
+  // One line per save, saying whether the client was told — same shape as the
+  // school module's own log, since the choice is made in the same popup.
   if(existing){ Object.assign(existing,d); selBday=existing.id;
-    bdayLog(existing,"Admin","Booking details edited.");
-    if(notify) bdayLog(existing,"System","Update emailed to "+(existing.email||"the client")+" — revised booking details and proforma.");
-    if(!wasBlocked && ["Confirmed","Completed"].includes(existing.status)) bdayLog(existing,"System","Function Process (FP) sent to all MuSo staff.");
+    bdayLog(existing,"Admin", notify
+      ? "Booking details edited. Update emailed to "+(existing.email||"the client")+" with the revised proforma."
+      : "Booking details edited. No email sent.");
   } else {
     if(!d.timeline) d.timeline=[];
     BIRTHDAY_BOOKINGS.unshift(d);
-    bdayLog(d,"Admin","Backend booking created.");
-    if(notify) bdayLog(d,"System","Booking confirmation and proforma emailed to "+(d.email||"the client")+".");
-    if(["Confirmed","Completed"].includes(d.status)) bdayLog(d,"System","Function Process (FP) sent to all MuSo staff.");
+    bdayLog(d,"Admin", notify
+      ? "Backend booking created; confirmation and proforma emailed to "+(d.email||"the client")+"."
+      : "Backend booking created. No email sent.");
     selBday=d.id;
   }
+  if(sendFP){ const t=bdayById(selBday); if(t) bdayLog(t,"System","Function Process (FP) sent to all MuSo staff."); }
   bdayDraft=null; bdaySaveConfirm=false; tab="detail"; bdsub="overview"; render(); $(".stage").scrollTop=0;
 }
 
@@ -10277,7 +10287,7 @@ function bdayDetail(){
       <div class="fld" style="margin:0"><div class="lab"><span class="lab-n">Extra adults F&amp;B</span></div><input class="inp mono" type="number" min="0" id="bdayPostFnbAdults" value="${escAttr(rec.postFnbAdults)}"></div>
     </div>
     ${c.hasActuals?`<div class="card-body" style="padding-top:0;font-size:12.5px">Extra-pax charge: <b>${money(c.postExtra)}</b> <span class="muted">(${c.overKids} kids · ${c.overAdults} adults beyond booked + extra)</span></div>`:""}
-    ${c.postFnbPax?`<div class="card-body" style="padding-top:0;font-size:12.5px">Extra F&amp;B charge: <b>${money(c.postFnb)}</b> <span class="muted">(${c.postFnbKids} kids · ${c.postFnbAdults} adults &times; ${money(c.fnbRate)} per head + ${BDAY_FNB_GST}% GST)</span>${c.fnbRate?"":' <span style="color:#9b2c2c">— no F&amp;B per-head price on the booking, so this prices at ₹0.</span>'}</div>`:""}
+    ${c.postFnbPax?`<div class="card-body" style="padding-top:0;font-size:12.5px">Extra F&amp;B charge: <b>${money(c.postFnb)}</b> <span class="muted">(${c.postFnbKids} kids · ${c.postFnbAdults} adults &times; ${money(c.fnbRate)} per head + ${c.fnbGst}% GST)</span>${c.fnbRate?"":' <span style="color:#9b2c2c">— no F&amp;B per-head price on the booking, so this prices at ₹0.</span>'}</div>`:""}
     <div class="card-body" style="padding-top:0"><button class="btn" data-bday-checkin="1">Save check-in numbers</button></div></div>
     ${bdayFeedbackCard(rec)}`
     : `<div class="card"><div class="card-body muted">Post-visit check-in opens once the booking is Confirmed.</div></div>`;
@@ -12065,7 +12075,7 @@ document.addEventListener("click",e=>{
   if(e.target.closest("[data-bday-cancel]")){ const editing=bdayById((bdayDraft||{}).id); bdayDraft=null; bdaySaveConfirm=false; tab=editing?"detail":"list"; render(); $(".stage").scrollTop=0; return; }
   if(e.target.closest("[data-bday-save]")){ bdayCaptureForm(); const err=bdayValidate(); if(err){ render(); const el=document.getElementById("bdayErr"); if(el) el.textContent=err; return; } bdaySaveConfirm=true; render(); return; }
   if(e.target.closest("[data-bday-save-cancel]")){ bdaySaveConfirm=false; render(); return; }
-  if(e.target.closest("[data-bday-save-confirm]")){ if(bookingClashes("birthday").length) return; const cb=document.getElementById("bdayNotify"); const notify=cb?cb.checked:true; bdaySaveConfirm=false; bdayCommit(notify); return; }
+  if(e.target.closest("[data-bday-save-confirm]")){ if(bookingClashes("birthday").length) return; const cb=document.getElementById("bdayNotify"); const notify=cb?cb.checked:true; const fp=document.getElementById("bdayFP"); const sendFP=fp?fp.checked:false; bdaySaveConfirm=false; bdayCommit(notify,sendFP); return; }
   const bdDsub=e.target.closest("[data-bdsub]");
   if(bdDsub){ bdsub=bdDsub.dataset.bdsub; render(); return; }
   if(e.target.closest("[data-bday-add-addon]")){ bdayCaptureForm(); (bdayDraft.customAddons=bdayDraft.customAddons||[]).push({name:"",type:"",price:"",gst:18}); render(); return; }
@@ -12474,7 +12484,7 @@ document.addEventListener("change",e=>{
   // A custom add-on's name/price/GST feeds the priced Add-ons breakdown under
   // it, so re-price when the field is left, same as the add-on chips above.
   if(e.target.matches&&e.target.matches("[data-caf]")&&bdayDraft){ bdayCaptureForm(); render(); return; }
-  if(e.target.matches&&e.target.matches('[data-bf="partyType"],[data-bf="partyDate"],[data-bf="slotWindow"],[data-bf="venue"],[data-bf="pkg"],[data-bf="kidsCount"],[data-bf="adultsCount"],[data-bf="compKids"],[data-bf="compAdults"],[data-bf="extraKids"],[data-bf="extraAdults"],[data-bf="fnbRate"],[data-bf="fnbPax"],[data-bf="fnbCharge"],[data-bf="discount"]')){
+  if(e.target.matches&&e.target.matches('[data-bf="partyType"],[data-bf="partyDate"],[data-bf="slotWindow"],[data-bf="venue"],[data-bf="pkg"],[data-bf="kidsCount"],[data-bf="adultsCount"],[data-bf="compKids"],[data-bf="compAdults"],[data-bf="extraKids"],[data-bf="extraAdults"],[data-bf="fnbRate"],[data-bf="fnbPax"],[data-bf="fnbGst"],[data-bf="fnbCharge"],[data-bf="discount"]')){
     if(e.target.matches('[data-bf="partyType"],[data-bf="partyDate"],[data-bf="slotWindow"],[data-bf="venue"]') && venueCheck && venueCheck.src==="birthday") venueCheck=null;
     bdayCaptureForm(); render(); return; }
   // ---- Credit note: settle as refund or voucher (shows the expiry box, no re-render) ----
