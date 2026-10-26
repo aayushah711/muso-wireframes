@@ -8878,7 +8878,7 @@ function spForm(editing){
     fld("Status",`<div class="selwrap"><select class="inp" data-spf="status">${statusOpts.map(o=>`<option value="${escAttr(o)}"${o===d.status?" selected":""}>${escHtml(statusLabel(o))}</option>`).join("")}</select></div>`,"No payment on sponsored visits — set Confirmed here. Live / Completed follow the visit date and completion.")+
     fld("Comments",ta("comments",d.comments),"","",true));
 
-  const body = secOrg+secBoard+secVisitDetails+secPOC+secInterested+secAdditional+secMulti+secPricing+secVisits+secImpact+secStatus;
+  const body = secOrg+secBoard+secVisitDetails+secPOC+secInterested+secAdditional+secImpact+secMulti+secPricing+secVisits+secStatus;
   const title = editing ? "Edit sponsored booking" : "New sponsored booking";
   const saveLbl = editing ? "Save changes" : "Create booking";
   const spClashes = spSaveConfirm ? bookingClashes("sponsored") : [];
