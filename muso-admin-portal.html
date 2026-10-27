@@ -8453,7 +8453,7 @@ function schoolForm(editing){
         <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px 16px;align-items:end">
           ${fld("Start Time",`<input class="inp" data-vof="start" value="${esc(st)}" placeholder="11:30">`)}
           ${fld("End Time",`<input class="inp" data-vof="end" value="${esc(en)}" placeholder="12:30">`)}
-          ${fld("Confirm slot",`<button type="button" class="btn btn-primary" data-school-checkavail="${vi}|${oi}" style="width:100%"${filled?"":" disabled"}>Book Venue</button>`)}
+          ${fld("Confirm slot",`<button type="button" class="btn btn-primary" data-school-checkavail="${vi}|${oi}" style="width:100%"${filled?"":" disabled"}>Check availability</button>`)}
         </div>
       </div>
       ${optCheckBanner(chk)}
@@ -8465,7 +8465,7 @@ function schoolForm(editing){
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px"><b style="font-size:12.5px">Visit ${i+1}</b>${i>0?`<div style="display:flex;gap:8px"><button type="button" class="btn" data-school-same="${i}">Same as above</button><button type="button" class="btn" data-school-del-visit="${i}">Remove</button></div>`:""}</div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px 16px;align-items:start">
       ${fld("Date",`<div style="display:flex;gap:8px"><input class="inp" data-vf="date" value="${esc(v.date)}" placeholder="DD Mon YYYY" style="flex:1"><button type="button" class="btn" data-school-musoview="${i}" style="white-space:nowrap">View availability</button></div>`)}
-      ${fld("School time slot",`<div class="selwrap"><select class="inp" data-vf="slotId">${schoolSlotTags(v.slotId)}</select></div>`,schoolMapNote(v.slotId))}
+      ${fld("School time slot",`<div style="display:flex;gap:8px"><div class="selwrap" style="flex:1"><select class="inp" data-vf="slotId">${schoolSlotTags(v.slotId)}</select></div><button type="button" class="btn" data-school-musocheck="${i}" style="white-space:nowrap">Check availability</button></div>`,schoolMapNote(v.slotId))}
     </div>
     ${musoCheckBanner("school",i)}
     <div style="${gridAuto};margin-top:12px">
@@ -12308,6 +12308,8 @@ document.addEventListener("click",e=>{
   if(spVA){ spCaptureForm(); const [vi,oi]=spVA.dataset.spViewavail.split("|").map(Number);
     const o=(((spDraft||{}).visits||[])[vi]||{}).optionals?.[oi]||{}; const p=(o.time||"").split(/[–-]/).map(s=>s.trim());
     venueAvail={venue:o.venue||"",date:o.date||"",start:o.start||p[0]||"",end:o.end||p[1]||"",src:"sponsored",vi,oi}; render(); return; }
+  const schMC=e.target.closest("[data-school-musocheck]");
+  if(schMC){ schoolCaptureForm(); musoCheck=runMusoCheck("school",+schMC.dataset.schoolMusocheck); render(); return; }
   const spMC=e.target.closest("[data-sp-musocheck]");
   if(spMC){ spCaptureForm(); musoCheck=runMusoCheck("sponsored",+spMC.dataset.spMusocheck); render(); return; }
   const spAddV=e.target.closest("[data-sp-add-visit]");
@@ -12718,7 +12720,7 @@ document.addEventListener("change",e=>{
     const row=e.target.closest("[data-spvrow]"), vi=row?+row.dataset.spvrow:-1;
     if(vi>=0){ spCaptureForm(); const hasSlot=!!((spDraft.visits||[])[vi]||{}).slotId; musoCheck=hasSlot?runMusoCheck("sponsored",vi):null; render(); return; }
   }
-  if(schoolDraft && e.target.matches&&e.target.matches('[data-vf="slotId"],[data-vf="date"]')){   // same for the School booking
+  if(schoolDraft && e.target.matches&&e.target.matches('[data-vf="slotId"],[data-vf="date"]')){   // same for the School booking (the Check availability button is there too)
     const row=e.target.closest("[data-vrow]"), vi=row?+row.dataset.vrow:-1;
     if(vi>=0){ schoolCaptureForm(); const hasSlot=!!((schoolDraft.visits||[])[vi]||{}).slotId; musoCheck=hasSlot?runMusoCheck("school",vi):null; render(); return; }
   }
