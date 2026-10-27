@@ -1413,16 +1413,17 @@ const M = {
   bdaypackages:{g:0,n:"Birthday packages",owner:"Events & Experiences",perm:"master.bdaypackage.manage",src:"Birthday booking",q:1,
     d:"The package tiers a birthday booking picks from — by party type, weekday/weekend, and package tier — each with its own included headcount, kids/adults price (venue included) and extra-pax rates.",
     view:"bdaypackages",
-    schema:[["Package|pkg","string","The package tier as it reads on the booking, e.g. Package A — typed directly here, same name reused across its other day type/party types."],
+    schema:[["Package|pkg","string","The package as it reads on the booking — named by what it includes, e.g. 30 Kids + 10 Adults. Typed directly here, same name reused across its other day type."],
             ["Party type|partyType","fk","→ Birthday party types"],
             ["Day type|dayType","enum","Weekday · Weekend","Which days this rate applies to — Monday to Friday, or Saturday and Sunday. Weekday and weekend each keep their own rate."],
             ["Kids included|kids","int"],
             ["Adults included|adults","int"],
-            ["Kids price|kidsPrice","money","Portion of the package price covering the included kids, before GST. The venue is included in the package — there's no separate venue charge."],
-            ["Adults price|adultsPrice","money","Portion of the package price covering the included adults, before GST. Package total = Kids price + Adults price."],
+            ["Kids price|kidsPrice","money","Price per included kid, before GST. The venue is included in the package — there's no separate venue charge."],
+            ["Adults price|adultsPrice","money","Price per included adult, before GST. Package total = kids included × Kids price + adults included × Adults price."],
             ["GST %|gst","decimal"],
             ["Extra child rate|extraChildRate","money","Per extra child beyond the included headcount, before GST (same GST % as the package)."],
             ["Extra adult rate|extraAdultRate","money","Per extra adult beyond the included headcount, before GST (same GST % as the package)."],
+            ["Extra nanny rate|extraNannyRate","money","Per nanny, before GST (same GST % as the package). No package includes nannies, so every nanny on a booking is charged this rate."],
             ["Active|is_active","bool","Turn it off to retire this package from new bookings."]]},
   bdayworkshops:{g:0,n:"Birthday workshop add-ons",owner:"Events & Experiences",perm:"master.bdayworkshop.manage",src:"Birthday booking",q:1,
     d:"The workshop add-ons a birthday booking can multi-select — e.g. Pottery workshop. The booking form prices the line off this list.",
@@ -1869,7 +1870,7 @@ const BIRTHDAY_BOOKINGS = [
     contactName:"Rao family", relation:"Father", email:"rao.family@gmail.com", phone:"+91 99870 22110",
     childName:"Ishaan Rao",
     prefDate:"12 Oct 2026", partyDate:"14 Oct 2026", ageGroup:"3-5 years", kidsCount:10, adultsCount:8,
-    partyType:"Mini Birthday Party", slotWindow:"Afternoon", venue:"Classroom", pkg:"Package A",
+    partyType:"Mini Birthday Party", slotWindow:"Afternoon", venue:"Classroom", pkg:"15 Kids + 5 Adults",
     compKids:0, compAdults:0, workshops:[], entertainment:["Face painting"], customAddons:[],
     fnbCharge:"", fnbGst:5, discount:0,
     guestList:[{kidsName:"Vihaan Shah",adultsAttending:"2",nanny:"",parentContact:"+91 98200 11223",parentName:"Priya Mehta"},
@@ -1882,7 +1883,7 @@ const BIRTHDAY_BOOKINGS = [
     contactName:"Mehta family", relation:"Mother", email:"priya.mehta@gmail.com", phone:"+91 98200 11223",
     childName:"Zara Mehta",
     prefDate:"15 Oct 2026", partyDate:"17 Oct 2026", ageGroup:"6-9 years", kidsCount:18, adultsCount:16,
-    partyType:"Regular Birthday Party", slotWindow:"Evening", venue:"Art Gallery", pkg:"Package B",
+    partyType:"Regular Birthday Party", slotWindow:"Evening", venue:"Art Gallery", pkg:"30 Kids + 10 Adults",
     compKids:1, compAdults:1, workshops:["Pottery workshop"], entertainment:["Magician"], customAddons:[{name:"Custom theme decor",type:"Decor",price:5000,gst:18}],
     fnbCharge:"", fnbGst:5, discount:5,
     guestList:[], payments:[{on:"20 Sep 2026", mode:"UPI", amount:15000, ref:"UPI-MEH-7741"}],
@@ -1896,17 +1897,17 @@ const BIRTHDAY_BOOKINGS = [
     contactName:"Deshpande family", relation:"Father", email:"rahul.d@gmail.com", phone:"+91 91670 44556",
     childName:"Anaya Deshpande",
     prefDate:"05 Aug 2026", partyDate:"05 Aug 2026", ageGroup:"3-5 years", kidsCount:8, adultsCount:6,
-    partyType:"Mini Birthday Party", slotWindow:"Morning", venue:"Classroom", pkg:"Package A",
+    partyType:"Mini Birthday Party", slotWindow:"Morning", venue:"Classroom", pkg:"15 Kids + 5 Adults",
     compKids:0, compAdults:0, workshops:[], entertainment:[], customAddons:[],
     fnbCharge:"", fnbGst:5, discount:0,
     guestList:[], payments:[{on:"02 Aug 2026", mode:"UPI", amount:3500, ref:"UPI-DES-2201"},
-              {on:"05 Aug 2026", mode:"Cash", amount:4760, ref:"RCPT-DES-115"}],
+              {on:"05 Aug 2026", mode:"Cash", amount:14200, ref:"RCPT-DES-115"}],
     actualKids:11, actualAdults:6, actualCompKids:0, actualCompAdults:0,
-    assignee:"Sneha Iyer", comments:"3 extra kids let in on the day — charged at the Mini weekday extra-child rate. Event completed, balance collected.",
+    assignee:"Sneha Iyer", comments:"11 kids and 6 adults on the day against the Mini package's 15 kids + 5 adults. Mini extra-pax rates aren't set yet, so nothing extra was charged. Event completed, balance collected.",
     timeline:[{on:"01 Aug 2026", who:"Admin", what:"Backend booking created; slot blocked."},
               {on:"02 Aug 2026", who:"Shivam (Finance)", what:"Advance payment recorded — ₹3,500 via UPI. Status → Confirmed."},
               {on:"05 Aug 2026", who:"Sneha Iyer", what:"Checked in — 11 kids, 6 adults on the day."},
-              {on:"05 Aug 2026", who:"Shivam (Finance)", what:"Balance + extra-pax collected — ₹4,760 via Cash."},
+              {on:"05 Aug 2026", who:"Shivam (Finance)", what:"Balance collected — ₹14,200 via Cash."},
               {on:"05 Aug 2026", who:"Admin", what:"Marked Completed."}] },
 
   /* A finished party with everything filled in — per-head F&B, a discount, extra
@@ -1918,15 +1919,15 @@ const BIRTHDAY_BOOKINGS = [
     relation:"Mother", email:"nandini.sharma@gmail.com", phone:"+91 98201 33447",
     childName:"Kabir Sharma",
     prefDate:"11 Oct 2026", partyDate:"11 Oct 2026", ageGroup:"6-9 years", kidsCount:22, adultsCount:18,
-    partyType:"Regular Birthday Party", slotWindow:"Afternoon", venue:"Art Gallery", pkg:"Package B",
+    partyType:"Regular Birthday Party", slotWindow:"Afternoon", venue:"Art Gallery", pkg:"30 Kids + 10 Adults",
     compKids:2, compAdults:0, extraKids:"", extraAdults:"",
     workshops:["Pottery workshop"], entertainment:["Magician"], customAddons:[],
-    fnbRate:450, fnbPax:40, fnbCharge:"", fnbGst:5, discount:10,
+    fnbRate:450, fnbPax:22, fnbAdultRate:450, fnbAdultPax:18, fnbCharge:"", fnbGst:5, discount:10,
     guestList:[],
     payments:[{on:"22 Sep 2026", mode:"UPI", amount:25000, ref:"UPI-SHA-8841"},
-              {on:"11 Oct 2026", mode:"Card", amount:36971, ref:"POS-SHA-2290"}],
+              {on:"11 Oct 2026", mode:"Card", amount:79630, ref:"POS-SHA-2290"}],
     actualKids:26, actualAdults:20, actualCompKids:2, actualCompAdults:0,
-    postFnbKids:4, postFnbAdults:2,
+    postFnbKids:26, postFnbAdults:20,
     feedback:{sent:true, emailSent:true, hostName:"Nandini Sharma", date:"11 Oct 2026",
       overall:"Excellent", floors:["Floor 7","Floor 9"], exhibitName:"Sound Garden",
       foodRating:"Good", foodComment:"Kids loved the pizza; a couple of adults asked for a lighter option.",
@@ -1935,12 +1936,12 @@ const BIRTHDAY_BOOKINGS = [
       suggestions:"A shaded waiting area near the entrance for parents dropping off.",
       additionalComments:"Kabir is still talking about the magician. Thank you!",
       recommend:"Yes"},
-    assignee:"Sneha Iyer", comments:"Weekend Package B. 4 extra kids and 2 extra adults on the day, plus 6 extra F&B covers — all charged and collected before they left.",
+    assignee:"Sneha Iyer", comments:"Weekend 30 Kids + 10 Adults package. 26 kids and 20 adults on the day (10 extra adults over the package), 46 F&B covers — all charged and collected before they left.",
     timeline:[{on:"20 Sep 2026", who:"Admin", what:"Backend booking created; slot blocked."},
               {on:"22 Sep 2026", who:"Shivam (Finance)", what:"Advance payment recorded — ₹25,000 via UPI. Status → Confirmed."},
               {on:"09 Oct 2026", who:"System", what:"Function Process (FP) sent to all MuSo staff."},
               {on:"11 Oct 2026", who:"Sneha Iyer", what:"Checked in — 26 kids, 20 adults on the day; 6 extra F&B covers."},
-              {on:"11 Oct 2026", who:"Shivam (Finance)", what:"Balance, extra pax and extra F&B collected — ₹36,971 via Card."},
+              {on:"11 Oct 2026", who:"Shivam (Finance)", what:"Balance, extra pax and extra F&B collected — ₹79,630 via Card."},
               {on:"11 Oct 2026", who:"Admin", what:"Marked Completed."},
               {on:"12 Oct 2026", who:"System", what:"Feedback form emailed to nandini.sharma@gmail.com."},
               {on:"14 Oct 2026", who:"Client", what:"Feedback form submitted — Excellent overall, would recommend: Yes."}] },
@@ -1949,7 +1950,7 @@ const BIRTHDAY_BOOKINGS = [
     contactName:"Kapoor family", relation:"Mother", email:"neha.kapoor@gmail.com", phone:"+91 98330 77889",
     childName:"Reyansh Kapoor",
     prefDate:"20 Sep 2026", partyDate:"20 Sep 2026", ageGroup:"7-9 years", kidsCount:14, adultsCount:10,
-    partyType:"Regular Birthday Party", slotWindow:"Morning", venue:"Small MPA", pkg:"Package A",
+    partyType:"Regular Birthday Party", slotWindow:"Morning", venue:"Small MPA", pkg:"20 Kids + 5 Adults",
     compKids:0, compAdults:0, workshops:[], entertainment:[], customAddons:[],
     fnbCharge:"", fnbGst:5, discount:0,
     guestList:[], payments:[], actualKids:"", actualAdults:"", actualCompKids:"", actualCompAdults:"",
@@ -2323,8 +2324,9 @@ function bdayPartyTypeVenues(partyType){
    bdaySlotRow(). Kept deliberately minimal (name/time/day-type/active,
    mirroring School time slots). */
 const BDAY_SLOTS = [
-  {name:"Morning",   dayType:"Weekday", start:"10:00", end:"13:00", is_active:true},
-  {name:"Afternoon", dayType:"Weekday", start:"13:00", end:"16:00", is_active:true},
+  {name:"Morning",   dayType:"Weekday", start:"09:30", end:"12:30", is_active:true},
+  {name:"Afternoon", dayType:"Weekday", start:"12:30", end:"15:30", is_active:true},
+  {name:"Evening",   dayType:"Weekday", start:"15:30", end:"18:30", is_active:true},
   {name:"Morning",   dayType:"Weekend", start:"10:00", end:"13:00", is_active:true},
   {name:"Afternoon", dayType:"Weekend", start:"13:00", end:"16:00", is_active:true},
   {name:"Evening",   dayType:"Weekend", start:"16:00", end:"19:00", is_active:true}
@@ -2335,23 +2337,33 @@ const BDAY_SLOTS = [
    right on each package row rather than a separate master — there's no
    separate "complimentary" rate to carry either, since complimentary guests
    are just a count the booking form subtracts before charging (₹0, always).
-   Kids price / Adults price: the package price used to be one lump sum; it's
-   now split into the portion covering the included kids and the portion
-   covering the included adults (package total = kidsPrice + adultsPrice).
+   Kids price / Adults price: the per-head price of an included kid / adult
+   (package total = kids x kidsPrice + adults x adultsPrice — see bdayPackageTotal).
    Seeded here as an even 50/50 split of the old combined price — a starting
    point, since the source data only ever had one number — admin can rebalance
    either half per package/day without touching the other. The package price
    covers the venue too — there's no separate venue charge on a booking. */
 const BDAY_PACKAGES = (()=>{
+  /* Source: the "What does a MuSo Birthday Party include?" rate card (Birthday Experience at MuSo, 11.06.26).
+     Package names read as the headcount they include. Costs are before GST and exclude F&B. The rate card
+     gives one Cost per package, so Kids price and Adults price are the PER-HEAD price: cost / total headcount, the
+     same for kids and adults (e.g. 30,000 / 25 = 1,200 each). Package total = kids x kidsPrice + adults x adultsPrice,
+     rounded to the whole rupee (bdayPackageTotal) — per-head prices that aren't whole (50,000 / 60 = 833.33) still
+     add back up to the rate card's exact cost. A row can set its own per-head prices instead (wdKidsPrice /
+     wdAdultsPrice, weKidsPrice / weAdultsPrice): the Regular 40 Kids + 20 Adults package uses 833 / 834 on weekdays
+     (40x833 + 20x834 = 50,000) and 1,333 / 1,334 on weekends (40x1,333 + 20x1,334 = 80,000).
+     Extra pax (kid / adult / nanny) are the rate card's per-head rates. The Mini party's card gives a cost and
+     headcount only, so its extra-pax rates are left blank until someone sets them in the package master. */
   const base=[
-    {partyType:"Regular Birthday Party", pkg:"Package A", kids:10, adults:10, wdPrice:12000, wePrice:15000, wdExtraChild:850,  weExtraChild:1250, wdExtraAdult:550, weExtraAdult:750, gst:18},
-    {partyType:"Regular Birthday Party", pkg:"Package B", kids:15, adults:15, wdPrice:16000, wePrice:19000, wdExtraChild:850,  weExtraChild:1250, wdExtraAdult:550, weExtraAdult:750, gst:18},
-    {partyType:"Mini Birthday Party",    pkg:"Package A", kids:8,  adults:8,  wdPrice:7000,  wePrice:9000,  wdExtraChild:1000, weExtraChild:1000, wdExtraAdult:750, weExtraAdult:750, gst:18}
+    {partyType:"Regular Birthday Party", pkg:"20 Kids + 5 Adults",  kids:20, adults:5,  wdPrice:30000, wePrice:40000, wdExtraChild:850, weExtraChild:1250, wdExtraAdult:550, weExtraAdult:750, wdNanny:250, weNanny:300, gst:18},
+    {partyType:"Regular Birthday Party", pkg:"30 Kids + 10 Adults", kids:30, adults:10, wdPrice:40000, wePrice:60000, wdExtraChild:850, weExtraChild:1250, wdExtraAdult:550, weExtraAdult:750, wdNanny:250, weNanny:300, gst:18},
+    {partyType:"Regular Birthday Party", pkg:"40 Kids + 20 Adults", kids:40, adults:20, wdPrice:50000, wePrice:80000, wdKidsPrice:833, wdAdultsPrice:834, weKidsPrice:1333, weAdultsPrice:1334, wdExtraChild:850, weExtraChild:1250, wdExtraAdult:550, weExtraAdult:750, wdNanny:250, weNanny:300, gst:18},
+    {partyType:"Mini Birthday Party",    pkg:"15 Kids + 5 Adults",  kids:15, adults:5,  wdPrice:15000, wePrice:20000, wdExtraChild:"",  weExtraChild:"",   wdExtraAdult:"",  weExtraAdult:"",  wdNanny:"",  weNanny:"",  gst:18}
   ];
-  const split=p=>({kidsPrice:Math.round(p/2), adultsPrice:p-Math.round(p/2)});
+  const split=(p,k,a)=>{ const h=Math.round(p/(k+a)*100)/100; return {kidsPrice:h, adultsPrice:h}; };
   return base.flatMap(r=>[
-    {partyType:r.partyType, dayType:"Weekday", pkg:r.pkg, kids:r.kids, adults:r.adults, ...split(r.wdPrice), gst:r.gst, extraChildRate:r.wdExtraChild, extraAdultRate:r.wdExtraAdult, is_active:true},
-    {partyType:r.partyType, dayType:"Weekend", pkg:r.pkg, kids:r.kids, adults:r.adults, ...split(r.wePrice), gst:r.gst, extraChildRate:r.weExtraChild, extraAdultRate:r.weExtraAdult, is_active:true}
+    {partyType:r.partyType, dayType:"Weekday", pkg:r.pkg, kids:r.kids, adults:r.adults, ...split(r.wdPrice,r.kids,r.adults), ...(r.wdKidsPrice!=null?{kidsPrice:r.wdKidsPrice, adultsPrice:r.wdAdultsPrice}:{}), gst:r.gst, extraChildRate:r.wdExtraChild, extraAdultRate:r.wdExtraAdult, extraNannyRate:r.wdNanny, is_active:true},
+    {partyType:r.partyType, dayType:"Weekend", pkg:r.pkg, kids:r.kids, adults:r.adults, ...split(r.wePrice,r.kids,r.adults), ...(r.weKidsPrice!=null?{kidsPrice:r.weKidsPrice, adultsPrice:r.weAdultsPrice}:{}), gst:r.gst, extraChildRate:r.weExtraChild, extraAdultRate:r.weExtraAdult, extraNannyRate:r.weNanny, is_active:true}
   ]);
 })();
 const BDAY_WORKSHOPS = [
@@ -3944,7 +3956,7 @@ const CAMP = {
     <div class="card-head"><span class="card-title">Batches · ${w.n}</span>
       <span class="card-note">${w.batches.length} batches</span></div>
     <div class="matrix-wrap"><table><thead><tr>
-      <th>Batch</th><th>Runs</th><th>Days</th><th class="ctr">Capacity</th><th class="ctr">Sold</th><th class="ctr">Price</th><th>Notes</th></tr></thead>
+      <th>Batch</th><th>Runs</th><th>Days</th><th class="ctr">Capacity</th><th class="ctr">Sold</th><th class="ctr">Price</th><th>Notes</th><th></th></tr></thead>
     <tbody>${w.batches.map((x,i)=>`<tr data-b="${i}" ${i===selB?'aria-selected="true"':""} style="cursor:pointer">
       <td><b style="font-weight:500">${x.n}</b></td>
       <td class="code">${x.from} – ${x.to}</td>
@@ -3952,7 +3964,8 @@ const CAMP = {
       <td class="ctr code">${x.cap}</td>
       <td class="ctr code">${x.sold}${x.sold>=x.cap?' <span class="q">full</span>':""}</td>
       <td class="ctr code">${money(x.price)}</td>
-      <td class="muted" style="font-size:11.5px">${x.diff||""}</td></tr>`).join("")}
+      <td class="muted" style="font-size:11.5px">${x.diff||""}</td>
+      <td style="text-align:right"><button class="btn" data-edit-batch="${i}">Edit</button></td></tr>`).join("")}
       ${addRowOpen("Add batch","batch")}</tbody></table></div>
   </div>
   ${addOpen==="batch"?batchFormCard(w):""}
@@ -3960,15 +3973,16 @@ const CAMP = {
     <div class="card-head"><span class="card-title">Days in ${b.n}</span>
       <span class="card-note">${b.from} – ${b.to}${b.days.length?` · default ${b.days[0].t1}–${b.days[0].t2}`:" · no sessions yet"}</span></div>
     <div class="matrix-wrap"><table><thead><tr>
-      <th>Day</th><th>Starts</th><th>Ends</th><th>Length</th><th>Note for that day</th></tr></thead>
-    <tbody>${b.days.map(d=>{const len=((+d.t2.slice(0,2))*60+ +d.t2.slice(3))-((+d.t1.slice(0,2))*60+ +d.t1.slice(3));
+      <th>Day</th><th>Starts</th><th>Ends</th><th>Length</th><th>Note for that day</th><th></th></tr></thead>
+    <tbody>${b.days.map((d,di)=>{const len=((+d.t2.slice(0,2))*60+ +d.t2.slice(3))-((+d.t1.slice(0,2))*60+ +d.t1.slice(3));
       const odd=d.t1!==b.days[0].t1||d.t2!==b.days[0].t2;
       return `<tr>
       <td><b style="font-weight:500">${d.d}</b></td>
       <td class="code">${d.t1}</td>
       <td class="code">${odd?`<b style="color:var(--warn)">${d.t2}</b>`:d.t2}</td>
       <td class="code muted">${(len/60).toFixed(len%60?1:0)} hr</td>
-      <td class="muted" style="font-size:12px">${d.note||""}</td></tr>`;}).join("")}
+      <td class="muted" style="font-size:12px">${d.note||""}</td>
+      <td style="text-align:right"><button class="btn" data-edit-day="${di}">Edit</button></td></tr>`;}).join("")}
     </tbody></table></div>
   </div>
   ${addOpen==="day"?dayFormCard(b):""}`;
@@ -4670,6 +4684,8 @@ const $ = s => document.querySelector(s);
 let addOpen = null;   // which inline add-form is open: "slot"|"batch"|"day"|"addon"|"rate"|"block"|null
 let editSlot = -1;    // index of the time slot being edited in the slot flyout (-1 = adding a new one)
 let editBlock = -1;   // index of the quota block being edited in the block flyout (-1 = adding a new one)
+let editBatch = -1;   // index of the camp batch being edited in the batch form (-1 = adding a new one)
+let editDay = -1;     // index of the day (in the selected batch) being edited in the day form (-1 = adding a new one)
 let blockDraft = null;   // quota-block flyout working copy {from,to,reason,slots:[],qtys:{}}
 let venueAvail = null;   // venue-availability flyout {venue,date,start,end,src,vi,oi}
 let venueCheck = null;   // inline "Check availability" verdict {src,vi,oi,status,msg}
@@ -4797,7 +4813,7 @@ const escAttr = s => String(s==null?"":s).replace(/&/g,"&amp;").replace(/"/g,"&q
 const BDAY_MASTER_REQUIRED = {
   bdaypartytypes:["name"],
   bdayslots:["name","start","end","dayType"],
-  bdaypackages:["pkg","partyType","dayType","kids","adults","kidsPrice","adultsPrice","gst","extraChildRate","extraAdultRate"],
+  bdaypackages:["pkg","partyType","dayType","kids","adults","kidsPrice","adultsPrice","gst","extraChildRate","extraAdultRate","extraNannyRate"],
   bdayworkshops:["name","price","gst"],
   bdayentertainment:["name","price","gst"],
   corpeventtypes:["name"]
@@ -4868,26 +4884,30 @@ function afCard(title,note,body){
   </div>`;
 }
 function batchFormCard(w){
-  return afCard("Add a batch to "+w.n,"Add the daily sessions on this tab once it exists",
+  const x=editBatch>=0?w.batches[editBatch]:null;   // editing an existing batch vs adding a new one
+  const dv=v=>(v!=null&&v!=="—")?escAttr(v):"";
+  return afCard(x?"Edit "+x.n:"Add a batch to "+w.n,x?"Existing days are kept — edit them on this tab":"Add the daily sessions on this tab once it exists",
     `<div class="form-body">
-      ${afFld("Batch name",`<input class="inp" id="af_bn" placeholder="Batch 4">`,"",true)}
-      ${afFld("From date",`<input class="inp mono" id="af_bfrom" placeholder="01 Sep 2026">`)}
-      ${afFld("To date",`<input class="inp mono" id="af_bto" placeholder="05 Sep 2026">`)}
-      ${afFld("Capacity",`<input class="inp mono" id="af_bcap" placeholder="${w.cap}">`,"Each batch owns its own.")}
-      ${afFld("Price",`<input class="inp mono" id="af_bprice" placeholder="12999">`)}
-      ${afFld("Strike-through price",`<input class="inp mono" id="af_bmrp" placeholder="Optional, e.g. 14999">`,"Display only — shown crossed out next to the price so buyers see the saving. Never used in any calculation.")}
+      ${afFld("Batch name",`<input class="inp" id="af_bn" placeholder="Batch 4" value="${x?dv(x.n):""}">`,"",true)}
+      ${afFld("From date",`<input class="inp mono" id="af_bfrom" placeholder="01 Sep 2026" value="${x?dv(x.from):""}">`)}
+      ${afFld("To date",`<input class="inp mono" id="af_bto" placeholder="05 Sep 2026" value="${x?dv(x.to):""}">`)}
+      ${afFld("Capacity",`<input class="inp mono" id="af_bcap" placeholder="${w.cap}" value="${x?dv(x.cap):""}">`,"Each batch owns its own.")}
+      ${afFld("Price",`<input class="inp mono" id="af_bprice" placeholder="12999" value="${x?dv(x.price):""}">`)}
+      ${afFld("Strike-through price",`<input class="inp mono" id="af_bmrp" placeholder="Optional, e.g. 14999" value="${x?dv(x.mrp):""}">`,"Display only — shown crossed out next to the price so buyers see the saving. Never used in any calculation.")}
       ${afFld("Active",`<button type="button" class="sw" data-on="1"><i></i><span>On</span></button>`,"Turn it off to close the batch to new bookings. A batch that's currently in use (has attendees) can't be turned off.")}
-    </div>${afFoot("Dates and days make a batch — its sessions are added next.","Add batch")}`);
+    </div>${afFoot(x?"Changing the dates doesn't regenerate the days.":"Dates and days make a batch — its sessions are added next.",x?"Save changes":"Add batch")}`);
 }
 function dayFormCard(b){
-  return afCard("Add a day to "+b.n,"Generated from the batch dates, or added by hand",
+  const x=editDay>=0?(b.days||[])[editDay]:null;   // editing an existing day vs adding a new one
+  const dv=v=>(v!=null&&v!=="—")?escAttr(v):"";
+  return afCard(x?"Edit "+x.d+" in "+b.n:"Add a day to "+b.n,x?"Changes this session only":"Generated from the batch dates, or added by hand",
     `<div class="form-body">
-      ${afFld("Date",`<input class="inp mono" id="af_dd" placeholder="Mon 07 Sep">`)}
-      ${afFld("Start time",`<input class="inp mono" id="af_dt1" placeholder="10:00">`)}
-      ${afFld("End time",`<input class="inp mono" id="af_dt2" placeholder="13:00">`)}
-      ${afFld("Note for this day",`<input class="inp" id="af_dnote" placeholder="e.g. Showcase day">`,"Goes out on that day's reminder only.",true)}
+      ${afFld("Date",`<input class="inp mono" id="af_dd" placeholder="Mon 07 Sep" value="${x?dv(x.d):""}">`)}
+      ${afFld("Start time",`<input class="inp mono" id="af_dt1" placeholder="10:00" value="${x?dv(x.t1):""}">`)}
+      ${afFld("End time",`<input class="inp mono" id="af_dt2" placeholder="13:00" value="${x?dv(x.t2):""}">`)}
+      ${afFld("Note for this day",`<input class="inp" id="af_dnote" placeholder="e.g. Showcase day" value="${x?dv(x.note):""}">`,"Goes out on that day's reminder only.",true)}
       ${afFld("Active",`<button type="button" class="sw" data-on="1"><i></i><span>On</span></button>`,"Turn it off to drop this session. A day that's currently in use (has attendees) can't be turned off.")}
-    </div>${afFoot("","Add day")}`);
+    </div>${afFoot("",x?"Save changes":"Add day")}`);
 }
 function rateFormCard(a){
   const avail=TAXRATES.filter(r=>!a.tax.includes(r.code));
@@ -5130,7 +5150,9 @@ const DASH = {
     {product:"Museum Exploration", date:"10/9/2026", start:"10:00", end:"15:00", from:"Website", bAdult:1,  bChild:1,   cAdult:0,  cChild:1},
     {product:"Museum Exploration", date:"10/9/2026", start:"10:00", end:"13:00", from:"Counter", bAdult:1,  bChild:1,   cAdult:1,  cChild:1},
     {product:"School",    date:"10/9/2026", start:"9:00",  end:"14:00", from:"NA",      bAdult:10, bChild:100, cAdult:10, cChild:100},
-    {product:"Birthday",  date:"10/9/2026", start:"10:00", end:"13:00", from:"NA",      bAdult:3,  bChild:10,  cAdult:4,  cChild:11}
+    {product:"Birthday",  date:"10/9/2026", start:"10:00", end:"13:00", from:"NA",      bAdult:3,  bChild:10,  cAdult:4,  cChild:11},
+    {product:"Sponsored School", date:"10/9/2026", start:"9:30", end:"14:30", from:"NA", bAdult:8,  bChild:90,  cAdult:7,  cChild:86},
+    {product:"Corporate", date:"10/9/2026", start:"10:00", end:"17:00", from:"NA",      bAdult:40, bChild:0,   cAdult:34, cChild:0}
   ]
 };
 
@@ -6122,18 +6144,14 @@ const VIEWS = {
     <div class="card"><div class="card-head"><span class="card-title">Birthday packages</span>
       <span class="card-note">${BDAY_PACKAGES.length} on file</span></div>
       <div class="matrix-wrap"><table><thead><tr>
-        <th>Package</th><th>Party type</th><th>Day type</th><th class="ctr">Kids</th><th class="ctr">Adults</th><th class="ctr">Kids price</th><th class="ctr">Adults price</th><th class="ctr">GST %</th><th class="ctr">Extra child</th><th class="ctr">Extra adult</th><th>Status</th><th>Actions</th></tr></thead>
+        <th>Package</th><th>Party type</th><th>Day type</th><th class="ctr">Kids</th><th class="ctr">Adults</th><th class="ctr">Package cost</th><th>Status</th><th>Actions</th></tr></thead>
       <tbody>${BDAY_PACKAGES.map((p,i)=>`<tr>
         <td><b style="font-weight:500">${escHtml(p.pkg)}</b></td>
         <td>${escHtml(p.partyType)}</td>
         <td>${escHtml(p.dayType)}</td>
         <td class="code" style="text-align:center">${p.kids}</td>
         <td class="code" style="text-align:center">${p.adults}</td>
-        <td class="code" style="text-align:center">${money(p.kidsPrice)}</td>
-        <td class="code" style="text-align:center">${money(p.adultsPrice)}</td>
-        <td class="code" style="text-align:center">${p.gst}%</td>
-        <td class="code" style="text-align:center">${money(p.extraChildRate)}</td>
-        <td class="code" style="text-align:center">${money(p.extraAdultRate)}</td>
+        <td class="code" style="text-align:center"><b>${money(bdayPackageTotal(p))}</b></td>
         <td>${p.is_active?'<span class="pill pill-ok"><i class="dot"></i>Active</span>':'<span class="pill pill-off">Inactive</span>'}</td>
         <td><button class="btn" data-medit="${i}">Edit</button></td></tr>`).join("")}
         ${addRowNew("Add birthday package")}</tbody></table></div></div>`;
@@ -6386,12 +6404,16 @@ const VIEWS = {
     const kpi=(ico,color,label,value,sub)=>`<div class="setcard"><div class="kpi-top"><span class="kpi-ico kpi-${color}">${ico}</span><div class="set-k">${label}</div></div><div class="set-v pos">${value}</div><div class="kpi-sub">${sub}</div></div>`;
     const openN=BIRTHDAY_BOOKINGS.filter(r=>r.status==="Open").length;
     const bookedN=BIRTHDAY_BOOKINGS.filter(r=>["Confirmed","Completed"].includes(r.status)).length;
-    const kids=BIRTHDAY_BOOKINGS.filter(r=>r.status!=="Cancelled").reduce((a,r)=>a+(+r.kidsCount||0),0);
+    // Kids booked = every non-cancelled booking's booked kids. A completed party's post-event
+    // check-in may differ, so the actual-aware total is shown beside it rather than replacing it.
+    const liveB=BIRTHDAY_BOOKINGS.filter(r=>r.status!=="Cancelled");
+    const kids=liveB.reduce((a,r)=>a+(+r.kidsCount||0),0);
+    const kidsActual=liveB.reduce((a,r)=>a+((r.actualKids!==""&&r.actualKids!=null)?(+r.actualKids||0):(+r.kidsCount||0)),0);
     const rev=BIRTHDAY_BOOKINGS.filter(r=>["Confirmed","Completed"].includes(r.status)).reduce((a,r)=>a+bdayCompute(r).grand,0);
     const tiles=`<div class="set">
       ${kpi(S('<path d="M3 21h18M5 21V7l7-4 7 4v14"/><path d="M9 21v-6h6v6"/>'),"blue","Open enquiries",openN,"not yet confirmed")}
       ${kpi(S('<path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>'),"teal","Confirmed &amp; completed",bookedN,"confirmed · completed")}
-      ${kpi(S('<circle cx="9" cy="7" r="4"/><path d="M2 21v-2a4 4 0 0 1 4-4h6a4 4 0 0 1 4 4v2"/>'),"amber","Kids booked",kids,"across all parties")}
+      ${kpi(S('<circle cx="9" cy="7" r="4"/><path d="M2 21v-2a4 4 0 0 1 4-4h6a4 4 0 0 1 4 4v2"/>'),"amber","Kids booked",kids,kidsActual!==kids?`${kidsActual} incl. check-in actuals · excl. cancelled`:"across all parties · excl. cancelled")}
       ${kpi(S('<circle cx="9" cy="9" r="6"/><path d="M18.1 10.7A6 6 0 1 1 10.7 18.1"/><path d="M7.5 7h2v4"/>'),"blue","Revenue",money(Math.round(rev)),"confirmed + completed")}
     </div>`;
     const filtered=BIRTHDAY_BOOKINGS.filter(r=>!bdFStatus||r.status===bdFStatus);
@@ -6750,7 +6772,7 @@ function createForm(schema,label,footNote,values={},editing=false){
     const byName=names=>names.map(n=>schema.find(f=>(f[0].split("|")[1]||f[0])===n)).filter(Boolean);
     const secs=[["Basic information",["pkg","partyType","dayType"]],
                 ["Schedule & booking",["kids","adults","kidsPrice","adultsPrice"]],
-                ["Extra-pax & tax",["extraChildRate","extraAdultRate","gst"]],
+                ["Extra-pax & tax",["extraChildRate","extraAdultRate","extraNannyRate","gst"]],
                 ["Status",["is_active"]]];
     headings=secs.map(s=>s[0]); groups=secs.map(s=>byName(s[1]));
   } else {
@@ -6759,6 +6781,10 @@ function createForm(schema,label,footNote,values={},editing=false){
   let secHTML=groups.map((group,i)=>`<section class="form-sec">
         <div class="form-sec-head"><span class="form-sec-title">${headings[i]||"Additional details"}</span></div>
         <div class="form-sec-body">${group.map(f=>field(f,values)).join("")}</div></section>`);
+  if(current==="bdaypackages"){
+    secHTML.push(`<section class="form-sec"><div class="form-sec-head"><span class="form-sec-title">Final calculation</span></div>
+        <div class="form-sec-body"><div class="fld wide" id="bdayPkgCalc" style="margin:0">${bdayPkgCalcHtml(values||{})}</div></div></section>`);
+  }
   if(label==="program"){
     const invSec=`<section class="form-sec"><div class="form-sec-head"><span class="form-sec-title">Inventory</span></div>
         <div class="form-sec-body">${inventoryFields("program")}</div></section>`;
@@ -9282,15 +9308,15 @@ function blankBday(){
     contactName:"", relation:"", email:"", phone:"",
     prefDate:"", ageGroup:"", kidsCount:"", adultsCount:"",
     partyDate:"", partyType:"Regular Birthday Party", slotWindow:"", venue:"", pkg:"",
-    compKids:0, compAdults:0, extraKids:"", extraAdults:"",
+    compKids:0, compAdults:0, extraKids:"", extraAdults:"", nannyCount:"",
     workshops:[], entertainment:[], customAddons:[],
     // F&B is priced per head — a rate and a pax count — and always at 5% GST.
     // fnbCharge stays as the computed/legacy lump sum so older bookings that
     // only ever had a flat amount keep pricing exactly as they did.
-    fnbRate:"", fnbPax:"", fnbCharge:"", fnbGst:5,
+    fnbRate:"", fnbPax:"", fnbAdultRate:"", fnbAdultPax:"", fnbCharge:"", fnbGst:5,
     discount:0,
     guestList:[], payments:[],
-    actualKids:"", actualAdults:"", actualCompKids:"", actualCompAdults:"",
+    actualKids:"", actualAdults:"", actualNannies:"", actualCompKids:"", actualCompAdults:"",
     postFnbKids:"", postFnbAdults:"",
     feedback:{sent:false, emailSent:false, hostName:"", date:"", overall:"", floors:[], exhibitName:"",
       foodRating:"", foodComment:"", staffExp:"", staffComment:"", coordination:"", coordinationComment:"",
@@ -9312,11 +9338,37 @@ function bdayDayType(dateStr){
 const BDAY_FNB_GST = 5;
 const bdayFnbGst = rec => (rec && rec.fnbGst!==""&&rec.fnbGst!=null) ? (+rec.fnbGst||0) : BDAY_FNB_GST;
 /* The discount is a percentage of the lines it's allowed to come off — the
-   package and the extra child/adult lines — capped at 100% so a booking can't
+   package and the extra pax lines — capped at 100% so a booking can't
    discount into negative territory. */
 function bdayDiscountAmount(rec, discountable){
   const pct=Math.max(0, Math.min(100, +rec.discount||0)); if(!pct) return 0;
   return Math.round((+discountable||0)*pct/100);
+}
+/* A package's total (before GST): included kids x Kids price + included adults x Adults price, to the whole rupee. */
+function bdayPackageTotal(p){ return p?Math.round((+p.kids||0)*(+p.kidsPrice||0)+(+p.adults||0)*(+p.adultsPrice||0)):0; }
+/* Birthday package form — "Final calculation": what a booking on this package will be charged, worked out
+   from the numbers currently typed in the form (not the saved record), so it updates as you type. */
+function bdayPkgCalcHtml(v){
+  const n=x=>(x===""||x==null)?0:(+x||0);
+  const kids=n(v.kids), adults=n(v.adults), kp=n(v.kidsPrice), ap=n(v.adultsPrice), gst=n(v.gst);
+  const kBase=kids*kp, aBase=adults*ap, base=Math.round(kBase+aBase), gstAmt=Math.round(base*gst/100), total=base+gstAmt;
+  const row=(label,price,gstCell,tot,top)=>`<tr${top?' style="border-top:2px solid var(--rule2)"':""}><td>${label}</td><td class="code ctr" style="text-align:right">${price}</td><td class="code ctr" style="text-align:right">${gstCell}</td><td class="code ctr" style="text-align:right">${tot}</td></tr>`;
+  const per=(label,rate)=>{ if(rate===""||rate==null) return row(label,'<span class="muted">not set</span>',"—","—"); const r=n(rate), g=Math.round(r*gst/100); return row(label,money(r),money(g),`<b>${money(r+g)}</b>`); };
+  return `<div class="matrix-wrap"><table class="reclist">
+      <thead><tr><th>Line</th><th class="ctr" style="text-align:right">Price (before GST)</th><th class="ctr" style="text-align:right">GST ${gst}%</th><th class="ctr" style="text-align:right">Total</th></tr></thead><tbody>
+      ${row(`Kids included <span class="muted">${kids} &times; ${money(kp)}</span>`,money(Math.round(kBase)),money(Math.round(kBase*gst/100)),money(Math.round(kBase)+Math.round(kBase*gst/100)))}
+      ${row(`Adults included <span class="muted">${adults} &times; ${money(ap)}</span>`,money(Math.round(aBase)),money(Math.round(aBase*gst/100)),money(Math.round(aBase)+Math.round(aBase*gst/100)))}
+      ${row("<b>Package</b> <span class=\"muted\">kids + adults, venue included</span>",`<b>${money(base)}</b>`,money(gstAmt),`<b>${money(total)}</b>`,true)}
+      <tr><td colspan="4" style="font-size:11.5px;color:var(--ink3);padding-top:10px">Extra pax, charged per head beyond what the package includes</td></tr>
+      ${per("Extra child",v.extraChildRate)}${per("Extra adult",v.extraAdultRate)}${per("Extra nanny",v.extraNannyRate)}
+    </tbody></table></div>
+    <div class="muted" style="font-size:11.5px;margin-top:8px">Package cost is before GST and excludes Food &amp; beverage, which is charged separately.</div>`;
+}
+/* Re-draw the package form's Final calculation from whatever is typed in its fields right now. */
+function bdayPkgCalcRefresh(){
+  const box=document.getElementById("bdayPkgCalc"); if(!box) return;
+  const g=name=>{ const el=document.querySelector('.fld[data-df="'+name+'"] input'); return el?el.value:""; };
+  box.innerHTML=bdayPkgCalcHtml({kids:g("kids"),adults:g("adults"),kidsPrice:g("kidsPrice"),adultsPrice:g("adultsPrice"),gst:g("gst"),extraChildRate:g("extraChildRate"),extraAdultRate:g("extraAdultRate"),extraNannyRate:g("extraNannyRate")});
 }
 function bdayPackageRow(rec){ return BDAY_PACKAGES.find(p=>p.is_active!==false && p.partyType===rec.partyType && p.dayType===bdayDayType(rec.partyDate) && p.pkg===rec.pkg); }
 /* Extra-pax rates live on the package row itself (no separate master) —
@@ -9325,7 +9377,7 @@ function bdayPackageRow(rec){ return BDAY_PACKAGES.find(p=>p.is_active!==false &
    before charging anything, so there's no ₹0 row to look up. */
 function bdayExtraRow(rec){
   const p=bdayPackageRow(rec);
-  return p?{childRate:p.extraChildRate, adultRate:p.extraAdultRate, gst:p.gst}:null;
+  return p?{childRate:+p.extraChildRate||0, adultRate:+p.extraAdultRate||0, nannyRate:+p.extraNannyRate||0, gst:p.gst}:null;
 }
 /* Slot names can repeat across Weekday and Weekend (both may have a "Morning"),
    so a lookup is only ever meaningful as (name + dayType) together. dayType is
@@ -9359,11 +9411,11 @@ function bdayCompute(rec){
   // placeholder row onto the proforma (see below); every other caller already
   // only calls addLine for things actually picked, so this is safe.
   // "disc" marks the lines a discount is allowed to come off — the package and
-  // the extra child/adult lines. Add-ons and F&B are never discounted, so they
+  // the extra pax lines. Add-ons and F&B are never discounted, so they
   // join the total at full price after the discount has been taken.
   const addLine=(name,qty,rate,gst,disc)=>{ qty=+qty||0; rate=+rate||0; const amount=qty*rate; const tax=Math.round(amount*(+gst||0))/100; lines.push({name,qty,rate,gst:+gst||0,amount,tax,disc:!!disc}); };
   const pkgRow=bdayPackageRow(rec)||{kids:0,adults:0,kidsPrice:0,adultsPrice:0,gst:0};
-  if(rec.pkg) addLine(`${rec.partyType} — ${rec.pkg}`, 1, (+pkgRow.kidsPrice||0)+(+pkgRow.adultsPrice||0), pkgRow.gst, true);
+  if(rec.pkg) addLine(`${rec.partyType} — ${rec.pkg}`, 1, bdayPackageTotal(pkgRow), pkgRow.gst, true);
   const kidsCount=+rec.kidsCount||0, adultsCount=+rec.adultsCount||0;
   const compKids=+rec.compKids||0, compAdults=+rec.compAdults||0;
   // Extra pax is measured against the package's included headcount and nothing
@@ -9380,14 +9432,27 @@ function bdayCompute(rec){
   // changes for any existing booking that's never touched this field.
   const extraKids = (rec.extraKids!==""&&rec.extraKids!=null) ? (+rec.extraKids||0) : suggestedExtraKids;
   const extraAdults = (rec.extraAdults!==""&&rec.extraAdults!=null) ? (+rec.extraAdults||0) : suggestedExtraAdults;
-  const exRow=bdayExtraRow(rec)||{childRate:0,adultRate:0,gst:0};
+  const exRow=bdayExtraRow(rec)||{childRate:0,adultRate:0,nannyRate:0,gst:0};
+  // Nannies: no package includes any, so every nanny is charged at the package's nanny rate. The post-event
+  // check-in's Actual nannies replaces the booked count once entered.
+  const nannyCount=(rec.nannyCount!==""&&rec.nannyCount!=null)?(+rec.nannyCount||0):0;
+  const hasActNannies=(rec.actualNannies!==""&&rec.actualNannies!=null);
+  const billedNannies=hasActNannies?(+rec.actualNannies||0):nannyCount;
+  // Once the post-event check-in has real headcounts, the proforma bills off those:
+  //   Extra child = Actual kids - kids in the package, Extra adult = Actual adults - adults in the package
+  // (never below zero). Complimentary guests are free and never enter any of this.
+  // Until they're entered, the booking's own Extra kids / adults (above) are billed.
+  const hasActKids=(rec.actualKids!==""&&rec.actualKids!=null), hasActAdults=(rec.actualAdults!==""&&rec.actualAdults!=null);
+  const billedExtraKids = (rec.pkg&&hasActKids) ? Math.max(0,(+rec.actualKids||0)-(pkgRow.kids||0)) : extraKids;
+  const billedExtraAdults = (rec.pkg&&hasActAdults) ? Math.max(0,(+rec.actualAdults||0)-(pkgRow.adults||0)) : extraAdults;
   // Extra child / Extra adult / F&B are fixed proforma categories — same as the
   // paper proforma this mirrors, once a package is on the booking they always
   // get their own line, even at zero (shown dashed-out on the invoice), rather
   // than disappearing just because nothing happened to be owed on that line
   // for this particular booking.
-  if(rec.pkg || extraKids) addLine("Extra child", extraKids, exRow.childRate, exRow.gst, true);
-  if(rec.pkg || extraAdults) addLine("Extra adult", extraAdults, exRow.adultRate, exRow.gst, true);
+  if(rec.pkg || billedExtraKids) addLine("Extra child", billedExtraKids, exRow.childRate, exRow.gst, true);
+  if(rec.pkg || billedExtraAdults) addLine("Extra adult", billedExtraAdults, exRow.adultRate, exRow.gst, true);
+  if(rec.pkg || billedNannies) addLine("Extra nanny", billedNannies, exRow.nannyRate, exRow.gst, true);
   (rec.workshops||[]).forEach(nm=>{const w=BDAY_WORKSHOPS.find(x=>x.name===nm); if(w) addLine("Workshop — "+w.name,1,w.price,w.gst);});
   (rec.entertainment||[]).forEach(nm=>{const w=BDAY_ENTERTAINMENT.find(x=>x.name===nm); if(w) addLine("Entertainment — "+w.name,1,w.price,w.gst);});
   (rec.customAddons||[]).forEach(a=>{ if(a&&a.name) addLine((a.type?a.type+" — ":"")+a.name,1,+a.price||0,+a.gst||0); });
@@ -9396,8 +9461,22 @@ function bdayCompute(rec){
   // holds. A booking from before per-head pricing only has the old lump sum, so
   // that still prices as a single unit at the same 5%.
   const fnbRate=+rec.fnbRate||0, fnbPax=+rec.fnbPax||0, fnbGst=bdayFnbGst(rec);
-  const perHeadFnb = fnbRate>0 && fnbPax>0;
-  if(perHeadFnb) addLine("Food & beverage", fnbPax, fnbRate, fnbGst);
+  const fnbAdultRate=+rec.fnbAdultRate||0, fnbAdultPax=+rec.fnbAdultPax||0;
+  // F&B is priced separately for kids and adults (Kids F&B price × Kids F&B count, Adults F&B
+  // price × Adults F&B count). The booking's counts apply until the post-event check-in has real
+  // F&B headcounts (Actual kids F&B / Actual adults F&B), which then replace them.
+  const hasActFnb=(rec.postFnbKids!==""&&rec.postFnbKids!=null)||(rec.postFnbAdults!==""&&rec.postFnbAdults!=null);
+  const postFnbKids=+rec.postFnbKids||0, postFnbAdults=+rec.postFnbAdults||0;
+  const fnbKidsBilled = hasActFnb ? postFnbKids : fnbPax;
+  const fnbAdultsBilled = hasActFnb ? postFnbAdults : fnbAdultPax;
+  const fnbPaxBilled = fnbKidsBilled+fnbAdultsBilled;
+  const perHeadFnb = (fnbRate>0&&fnbKidsBilled>0) || (fnbAdultRate>0&&fnbAdultsBilled>0);
+  // Two lines here so the form's Final calculation can show the split; the proforma merges them
+  // back into one Food & beverage line (bdayProformaLines).
+  if(perHeadFnb){
+    if(fnbRate>0&&fnbKidsBilled>0){ addLine("Food & beverage — Kids", fnbKidsBilled, fnbRate, fnbGst); lines[lines.length-1].fnbPart="kids"; }
+    if(fnbAdultRate>0&&fnbAdultsBilled>0){ addLine("Food & beverage — Adults", fnbAdultsBilled, fnbAdultRate, fnbGst); lines[lines.length-1].fnbPart="adults"; }
+  }
   else if(rec.pkg || +rec.fnbCharge) addLine("Food & beverage", +rec.fnbCharge?1:0, +rec.fnbCharge||0, fnbGst);
   const subtotal=lines.reduce((a,l)=>a+l.amount,0);
   /* The calculation runs in this order:
@@ -9425,28 +9504,12 @@ function bdayCompute(rec){
   // actually been paid (see Payments), same thing Balance has always been off of.
   const paid=(rec.payments||[]).reduce((a,p)=>a+(+p.amount||0),0);
   const balance=grand-paid;
-  // Post-event: actual headcount beyond booked + complimentary, charged at the same extra-pax rate.
-  let postExtra=0, overKids=0, overAdults=0;
-  const hasActuals = (rec.actualKids!==""&&rec.actualKids!=null) || (rec.actualAdults!==""&&rec.actualAdults!=null);
-  if(hasActuals){
-    overKids=Math.max(0, (+rec.actualKids||0) - kidsCount - (+rec.actualCompKids||0));
-    overAdults=Math.max(0, (+rec.actualAdults||0) - adultsCount - (+rec.actualCompAdults||0));
-    const pe=overKids*exRow.childRate + overAdults*exRow.adultRate;
-    postExtra=Math.round(pe + pe*exRow.gst/100);
-  }
-  // Extra F&B served on the day — how many extra kids and adults ate, counted
-  // at check-in and charged at the same per-head F&B rate and its fixed 5%.
-  const postFnbKids=+rec.postFnbKids||0, postFnbAdults=+rec.postFnbAdults||0;
-  const postFnbPax=postFnbKids+postFnbAdults;
-  const postFnbBase=postFnbPax*fnbRate;
-  const postFnb=Math.round(postFnbBase + postFnbBase*fnbGst/100);
-  return {lines, pkgRow, exRow, kidsCount, adultsCount, extraKids, extraAdults, suggestedExtraKids, suggestedExtraAdults, compKids, compAdults,
-    fnbRate, fnbPax, fnbGst, perHeadFnb,
+  return {lines, pkgRow, exRow, kidsCount, adultsCount, extraKids, extraAdults, billedExtraKids, billedExtraAdults, nannyCount, billedNannies, hasActNannies, suggestedExtraKids, suggestedExtraAdults, compKids, compAdults,
+    fnbRate, fnbPax, fnbAdultRate, fnbAdultPax, fnbKidsBilled, fnbAdultsBilled, fnbPaxBilled, fnbGst, perHeadFnb,
     subtotal:Math.round(subtotal), netTaxable:Math.round(netTaxable), gst:Math.round(gst), discount, grand, paid, balance,
     discountableSub:Math.round(discountableSub), discountableNet:Math.round(discountableNet), otherSub:Math.round(otherSub),
     discountPct:Math.max(0, Math.min(100, +rec.discount||0)),
-    hasActuals, overKids, overAdults, postExtra,
-    postFnbKids, postFnbAdults, postFnbPax, postFnbBase, postFnb,
+    hasActKids, hasActAdults, hasActFnb, postFnbKids, postFnbAdults,
     dayType:bdayDayType(rec.partyDate)};
 }
 function bdayLog(rec, who, what){ (rec.timeline=rec.timeline||[]).unshift({on:fmtDMY(new Date()), who, what}); }
@@ -9491,7 +9554,16 @@ function bdayFeedbackCard(rec){
    party), so there's no GSTIN/e-invoice branch here. */
 function bdayProformaLines(rec){
   const c=bdayCompute(rec);
-  return c.lines;
+  // The proforma shows ONE Food & beverage line — no kids / adults split (that lives in the
+  // booking form's Final calculation). Pax, amount and tax add up; when both kids and adults
+  // are billed there's no single price, so the Rate cell is left as a dash.
+  const parts=c.lines.filter(l=>l.fnbPart);
+  if(!parts.length) return c.lines;
+  const merged={name:"Food & beverage", qty:parts.reduce((a,l)=>a+l.qty,0), rate:parts.length>1?0:parts[0].rate, gst:parts[0].gst,
+    amount:parts.reduce((a,l)=>a+l.amount,0), tax:parts.reduce((a,l)=>a+l.tax,0), net:parts.reduce((a,l)=>a+(l.net!=null?l.net:l.amount),0), disc:false};
+  const out=[]; let put=false;
+  c.lines.forEach(l=>{ if(l.fnbPart){ if(!put){ out.push(merged); put=true; } } else out.push(l); });
+  return out;
 }
 function bdayProformaInvoice(rec){
   const c=bdayCompute(rec);
@@ -9519,15 +9591,17 @@ function bdayProformaInvoice(rec){
       <div class="inv-buyer"><b>Buyer (Bill to)</b><div>${escHtml(rec.contactName||"—")}</div>${rec.phone?`<div>${escHtml(rec.phone)}</div>`:""}<div class="muted">B2C — no GSTIN on file.</div></div>
       <div class="inv-buyer"><b>Party details</b><div>Date: ${escHtml(rec.partyDate||"—")}${bdayTimingsLabel(rec)?` &nbsp;·&nbsp; Timings: ${bdayTimingsLabel(rec)}`:""}</div>
         <div>Venue: ${escHtml(rec.venue||"—")} &nbsp;·&nbsp; Party type: ${escHtml(rec.partyType||"—")} &nbsp;·&nbsp; Package: ${escHtml(rec.pkg||"—")}</div></div>
-      ${c.discount?`<div class="inv-note muted">A discount applies to this booking. It comes off the package and extra child/adult lines only (as a percentage) — add-ons and F&amp;B are never discounted. Basic Amount below is what each line was ordered at, while its CGST/SGST and Grand Total are on the line's share after the discount, so the columns add up to the Grand Total at the foot.</div>`:""}
+      ${c.discount?`<div class="inv-note muted">A discount applies to this booking. It comes off the package and extra pax lines only (as a percentage) — add-ons and F&amp;B are never discounted. Basic Amount below is what each line was ordered at, while its CGST/SGST and Grand Total are on the line's share after the discount, so the columns add up to the Grand Total at the foot.</div>`:""}
       <div class="matrix-wrap"><table class="reclist inv-table"><thead><tr><th>Sr. No.</th><th>Heads</th><th>#Pax</th><th>Rate</th><th>GST %</th><th>Basic Amount</th><th>CGST</th><th>SGST</th><th>Grand Total</th></tr></thead><tbody>${partRows||`<tr><td colspan="9" class="muted" style="text-align:center;padding:14px">No priced lines yet — pick a package.</td></tr>`}
-        <tr class="inv-tax"><td colspan="8" style="text-align:right">Taxable value</td><td class="code">${money(c.subtotal)}</td></tr>
-        ${c.discount?`<tr class="inv-tax"><td colspan="8" style="text-align:right">Discount <span class="muted">on the package and extra pax</span></td><td class="code">− ${money(c.discount)}</td></tr>
-        <tr class="inv-tax"><td colspan="8" style="text-align:right">Total <span class="muted">after discount</span></td><td class="code">${money(c.netTaxable)}</td></tr>`:""}
+        ${c.discount?`<tr class="inv-tax"><td colspan="8" style="text-align:right">Gross value <span class="muted">before discount</span></td><td class="code">${money(c.subtotal)}</td></tr>
+        <tr class="inv-tax"><td colspan="8" style="text-align:right">Discount <span class="muted">on the package and extra pax</span></td><td class="code">− ${money(c.discount)}</td></tr>
+        <tr class="inv-tax"><td colspan="8" style="text-align:right">Taxable value <span class="muted">after discount</span></td><td class="code">${money(c.netTaxable)}</td></tr>`
+          :`<tr class="inv-tax"><td colspan="8" style="text-align:right">Taxable value</td><td class="code">${money(c.subtotal)}</td></tr>`}
         <tr class="inv-tax"><td colspan="8" style="text-align:right">GST</td><td class="code">${money(c.gst)}</td></tr>
         <tr class="inv-total"><td colspan="8" style="text-align:right"><b>Grand Total</b></td><td class="code"><b>${money(c.grand)}</b></td></tr>
         ${advRows}
         <tr class="inv-total"><td colspan="8" style="text-align:right"><b>Balance</b></td><td class="code"><b>${money(c.balance)}</b></td></tr></tbody></table></div>
+      <div class="inv-note muted">Package cost is before GST and excludes Food &amp; beverage, which is charged separately.</div>
       <div class="inv-words">Amount Chargeable (in words): <b>INR ${amountInWords(c.grand).replace(/^Rupees /,"")}</b></div>
       <div class="inv-foot"><div><b>Company's Bank Details</b><div>Bank: ${MUSO_SELLER.bank.name}</div><div>A/c No.: <span class="code">${MUSO_SELLER.bank.ac}</span></div><div>IFSC: ${MUSO_SELLER.bank.ifsc}</div></div><div class="inv-sign"><div>for <b>${MUSO_SELLER.name}</b></div><div class="inv-sign-line"></div><div class="muted">Authorised Signatory</div></div></div>
       <div class="inv-note muted">Proforma invoice — for advance / estimation only, not a tax invoice.</div>
@@ -9556,19 +9630,26 @@ function bdayProformaPdf(rec){
   line("Party date: "+(rec.partyDate||"-")+(timings?"    Timings: "+timings:""),ML,9,true,INK2);y-=13;
   line("Venue: "+(rec.venue||"-")+"    Party type: "+(rec.partyType||"-")+"    Package: "+(rec.pkg||"-"),ML,9,false,INK2);y-=16;
   ops.push("q "+BLUE+" RG 1 w "+ML+" "+y.toFixed(1)+" m "+(W-MR)+" "+y.toFixed(1)+" l S Q");y-=15;
-  line("Heads",ML,8,true,INK2);rt("#Pax",ML+210,8,true,INK2);rt("Rate",ML+265,8,true,INK2);rt("GST%",ML+320,8,true,INK2);rt("CGST",ML+395,8,true,INK2);rt("SGST",ML+465,8,true,INK2);rt("Grand Total",W-MR,8,true,INK2);y-=13;
+  // Column right edges (pt). Money is up to ~11 chars wide at 8pt (~48pt), so every numeric column
+  // needs at least that much room to its left or neighbouring columns print on top of each other.
+  const CX={pax:ML+170,rate:ML+226,gst:ML+266,cgst:ML+336,sgst:ML+406,gt:W-MR};
+  const NAMEW=CX.pax-ML-30;   // item names are clipped to this width so they can't run into #Pax
+  const fit=(t,size)=>{ t=String(t); if(pdfWidth(A(t),size,false)<=NAMEW) return t; while(t.length>1 && pdfWidth(A(t+"..."),size,false)>NAMEW) t=t.slice(0,-1); return t+"..."; };
+  line("Heads",ML,8,true,INK2);rt("#Pax",CX.pax,8,true,INK2);rt("Rate",CX.rate,8,true,INK2);rt("GST%",CX.gst,8,true,INK2);rt("CGST",CX.cgst,8,true,INK2);rt("SGST",CX.sgst,8,true,INK2);rt("Grand Total",CX.gt,8,true,INK2);y-=13;
   const pdfDash=v=>v?money(v):"—";
   lines.forEach(l=>{ const cgst=Math.round(l.tax/2), sgst=l.tax-cgst, gtotal=Math.round(l.amount+l.tax);
-    line(l.name,ML,8,false,INK);rt(l.qty?String(l.qty):"—",ML+210,8,false,INK);rt(pdfDash(l.rate),ML+265,8,false,INK);rt(l.gst+"%",ML+320,8,false,INK);rt(pdfDash(cgst),ML+395,8,false,INK);rt(pdfDash(sgst),ML+465,8,false,INK);rt(pdfDash(gtotal),W-MR,8,false,INK);y-=13; });
+    line(fit(l.name,8),ML,8,false,INK);rt(l.qty?String(l.qty):"—",CX.pax,8,false,INK);rt(pdfDash(l.rate),CX.rate,8,false,INK);rt(l.gst+"%",CX.gst,8,false,INK);rt(pdfDash(cgst),CX.cgst,8,false,INK);rt(pdfDash(sgst),CX.sgst,8,false,INK);rt(pdfDash(gtotal),CX.gt,8,false,INK);y-=13; });
   y-=4;ops.push("q 0.878 0.898 0.918 RG 0.7 w "+ML+" "+y.toFixed(1)+" m "+(W-MR)+" "+y.toFixed(1)+" l S Q");y-=16;
-  rt("Taxable value: "+money(c.subtotal),W-MR,9,false,INK2);y-=13;
-  if(c.discount){ rt("Discount (package & extra pax): -"+money(c.discount),W-MR,9,false,INK2);y-=13;
-    rt("Total (after discount): "+money(c.netTaxable),W-MR,9,false,INK2);y-=13; }
+  if(c.discount){ rt("Gross value: "+money(c.subtotal),W-MR,9,false,INK2);y-=13;
+    rt("Discount (package & extra pax): -"+money(c.discount),W-MR,9,false,INK2);y-=13;
+    rt("Taxable value (after discount): "+money(c.netTaxable),W-MR,9,false,INK2);y-=13; }
+  else { rt("Taxable value: "+money(c.subtotal),W-MR,9,false,INK2);y-=13; }
   rt("GST: "+money(c.gst),W-MR,9,false,INK2);y-=13;
   rt("Grand Total: "+money(c.grand),W-MR,10,true,INK);y-=14;
   (rec.payments||[]).forEach((p,i)=>{ rt("Advance "+(i+1)+(p.mode?" ("+p.mode+")":"")+": "+money(p.amount||0),W-MR,9,false,INK2); y-=13; });
   rt("Balance: "+money(c.balance),W-MR,11,true,INK);y-=18;
   line("Amount in words: "+amountInWords(c.grand),ML,9,false,INK2);y-=20;
+  line("Package cost is before GST and excludes Food & beverage, which is charged separately.",ML,8,false,INK3);y-=12;
   line("Proforma invoice — for advance / estimation only, not a tax invoice.",ML,8,false,INK3);
   ops.push("BT /F1 8 Tf "+INK3+" rg 1 0 0 1 "+ML+" 40 Tm ("+pdfEsc(A("Museum of Solutions  -  "+rec.id+"  -  Proforma"))+") Tj ET");
   return pdfAssemble([ops.join("\n")], rec.id+"-proforma.pdf");
@@ -9700,7 +9781,7 @@ function bdayForm(editing){
   const pkgHint=!d.partyDate?"Pick a party date first, then a package, to see what's included."
     :!d.pkg?(pkgOptions.length?"Pick a package to see what's included.":`No ${dayType} package is priced yet — add one under Birthday packages.`)
     :"";
-  const pkgInfo=(d.partyDate&&d.pkg)?(pkgRow?`Includes <b>${pkgRow.kids} kids</b> (${money(pkgRow.kidsPrice)}) &amp; <b>${pkgRow.adults} adults</b> (${money(pkgRow.adultsPrice)}) · ${money((+pkgRow.kidsPrice||0)+(+pkgRow.adultsPrice||0))} total + ${pkgRow.gst}% GST <span class="muted">(${dayType} rate — includes the venue)</span>`:`<span style="color:#9b2c2c">No ${dayType} rate on file for ${d.partyType} / ${d.pkg} — add one under Birthday packages.</span>`):"";
+  const pkgInfo=(d.partyDate&&d.pkg)?(pkgRow?`Includes <b>${pkgRow.kids} kids</b> (${money(pkgRow.kidsPrice)} each) &amp; <b>${pkgRow.adults} adults</b> (${money(pkgRow.adultsPrice)} each) · ${money(bdayPackageTotal(pkgRow))} total + ${pkgRow.gst}% GST <span class="muted">(${dayType} rate — includes the venue)</span>`:`<span style="color:#9b2c2c">No ${dayType} rate on file for ${d.partyType} / ${d.pkg} — add one under Birthday packages.</span>`):"";
   const exRow=bdayExtraRow(d);
   // Computed early so both Venue & schedule (Extra kids/adults, below) and
   // Charges & discount (Estimated total, further down) can read off the same
@@ -9716,7 +9797,7 @@ function bdayForm(editing){
   // Cost of Extra kids/adults on their own — shown as a running calculation
   // right under the two fields, same "show the result, not just the inputs"
   // reasoning as the Estimated total box in Charges & discount below.
-  const extraPaxSub = live.extraKids*(exRow?exRow.childRate:0) + live.extraAdults*(exRow?exRow.adultRate:0);
+  const extraPaxSub = live.billedExtraKids*(exRow?exRow.childRate:0) + live.billedExtraAdults*(exRow?exRow.adultRate:0) + live.billedNannies*(exRow?exRow.nannyRate:0);
   const extraPaxAmount = Math.round(extraPaxSub + (exRow?extraPaxSub*exRow.gst/100:0));
   // Whether the admin has typed their own number over the auto-calculated one —
   // the box below says so rather than silently showing a figure that no longer
@@ -9752,19 +9833,21 @@ function bdayForm(editing){
     // means it stays correct even if the form captures twice before it redraws.
     +fld("Extra kids",`<input class="inp mono" type="number" min="0" data-bf="extraKids" data-auto="${live.suggestedExtraKids}" value="${esc(live.extraKids)}">`,"Kids past what the package includes: Expected kids − the package's included kids. Filled in for you as either changes, and editable — type your own number to override it. Billed as a chargeable 'Extra child' line on the invoice.")
     +fld("Extra adults",`<input class="inp mono" type="number" min="0" data-bf="extraAdults" data-auto="${live.suggestedExtraAdults}" value="${esc(live.extraAdults)}">`,"Adults past what the package includes: Expected adults − the package's included adults. Filled in for you as either changes, and editable — type your own number to override it. Billed as a chargeable 'Extra adult' line on the invoice.")
+    +fld("Nannies",`<input class="inp mono" type="number" min="0" data-bf="nannyCount" value="${esc(d.nannyCount)}">`,"Nannies attending with the children. No package includes any, so every nanny is charged at the package's extra nanny rate (before GST). Billed as an 'Extra nanny' line on the invoice.")
     // The box only exists once there's something to work out — no package, no
     // calculation, rather than a panel explaining its own emptiness.
     +((d.pkg&&pkgRow)?`<div class="fld wide" style="margin-top:-6px;padding:10px 12px;border-radius:8px;background:#FBFCFA;border:1px solid var(--rule2);font-size:12.5px">
         <div>Kids: <b>${live.kidsCount}</b> expected &minus; <b>${pkgRow.kids}</b> in ${escHtml(d.pkg)} = <b>${live.suggestedExtraKids}</b> extra${kidsOverridden?` <span class="muted">(overridden to ${live.extraKids})</span>`:""}</div>
         <div style="margin-top:3px">Adults: <b>${live.adultsCount}</b> expected &minus; <b>${pkgRow.adults}</b> in ${escHtml(d.pkg)} = <b>${live.suggestedExtraAdults}</b> extra${adultsOverridden?` <span class="muted">(overridden to ${live.extraAdults})</span>`:""}</div>
-        <div style="margin-top:6px;padding-top:6px;border-top:1px solid var(--rule2)">Extra pax charge: ${live.extraKids} &times; ${money(exRow?exRow.childRate:0)} + ${live.extraAdults} &times; ${money(exRow?exRow.adultRate:0)}${exRow?` + ${exRow.gst}% GST`:""} = <b>${money(extraPaxAmount)}</b></div></div>`:"")
+        <div style="margin-top:3px">Nannies: <b>${live.billedNannies}</b> &times; ${money(exRow?exRow.nannyRate:0)}${live.hasActNannies?` <span class="muted">actual &middot; booked ${live.nannyCount}</span>`:""}</div>
+        <div style="margin-top:6px;padding-top:6px;border-top:1px solid var(--rule2)">Extra pax charge: ${live.billedExtraKids} &times; ${money(exRow?exRow.childRate:0)} + ${live.billedExtraAdults} &times; ${money(exRow?exRow.adultRate:0)} + ${live.billedNannies} &times; ${money(exRow?exRow.nannyRate:0)}${exRow?` + ${exRow.gst}% GST`:""} = <b>${money(extraPaxAmount)}</b></div>${(pkgRow.extraChildRate===""||pkgRow.extraAdultRate===""||pkgRow.extraNannyRate===""||pkgRow.extraNannyRate==null)?`<div style="margin-top:6px;color:#9b2c2c">Extra-pax rates aren't set for this package in the Birthday packages master, so extra kids, adults or nannies price at ₹0 until they are.</div>`:""}</div>`:"")
     // Discount lives with the package it's being given against, not off in a
     // charges section of its own. It comes off the package and extra-pax lines
     // only — add-ons and F&B are never discounted — and GST is charged on
     // what's left, so the hint is worth keeping here.
     +fld("Discount",`<div style="display:flex;gap:8px;align-items:center">
         <input class="inp mono" type="number" min="0" max="100" data-bf="discount" value="${esc(d.discount)}" style="flex:1">
-        <span class="muted" style="font-size:12.5px">%</span></div>`,"Percentage off the package and extra child/adult lines, before GST. Add-ons and F&amp;B aren't discounted.")
+        <span class="muted" style="font-size:12.5px">%</span></div>`,"Percentage off the package and extra pax lines (extra kids, adults and nannies), before GST. Add-ons and F&amp;B aren't discounted.")
     +(live.discount?`<div class="fld wide" style="margin-top:-6px;padding:10px 12px;border-radius:8px;background:#FBFCFA;border:1px solid var(--rule2);font-size:12.5px">
         ${live.discountPct}% of ${money(live.discountableSub)} <span class="muted">(package + extra pax)</span> = <b>&minus; ${money(live.discount)}</b></div>`:""));
 
@@ -9810,18 +9893,25 @@ function bdayForm(editing){
 
   // F&B is a per-head rate times the number of pax eating, at a fixed 5% GST —
   // the rate isn't an input, so it's stated rather than offered as a field.
-  const fnbRateIn=+d.fnbRate||0, fnbPaxIn=+d.fnbPax||0, fnbGstIn=bdayFnbGst(d);
-  const fnbBase=fnbRateIn&&fnbPaxIn ? fnbRateIn*fnbPaxIn : (+d.fnbCharge||0);
+  const fnbRateIn=+d.fnbRate||0, fnbPaxIn=+d.fnbPax||0, fnbAdultRateIn=+d.fnbAdultRate||0, fnbAdultPaxIn=+d.fnbAdultPax||0, fnbGstIn=bdayFnbGst(d);
+  // The summary must price exactly what the Final calculation below does: once the post-event
+  // check-in has Actual kids / adults F&B, those replace the booked counts (live.fnbKidsBilled).
+  const fnbKidsN=live.fnbKidsBilled, fnbAdultsN=live.fnbAdultsBilled, fnbOnActuals=live.hasActFnb;
+  const fnbKidsBase=fnbRateIn*fnbKidsN, fnbAdultBase=fnbAdultRateIn*fnbAdultsN;
+  const perHeadIn=!!(fnbKidsBase||fnbAdultBase);
+  const fnbBase=perHeadIn ? fnbKidsBase+fnbAdultBase : (+d.fnbCharge||0);
   const fnbGstAmt=Math.round(fnbBase*fnbGstIn/100), fnbTotal=fnbBase+fnbGstAmt;
   const chargeRow=(label,val)=>`<div style="display:flex;justify-content:space-between;gap:12px;margin-top:3px"><span>${label}</span><span class="mono">${val}</span></div>`;
   const secCharges=section("Food &amp; beverage",
-    fld("F&amp;B price per head",num("fnbRate",d.fnbRate,"e.g. 450"))+
-    fld("Number of pax",num("fnbPax",d.fnbPax,"e.g. 30"))+
+    fld("Kids F&amp;B price",num("fnbRate",d.fnbRate,"e.g. 450"))+
+    fld("Kids F&amp;B count",num("fnbPax",d.fnbPax,"e.g. 20"))+
+    fld("Adults F&amp;B price",num("fnbAdultRate",d.fnbAdultRate,"e.g. 450"),"Required once an Adults F&amp;B count is entered.")+
+    fld("Adults F&amp;B count",num("fnbAdultPax",d.fnbAdultPax,"e.g. 10"))+
     fld("GST %",`<div style="display:flex;gap:8px;align-items:center">
         <input class="inp mono" type="number" min="0" max="100" data-bf="fnbGst" value="${esc(d.fnbGst===""||d.fnbGst==null?BDAY_FNB_GST:d.fnbGst)}" style="flex:1">
         <span class="muted" style="font-size:12.5px">%</span></div>`,`F&amp;B is normally ${BDAY_FNB_GST}% — not the 18% the rest of the booking carries — but it can be changed on a booking.`)
     +(fnbBase?`<div class="fld wide" style="margin-top:-6px;padding:10px 12px;border-radius:8px;background:#FBFCFA;border:1px solid var(--rule2);font-size:12.5px">
-      ${chargeRow(fnbRateIn&&fnbPaxIn?`${money(fnbRateIn)} per head &times; ${fnbPaxIn} pax`:`Food &amp; beverage <span class="muted">(entered as a lump sum)</span>`,money(fnbBase))}
+      ${perHeadIn?(fnbKidsBase?chargeRow(`Kids: ${money(fnbRateIn)} &times; ${fnbKidsN}${fnbOnActuals?` <span class="muted">actual &middot; booked ${fnbPaxIn}</span>`:""}`,money(fnbKidsBase)):"")+(fnbAdultBase?chargeRow(`Adults: ${money(fnbAdultRateIn)} &times; ${fnbAdultsN}${fnbOnActuals?` <span class="muted">actual &middot; booked ${fnbAdultPaxIn}</span>`:""}`,money(fnbAdultBase)):""):chargeRow(`Food &amp; beverage <span class="muted">(entered as a lump sum)</span>`,money(fnbBase))}
       ${chargeRow(`GST <span class="muted">${fnbGstIn}%</span>`,money(fnbGstAmt))}
       <div style="display:flex;justify-content:space-between;gap:12px;margin-top:6px;padding-top:6px;border-top:1px solid var(--rule2)">
         <span>F&amp;B total <span class="muted">(incl. GST)</span></span><span class="mono"><b>${money(fnbTotal)}</b></span></div></div>`:""));
@@ -9860,20 +9950,21 @@ function bdayForm(editing){
   };
   // One straight run of lines, then the summary: taxable value, the discount,
   // the total it leaves, GST, grand total. The discount still only comes off
-  // the package and extra child/adult lines — that's said next to the Discount
+  // the package and extra pax lines — that's said next to the Discount
   // field and on the row itself, rather than by splitting the table in two.
   const allLines=live.lines.map(lineRow).join("");
   const secTotal=section("Final calculation",
     `<div class="fld wide" style="margin:0"><div class="matrix-wrap"><table class="reclist">
       <thead><tr><th>Line</th><th class="ctr" style="text-align:right">Price</th><th class="ctr" style="text-align:right">GST</th><th class="ctr" style="text-align:right">Total</th></tr></thead><tbody>
       ${allLines||`<tr><td colspan="4" class="muted" style="text-align:center;padding:12px">Nothing priced yet — pick a package to start the calculation.</td></tr>`}
-      ${sumRow(`Taxable value`, money(live.subtotal), {top:true})}
+      ${sumRow(live.discount?`Gross value <span class="muted">before discount</span>`:`Taxable value`, money(live.subtotal), {top:true})}
       ${sumRow(`Discount${live.discount?` <span class="muted">${live.discountPct}% on the package and extra pax</span>`:""}`, live.discount?`− ${money(live.discount)}`:"—")}
-      ${sumRow(`Total <span class="muted">after discount, before GST</span>`, money(live.netTaxable))}
+      ${sumRow(`Taxable value <span class="muted">${live.discount?"after discount, ":""}before GST</span>`, money(live.netTaxable))}
       ${sumRow(`Total GST <span class="muted">sum of the GST column above</span>`, money(live.gst))}
       ${sumRow(`<b>Grand total</b> <span class="muted">(incl. GST)</span>`, `<b>${money(live.grand)}</b>`)}
       ${live.paid?sumRow("Paid so far", money(live.paid))+sumRow("<b>Balance</b>", `<b>${money(live.balance)}</b>`):""}
-    </tbody></table></div></div>`);
+    </tbody></table></div>
+    <div class="muted" style="font-size:11.5px;margin-top:8px">Package cost is before GST and excludes Food &amp; beverage, which is charged separately.</div></div>`);
 
   const statusOpts = BDAY_MANUAL_STATUSES.includes(d.status) ? BDAY_MANUAL_STATUSES : BDAY_MANUAL_STATUSES.concat([d.status]);
   const statusLocked = !BDAY_MANUAL_STATUSES.includes(d.status);
@@ -9914,7 +10005,7 @@ function bdayCaptureForm(){
   // types) — drop a venue that no longer belongs to the newly-picked party
   // type rather than silently keep a choice the form wouldn't offer any more.
   if(d.venue && !bdayPartyTypeVenues(d.partyType).includes(d.venue)) d.venue="";
-  ["kidsCount","adultsCount","compKids","compAdults","fnbRate","fnbPax","fnbGst","fnbCharge","discount"].forEach(k=>{const v=g(k);if(v!==undefined)d[k]=v===""?"":+v||0;});
+  ["kidsCount","adultsCount","compKids","compAdults","nannyCount","fnbRate","fnbPax","fnbAdultRate","fnbAdultPax","fnbGst","fnbCharge","discount"].forEach(k=>{const v=g(k);if(v!==undefined)d[k]=v===""?"":+v||0;});
   // Extra kids / adults: each input carries the number it was auto-filled with
   // (data-auto). A value that still matches it is just the suggestion sitting
   // there untouched, so the field stays on auto and keeps tracking Expected /
@@ -9949,6 +10040,7 @@ function bdayValidate(){ const d=bdayDraft; if(!d) return "";
   if(!d.contactName||!d.contactName.trim()) return "Contact first and last name are required.";
   if(!d.prefDate||!d.prefDate.trim()) return "Preferred date of party is required.";
   if(!d.ageGroup||!d.ageGroup.trim()) return "Age group is required.";
+  if((+d.fnbAdultPax||0)>0 && (d.fnbAdultRate===""||d.fnbAdultRate==null)) return "Enter the Adults F&B price — the Adults F&B count is filled in.";
   const cl=bookingClashes("birthday"); if(cl.length) return cl[0]; return ""; }
 function bdayCommit(notify, sendFP){
   bdayCaptureForm(); const d=bdayDraft; if(!d) return;
@@ -10218,7 +10310,7 @@ function bdayDetail(){
       ${row("Time window",escHtml(rec.slotWindow)+(rec.slotWindow?` <span class="muted">(${c.dayType})</span>`:""))}
       ${row("Package",escHtml(rec.pkg)+(c.pkgRow?` <span class="muted">— ${c.pkgRow.kids} kids / ${c.pkgRow.adults} adults incl.</span>`:""))}
       ${row("Complimentary kids",c.compKids)}${row("Complimentary adults",c.compAdults)}
-      ${row("Extra kids",c.extraKids)}${row("Extra adults",c.extraAdults)}
+      ${row("Extra kids",c.billedExtraKids)}${row("Extra adults",c.billedExtraAdults)}${row("Nannies",c.billedNannies)}
     </tbody></table></div></div>
     <div class="card"><div class="card-head"><span class="card-title">Add-ons</span></div><div class="matrix-wrap"><table class="reclist"><tbody>
       ${row("Workshop add-ons",(rec.workshops||[]).map(escHtml).join(", "))}
@@ -10279,15 +10371,18 @@ function bdayDetail(){
      is Confirmed or further along, same gate as before. */
   const postEvent = ["Confirmed","Completed"].includes(rec.status) ? `<div class="card"><div class="card-head"><span class="card-title">Post-event check-in</span><span class="card-note">headcount on the day — editable even after the event</span></div>
     <div class="form-body" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px 16px;padding:14px 20px">
-      <div class="fld" style="margin:0"><div class="lab"><span class="lab-n">Extra kids</span></div><input class="inp mono" type="number" min="0" id="bdayActualKids" value="${escAttr(rec.actualKids)}"></div>
-      <div class="fld" style="margin:0"><div class="lab"><span class="lab-n">Extra adults</span></div><input class="inp mono" type="number" min="0" id="bdayActualAdults" value="${escAttr(rec.actualAdults)}"></div>
-      <div class="fld" style="margin:0"><div class="lab"><span class="lab-n">Extra complimentary kids</span></div><input class="inp mono" type="number" min="0" id="bdayActualCompKids" value="${escAttr(rec.actualCompKids)}"></div>
-      <div class="fld" style="margin:0"><div class="lab"><span class="lab-n">Extra complimentary adults</span></div><input class="inp mono" type="number" min="0" id="bdayActualCompAdults" value="${escAttr(rec.actualCompAdults)}"></div>
-      <div class="fld" style="margin:0"><div class="lab"><span class="lab-n">Extra kids F&amp;B</span></div><input class="inp mono" type="number" min="0" id="bdayPostFnbKids" value="${escAttr(rec.postFnbKids)}"></div>
-      <div class="fld" style="margin:0"><div class="lab"><span class="lab-n">Extra adults F&amp;B</span></div><input class="inp mono" type="number" min="0" id="bdayPostFnbAdults" value="${escAttr(rec.postFnbAdults)}"></div>
+      <div class="fld" style="margin:0"><div class="lab"><span class="lab-n">Actual kids</span></div><input class="inp mono" type="number" min="0" id="bdayActualKids" value="${escAttr(rec.actualKids)}"></div>
+      <div class="fld" style="margin:0"><div class="lab"><span class="lab-n">Actual adults</span></div><input class="inp mono" type="number" min="0" id="bdayActualAdults" value="${escAttr(rec.actualAdults)}"></div>
+      <div class="fld" style="margin:0"><div class="lab"><span class="lab-n">Actual nannies</span></div><input class="inp mono" type="number" min="0" id="bdayActualNannies" value="${escAttr(rec.actualNannies)}"></div>
+      <div class="fld" style="margin:0"><div class="lab"><span class="lab-n">Actual complimentary kids</span></div><input class="inp mono" type="number" min="0" id="bdayActualCompKids" value="${escAttr(rec.actualCompKids)}"></div>
+      <div class="fld" style="margin:0"><div class="lab"><span class="lab-n">Actual complimentary adults</span></div><input class="inp mono" type="number" min="0" id="bdayActualCompAdults" value="${escAttr(rec.actualCompAdults)}"></div>
+      <div class="fld" style="margin:0"><div class="lab"><span class="lab-n">Actual kids F&amp;B</span></div><input class="inp mono" type="number" min="0" id="bdayPostFnbKids" value="${escAttr(rec.postFnbKids)}"></div>
+      <div class="fld" style="margin:0"><div class="lab"><span class="lab-n">Actual adults F&amp;B</span></div><input class="inp mono" type="number" min="0" id="bdayPostFnbAdults" value="${escAttr(rec.postFnbAdults)}"></div>
     </div>
-    ${c.hasActuals?`<div class="card-body" style="padding-top:0;font-size:12.5px">Extra-pax charge: <b>${money(c.postExtra)}</b> <span class="muted">(${c.overKids} kids · ${c.overAdults} adults beyond booked + extra)</span></div>`:""}
-    ${c.postFnbPax?`<div class="card-body" style="padding-top:0;font-size:12.5px">Extra F&amp;B charge: <b>${money(c.postFnb)}</b> <span class="muted">(${c.postFnbKids} kids · ${c.postFnbAdults} adults &times; ${money(c.fnbRate)} per head + ${c.fnbGst}% GST)</span>${c.fnbRate?"":' <span style="color:#9b2c2c">— no F&amp;B per-head price on the booking, so this prices at ₹0.</span>'}</div>`:""}
+    <div class="card-body" style="padding-top:0;font-size:12px;color:var(--ink3)">Complimentary kids and adults are for information only — they are free and never enter the proforma.</div>
+    ${c.hasActNannies?`<div class="card-body" style="padding-top:0;font-size:12.5px">Billed on the proforma: <b>${c.billedNannies}</b> extra nannies <span class="muted">(actual, replacing the booked ${c.nannyCount})</span></div>`:""}
+    ${(c.hasActKids||c.hasActAdults)?`<div class="card-body" style="padding-top:0;font-size:12.5px">Billed on the proforma: <b>${c.billedExtraKids}</b> extra kids <span class="muted">(${c.hasActKids?`${+rec.actualKids||0} actual &minus; ${c.pkgRow?c.pkgRow.kids:0} in package`:"from the booking"})</span> &middot; <b>${c.billedExtraAdults}</b> extra adults <span class="muted">(${c.hasActAdults?`${+rec.actualAdults||0} actual &minus; ${c.pkgRow?c.pkgRow.adults:0} in package`:"from the booking"})</span></div>`:""}
+    ${c.hasActFnb?`<div class="card-body" style="padding-top:0;font-size:12.5px">Food &amp; beverage billed for <b>${c.fnbPaxBilled}</b> pax <span class="muted">(${c.postFnbKids} kids &times; ${money(c.fnbRate)} + ${c.postFnbAdults} adults &times; ${money(c.fnbAdultRate)} actual, replacing the booked ${c.fnbPax} kids + ${c.fnbAdultPax} adults)</span>${(c.fnbRate||c.fnbAdultRate)?"":' <span style="color:#9b2c2c">— no F&amp;B price on the booking, so this prices at ₹0.</span>'}</div>`:""}
     <div class="card-body" style="padding-top:0"><button class="btn" data-bday-checkin="1">Save check-in numbers</button></div></div>
     ${bdayFeedbackCard(rec)}`
     : `<div class="card"><div class="card-body muted">Post-visit check-in opens once the booking is Confirmed.</div></div>`;
@@ -11456,12 +11551,24 @@ function addSubmit(){
     editSlot=-1;
   } else if(addOpen==="batch"){
     const bfrom=g("af_bfrom")||"—", bto=g("af_bto")||"—";
-    const def=(w.batches[0]&&w.batches[0].days&&w.batches[0].days[0])||{};
-    w.batches.push({ n:g("af_bn")||("Batch "+(w.batches.length+1)), from:bfrom, to:bto,
-      cap:+g("af_bcap")||+w.cap||9, sold:0, price:+g("af_bprice")||0, mrp:+g("af_bmrp")||null, days:genBatchDays(bfrom,bto,def.t1,def.t2) });
-    selB=w.batches.length-1;
+    if(editBatch>=0 && w.batches[editBatch]){   // update the existing batch in place — its days, sold count and any fields not on the form are kept
+      const x=w.batches[editBatch];
+      x.n=g("af_bn")||x.n; x.from=bfrom; x.to=bto; x.cap=+g("af_bcap")||x.cap; x.price=+g("af_bprice")||0; x.mrp=+g("af_bmrp")||null;
+      selB=editBatch;
+    } else {
+      const def=(w.batches[0]&&w.batches[0].days&&w.batches[0].days[0])||{};
+      w.batches.push({ n:g("af_bn")||("Batch "+(w.batches.length+1)), from:bfrom, to:bto,
+        cap:+g("af_bcap")||+w.cap||9, sold:0, price:+g("af_bprice")||0, mrp:+g("af_bmrp")||null, days:genBatchDays(bfrom,bto,def.t1,def.t2) });
+      selB=w.batches.length-1;
+    }
+    editBatch=-1;
   } else if(addOpen==="day"){
-    const b=w.batches[selB]; if(b) b.days.push({ d:g("af_dd")||"New day", t1:g("af_dt1")||"—", t2:g("af_dt2")||"—", note:g("af_dnote") });
+    const b=w.batches[selB];
+    if(b){
+      if(editDay>=0 && b.days[editDay]){ const d=b.days[editDay]; d.d=g("af_dd")||d.d; d.t1=g("af_dt1")||d.t1; d.t2=g("af_dt2")||d.t2; d.note=g("af_dnote"); }
+      else b.days.push({ d:g("af_dd")||"New day", t1:g("af_dt1")||"—", t2:g("af_dt2")||"—", note:g("af_dnote") });
+    }
+    editDay=-1;
   } else if(addOpen==="rate"){
     const code=g("af_rate"); if(code && TAXRATES.some(r=>r.code===code) && !a.tax.includes(code)) a.tax.push(code);
   } else if(addOpen==="block"){
@@ -11895,7 +12002,8 @@ document.addEventListener("click",e=>{
     if(navigator.clipboard&&navigator.clipboard.writeText){ navigator.clipboard.writeText(code).then(done).catch(done); } else done();
     return; }
   const od=e.target.closest("[data-open]");
-  if(od){ const [kind,i]=od.dataset.open.split(":"); const idx=+i; einvView=null;
+  // a row's own Edit button (Birthday / Corporate) lives inside the clickable row — let its handler further down take the click instead of opening the detail page
+  if(od && !e.target.closest("[data-bday-edit-row],[data-corp-edit-row]")){ const [kind,i]=od.dataset.open.split(":"); const idx=+i; einvView=null;
     if(kind==="prod") selP=idx; else if(kind==="camp"){ selW=idx; selB=0; progKind="camp"; } else if(kind==="event"){ selE=idx; progKind="event"; } else if(kind==="disc"){ selD=idx; dsub="summary"; } else if(kind==="member"){ selMember=idx; msub="summary"; } else if(kind==="tier"){ selTier=idx; } else if(kind==="shopitem"){ selShopItem=idx; sitab="details"; } else if(kind==="shopsale"){ selShopSale=idx; ssub="details"; } else if(kind==="shopcoupon"){ selShopCoupon=idx; } else if(kind==="school"){ selSchool=(SCHOOL_BOOKINGS[idx]||{}).id||""; schsub="overview"; schoolEmailView=null; schoolMsg=""; schoolEInvView=false; schoolEInvConfirm=false; schoolPayFlyout=false; schoolPayEdit=-1; schoolPayDel=-1; schoolCNFlyout=false; schoolCNView=false; } else if(kind==="sponsored"){ selSp=(SPONSORED_BOOKINGS[idx]||{}).id||""; spsub="overview"; spEmailView=null; spMsg=""; spInvoiceEdit=null; } else if(kind==="birthday"){ selBday=(BIRTHDAY_BOOKINGS[idx]||{}).id||""; bdsub="overview"; bdayMsg=""; bdayPayFlyout=false; bdayPayEdit=-1; bdayPayDel=-1; bdaySaveConfirm=false; bdayCancelConfirm=false; } else if(kind==="corporate"){ selCorp=(CORPORATE_BOOKINGS[idx]||{}).id||""; corpsub="overview"; corpPayFlyout=false; corpPayEdit=-1; corpPayDel=-1; corpCancelConfirm=false; corpEInvConfirm=false; corpEInvView=false; corpCNFlyout=false; corpCNView=false; }
     tab="detail"; sub="details"; esub="details"; csub="details"; addOpen=null; render(); $(".stage").scrollTop=0; return; }
   // ---- Bulk CSV import (School & Sponsored) ----
@@ -12098,6 +12206,7 @@ document.addEventListener("click",e=>{
   if(e.target.closest("[data-bday-checkin]")){ const rec=bdayById(selBday); if(rec){ const g=id=>{const el=document.getElementById(id);return el?el.value:"";};
       rec.actualKids=g("bdayActualKids")===""?"":+g("bdayActualKids")||0;
       rec.actualAdults=g("bdayActualAdults")===""?"":+g("bdayActualAdults")||0;
+      rec.actualNannies=g("bdayActualNannies")===""?"":+g("bdayActualNannies")||0;
       rec.actualCompKids=+g("bdayActualCompKids")||0;
       rec.actualCompAdults=+g("bdayActualCompAdults")||0;
       rec.postFnbKids=g("bdayPostFnbKids")===""?"":+g("bdayPostFnbKids")||0;
@@ -12291,6 +12400,10 @@ document.addEventListener("click",e=>{
   // ---- inline add forms (open / cancel / submit) ----
   const eslot=e.target.closest("[data-edit-slot]");
   if(eslot){ editSlot=+eslot.dataset.editSlot; addOpen="slot"; render(); $(".stage").scrollTop=0; return; }
+  const ebatch=e.target.closest("[data-edit-batch]");
+  if(ebatch){ editBatch=+ebatch.dataset.editBatch; selB=editBatch; addOpen="batch"; render(); $(".stage").scrollTop=0; return; }
+  const eday=e.target.closest("[data-edit-day]");
+  if(eday){ editDay=+eday.dataset.editDay; addOpen="day"; render(); $(".stage").scrollTop=0; return; }
   const eblock=e.target.closest("[data-edit-block]");
   if(eblock){ editBlock=+eblock.dataset.editBlock; blockDraft=seedBlockDraft((P[selP].blocks||[])[editBlock]); blockMselOpen=false; addOpen="block"; render(); $(".stage").scrollTop=0; return; }
   // ---- quota-block flyout: time-slot multi-select ----
@@ -12311,10 +12424,10 @@ document.addEventListener("click",e=>{
   if(e.target.closest("[data-rule-del-cancel]")){ ruleDel=null; render(); return; }
   if(e.target.closest("[data-rule-del-confirm]")){ const a=ruleTarget(); if(ruleDel&&a&&a.rules&&a.rules[ruleDel.ctx]) a.rules[ruleDel.ctx].splice(ruleDel.i,1); ruleDel=null; render(); return; }
   const ao=e.target.closest("[data-addopen]");
-  if(ao){ if(ao.dataset.addopen==="slot") editSlot=-1; if(ao.dataset.addopen==="block"){ editBlock=-1; blockDraft=seedBlockDraft(null); blockMselOpen=false; } addOpen=ao.dataset.addopen; render(); $(".stage").scrollTop=0; return; }
+  if(ao){ if(ao.dataset.addopen==="slot") editSlot=-1; if(ao.dataset.addopen==="batch") editBatch=-1; if(ao.dataset.addopen==="day") editDay=-1; if(ao.dataset.addopen==="block"){ editBlock=-1; blockDraft=seedBlockDraft(null); blockMselOpen=false; } addOpen=ao.dataset.addopen; render(); $(".stage").scrollTop=0; return; }
   const econds=e.target.closest("[data-editconds]");
   if(econds){ syncDiscountForm(); condDraft=condDraftFromDiscount(curDiscount()); condItemsOpen=false; addOpen="cond"; render(); $(".stage").scrollTop=0; return; }
-  if(e.target.closest("[data-addcancel]")){ addOpen=null; editCond=-1; condDraft=null; editSlot=-1; editBlock=-1; blockDraft=null; blockMselOpen=false; render(); return; }
+  if(e.target.closest("[data-addcancel]")){ addOpen=null; editCond=-1; condDraft=null; editSlot=-1; editBlock=-1; editBatch=-1; editDay=-1; blockDraft=null; blockMselOpen=false; render(); return; }
   if(e.target.closest("[data-addsubmit]")){ addSubmit(); return; }
   // Food vendor F&B-options editor — DOM-only add/remove (master edits don't persist)
   const fbAddDonor=e.target.closest("[data-fb-add-donor]");
@@ -12555,6 +12668,7 @@ function ageFromDOB(str){
   return age;
 }
 function ageLabel(str){ const a=ageFromDOB(str); return a===null?"":(a===0?"Under 1 yr":a+(a===1?" yr":" yrs")); }
+document.addEventListener("input",e=>{ if(current==="bdaypackages" && (tab==="edit"||tab==="new") && e.target.closest&&e.target.closest('.fld[data-df]')) bdayPkgCalcRefresh(); });
 document.addEventListener("input",e=>{
   const oRow=e.target.closest&&e.target.closest("[data-vorow],[data-spvorow]"); if(oRow) syncOptCheckBtn(oRow);
   const instAmt=e.target.closest&&e.target.closest("[data-shop-instrow-amt]");
