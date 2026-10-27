@@ -3459,10 +3459,14 @@ const CUSTOMERS = (()=>{ const seen=new Map(); BOOKINGS.forEach(b=>{ if(b.phone 
 /* Plans have configurable names, visit counts (a number, or "Unlimited"), validity, price and
    per-plan discounts. A visit = 1 adult + 1 child. Platinum is unlimited; Gold/Silver are limited. */
 const MEMBERSHIP_TIERS = [
-  {id:"silver",  name:"Silver",  price:2999, visits:6,           validity:"3 months", hsn:"999692", priority:false, status:"Active"},
-  {id:"gold",    name:"Gold",    price:5999, visits:12,          validity:"6 months", hsn:"999692", priority:true,  status:"Active"},
-  {id:"platinum",name:"Platinum",price:9999, visits:"Unlimited", validity:"Yearly",   hsn:"999692", priority:true,  status:"Active"}
+  {id:"silver",  name:"Silver",  price:2999, visits:6,           validity:"3 months", hsn:"999692", priority:false, status:"Active", bday:{pct:5,  perks:""}},
+  {id:"gold",    name:"Gold",    price:5999, visits:12,          validity:"6 months", hsn:"999692", priority:true,  status:"Active", bday:{pct:10, perks:"Free welcome kit for the birthday child"}},
+  {id:"platinum",name:"Platinum",price:9999, visits:"Unlimited", validity:"Yearly",   hsn:"999692", priority:true,  status:"Active", bday:{pct:10, perks:"Free welcome kit for the birthday child\n5 extra children at no charge"}}
 ];
+/* Birthday-party perks live ON the plan, not in Discounts & offers: birthday parties are booked outside the POS /
+   website booking flow, so no discount code or automatic discount ever reaches them. Staff apply bday.pct and the
+   listed perks by hand when quoting a member's party. */
+const bdayPerkLabel = t => { const b=t&&t.bday||{}; const x=[]; if(+b.pct) x.push(b.pct+"% off"); (b.perks||"").split("\n").map(l=>l.trim()).filter(Boolean).forEach(l=>x.push(l)); return x; };
 const MEMBER_TODAY = "24 Aug 2026";   // reference "now" for expiry maths
 /* Each member registers ONE adult-child pair at purchase; only that pair may redeem.
    A visit = 1 adult + 1 child; visitsUsed / visitsTotal count PAIRS (Platinum = Unlimited). */
@@ -5520,15 +5524,16 @@ const VIEWS = {
   tiers(){
     return `${toolbar("Search membership tiers",MEMBERSHIP_TIERS.length+" plans")}
     <div class="card"><div class="matrix-wrap"><table class="reclist"><thead><tr>
-      <th>Plan</th><th>Price</th><th>Visits</th><th>Validity</th><th>Member discounts</th><th>Status</th></tr></thead>
+      <th>Plan</th><th>Price</th><th>Visits</th><th>Validity</th><th>Member discounts</th><th>Birthday party perks</th><th>Status</th></tr></thead>
     <tbody>${MEMBERSHIP_TIERS.map((t,i)=>`<tr data-open="tier:${i}">
       <td>${tierPill(t.name)}</td>
       <td class="code">${money(t.price)}</td>
       <td class="code">${t.visits==="Unlimited"?'<b style="font-weight:600">Unlimited</b>':t.visits}</td>
       <td>${t.validity}</td>
       <td>${(()=>{const k=tierPerks(t);return k.length?k.map(d=>`${perkLabel(d)} <span class="code">${d.v}</span>`).join("<br>"):'<span class="muted">None</span>';})()}</td>
+      <td>${bdayPerkLabel(t).join("<br>")||'<span class="muted">None</span>'}</td>
       <td>${t.status==="Active"?'<span class="pill pill-ok"><i class="dot"></i>Active</span>':'<span class="pill pill-draft"><i class="dot"></i>'+t.status+'</span>'}</td></tr>`).join("")}
-      <tr><td colspan="6"><button class="rep-add" data-tab="new" style="border-radius:4px">+ New tier</button></td></tr>
+      <tr><td colspan="7"><button class="rep-add" data-tab="new" style="border-radius:4px">+ New tier</button></td></tr>
     </tbody></table></div></div>`;
   },
   members(){
@@ -7520,12 +7525,17 @@ function tierDetail(){
           <div class="matrix-wrap"><table><thead><tr><th>Discount</th><th class="ctr">Value</th><th>Status</th></tr></thead><tbody>
             ${tierPerks(t).map(d=>`<tr><td>${perkLabel(d)}</td><td class="ctr code">${d.v}</td><td>${d.status}</td></tr>`).join("")||`<tr><td colspan="3" class="muted">No discount applies to this plan yet.</td></tr>`}
           </tbody></table></div></div>
+        <div class="card"><div class="card-head"><span class="card-title">Birthday party perks</span><span class="card-note">applied by staff when quoting the party</span></div>
+          <div class="matrix-wrap"><table><tbody>
+            ${row("Discount on the party",+(t.bday&&t.bday.pct)?'<span class="code">'+t.bday.pct+'%</span>':'<span class="muted">None</span>')}
+            ${row("Other perks",((t.bday&&t.bday.perks)||"").split("\n").map(l=>l.trim()).filter(Boolean).map(escHtml).join("<br>")||'<span class="muted">None</span>')}
+          </tbody></table></div></div>
       </div>
       <div class="card"><div class="card-head"><span class="card-title">Terms</span></div>
         <ul class="card-body" style="font-size:12.5px;line-height:1.6;color:var(--ink2);margin:0;padding:14px 16px 14px 30px">
           <li>A museum-visitation membership only.</li>
           <li>Each visit admits the <b style="color:var(--ink)">registered adult + child pair</b> — no other adult or child may use it.</li>
-          <li>Members do <b style="color:var(--ink)">not</b> get free admission to special workshops, events, activities, camps, birthdays or special exhibits — those carry the member discounts above.</li>
+          <li>Members do <b style="color:var(--ink)">not</b> get free admission to special workshops, events, activities, camps, birthdays or special exhibits — those carry the member discounts above (birthday parties get the birthday party perks instead).</li>
           <li>Blackout dates apply — check the calendar.</li>
           <li>Non-refundable and non-transferable.</li>
           <li>Valid ID proof required at entry.</li>
@@ -7534,7 +7544,8 @@ function tierDetail(){
 }
 /* ---- membership tier create / edit form ---- */
 function tierForm(editing){
-  const t=editing?MEMBERSHIP_TIERS[selTier]:{name:"",price:"",visits:"",validity:"6 months",priority:false,hsn:"999692",status:"Active"};
+  const t=editing?MEMBERSHIP_TIERS[selTier]:{name:"",price:"",visits:"",validity:"6 months",priority:false,hsn:"999692",status:"Active",bday:{pct:"",perks:""}};
+  const bd=t.bday||{};
   if(!tierDraft) seedTierDraft(editing);   // safety net if the form is reached without going through the entry handler
   const td=tierDraft;
   const tierInvalid=tierSaveTried&&!tierProdsOk(td);
@@ -7565,6 +7576,10 @@ function tierForm(editing){
         ${editing&&tierPerks(t).length?`<div class="matrix-wrap"><table class="reclist"><thead><tr><th>Discount</th><th>Value</th><th>Status</th></tr></thead><tbody>${tierPerks(t).map(d=>`<tr><td>${perkLabel(d)}</td><td class="code">${d.v}</td><td>${d.status}</td></tr>`).join("")}</tbody></table></div>`:`<div class="muted" style="font-size:12.5px">${editing?"No discount applies to this plan yet.":"Save the plan first, then add its discounts in Discounts &amp; offers."}</div>`}
         <button type="button" class="rep-add" data-goto="discounts" style="border-radius:6px;border:1px dashed var(--rule2);margin-top:8px">Manage in Discounts &amp; offers →</button></div>`,
         "read-only here")}
+      ${sec("Birthday party perks",
+        fld("Discount on birthday parties",`<div class="inp-suffix"><input class="inp mono" type="number" min="0" max="100" value="${escAttr(bd.pct??"")}" placeholder="0"><span>%</span></div>`,"Percent off a birthday party booked by a member of this plan. Birthday parties are booked outside Discounts & offers and the booking flow, so set it here. Leave blank or 0 for none.",false)
+        +fld("Other perks",`<textarea class="inp" rows="3" style="resize:vertical" placeholder="One per line, e.g. Free welcome kit for the birthday child">${escHtml(bd.perks||"")}</textarea>`,"Anything else the member gets with a birthday party, one per line. Shown to staff when quoting the party.",false,true),
+        "set on the plan")}
     </div>
     <div class="form-foot"><button class="btn" data-tab="list">Cancel</button><button class="btn btn-primary" data-tier-save="1">${editing?"Save changes":"Create tier"}</button></div>
   </div>${addOpen==="tierprods"?tierProdsFormCard():""}</div>`;
@@ -7663,6 +7678,7 @@ function memberDetail(){
           ${row("Joined",m.joined)}
           ${row("Expires",m.expires)}
           ${row("Member discounts",tierPerks(t).map(d=>perkLabel(d)+" · "+d.v).join("<br>")||"None")}
+          ${row("Birthday party perks",bdayPerkLabel(t).map(escHtml).join("<br>")||"None")}
         </tbody></table></div></div>
       </div>
       <div class="card"><div class="card-head"><span class="card-title">Actions</span></div>
