@@ -1368,7 +1368,7 @@ const M = {
             ["Description|desc","string","A short line on what the program covers."],
             ["Show on website|on_web","bool","List this program on the public website."],
             ["Active|is_active","bool","Turn it off to retire this program."]]},
-  transportvendors:{g:0,n:"Transport vendors",owner:"Partnerships & CSR",perm:"master.transportvendor.manage",src:"Scope §9",q:1,
+  transportvendors:{g:0,n:"Sponsored School Transport vendors",owner:"Partnerships & CSR",perm:"master.transportvendor.manage",src:"Scope §9",q:1,
     d:"The bus operators a sponsored school visit can be assigned to. The sponsored-booking form picks one for transport.",
     view:"transportvendors",
     schema:[["Vendor|name","string","As it reads on the booking, e.g. Konkan Travels."],
@@ -1377,7 +1377,7 @@ const M = {
             ["Work order no.|workOrder","string","The MuSo work order / PO number for this vendor."],
             ["Bus types|busTypes","rows","Bus type · Seater capacity · Cost (incl. GST)","Each bus type's seater capacity and cost (inclusive of GST). On a sponsored booking, each visit picks one or more bus types and the number of buses per type."],
             ["Active|is_active","bool","Turn it off to retire this vendor."]]},
-  foodvendors:{g:0,n:"Food vendors",owner:"Partnerships & CSR",perm:"master.foodvendor.manage",src:"Scope §9",q:1,
+  foodvendors:{g:0,n:"Sponsored School Food vendors",owner:"Partnerships & CSR",perm:"master.foodvendor.manage",src:"Scope §9",q:1,
     d:"The caterers a sponsored school visit's food is sourced from. The sponsored-booking form picks one as the food vendor.",
     view:"foodvendors",
     schema:[["Vendor|name","string","As it reads on the booking, e.g. Annapurna Caterers."],
@@ -6458,7 +6458,7 @@ const VIEWS = {
     return `<div class="note note-scope"><span class="note-mark">Structure</span><div>
       The bus operators a sponsored school visit can be assigned to — the sponsored-booking form picks one for transport.
     </div></div>
-    <div class="card"><div class="card-head"><span class="card-title">Transport vendors</span><span class="card-note">${TRANSPORT_VENDORS.length} on file</span></div>
+    <div class="card"><div class="card-head"><span class="card-title">Sponsored School Transport vendors</span><span class="card-note">${TRANSPORT_VENDORS.length} on file</span></div>
       <div class="matrix-wrap"><table><thead><tr><th>Vendor</th><th>GSTIN</th><th>PAN</th><th>Work order no.</th><th>Bus types (seater · cost incl. GST)</th><th>Status</th><th>Actions</th></tr></thead>
       <tbody>${TRANSPORT_VENDORS.map((v,i)=>`<tr>
         <td><b style="font-weight:500">${escHtml(v.name)}</b></td>
@@ -6467,14 +6467,14 @@ const VIEWS = {
         <td>${(v.busTypes||[]).length?(v.busTypes||[]).map(b=>`<div style="white-space:nowrap">${escHtml(b.name)} <span class="muted code">· ${b.seater||"—"} seats · ${money(b.cost||0)}</span></div>`).join(""):'<span class="muted">—</span>'}</td>
         <td>${v.is_active===false?'<span class="pill pill-off">Inactive</span>':'<span class="pill pill-ok"><i class="dot"></i>Active</span>'}</td>
         <td><button class="btn" data-medit="${i}">Edit</button></td></tr>`).join("")}
-        ${addRowNew("Add transport vendor")}</tbody></table></div></div>`;
+        ${addRowNew("Add sponsored school transport vendor")}</tbody></table></div></div>`;
   },
 
   foodvendors(){
     return `<div class="note note-scope"><span class="note-mark">Structure</span><div>
       The caterers a sponsored school visit's food is sourced from — the sponsored-booking form picks one as the food vendor.
     </div></div>
-    <div class="card"><div class="card-head"><span class="card-title">Food vendors</span><span class="card-note">${FOOD_VENDORS.length} on file</span></div>
+    <div class="card"><div class="card-head"><span class="card-title">Sponsored School Food vendors</span><span class="card-note">${FOOD_VENDORS.length} on file</span></div>
       <div class="matrix-wrap"><table><thead><tr><th>Vendor</th><th>GSTIN</th><th>PAN</th><th>Work order no.</th><th>F&amp;B options (donor · ₹child / ₹adult)</th><th>Status</th><th>Actions</th></tr></thead>
       <tbody>${FOOD_VENDORS.map((v,i)=>`<tr>
         <td><b style="font-weight:500">${escHtml(v.name)}</b></td>
@@ -6483,7 +6483,7 @@ const VIEWS = {
         <td>${(v.fbOptions||[]).length?(v.fbOptions||[]).map(o=>`<div style="white-space:nowrap">${escHtml(o.option)} <span class="muted code">· ${escHtml(o.donor||"—")} · ${money(o.child||0)} / ${money(o.adult||0)}</span></div>`).join(""):'<span class="muted">—</span>'}</td>
         <td>${v.is_active===false?'<span class="pill pill-off">Inactive</span>':'<span class="pill pill-ok"><i class="dot"></i>Active</span>'}</td>
         <td><button class="btn" data-medit="${i}">Edit</button></td></tr>`).join("")}
-        ${addRowNew("Add food vendor")}</tbody></table></div></div>`;
+        ${addRowNew("Add sponsored school food vendor")}</tbody></table></div></div>`;
   },
 
   sponsored(){
@@ -7349,7 +7349,7 @@ const SING={blackout:"blackout date",affiliates:"affiliate link",
   tax:"tax rate",hsn:"code",discounts:"discount",products:"product or add-on",
   programs:"program",progcats:"program category",departments:"department",events:"event",camps:"camp or workshop",bookings:"order",career:"role",
   fboptions:"F&B option",schoolslots:"school time slot",entryprices:"school entry price preset",school:"school booking",
-  sponsors:"sponsor",districts:"district",spprograms:"sponsored program",sponsored:"sponsored booking",venues:"venue",
+  sponsors:"sponsor",districts:"district",spprograms:"sponsored program",transportvendors:"sponsored school transport vendor",foodvendors:"sponsored school food vendor",sponsored:"sponsored booking",venues:"venue",
   bdaypartytypes:"birthday party type",
   bdayslots:"birthday time window",bdaypackages:"birthday package",
   bdayworkshops:"birthday workshop add-on",bdayentertainment:"birthday entertainment add-on",birthday:"birthday booking",
@@ -9003,7 +9003,7 @@ function spForm(editing){
         <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px 16px;align-items:end">
           ${fld("Start Time",`<input class="inp" data-spvof="start" value="${esc(st)}" placeholder="14:15">`)}
           ${fld("End Time",`<input class="inp" data-spvof="end" value="${esc(en)}" placeholder="14:45">`)}
-          ${fld("Confirm slot",`<button type="button" class="btn btn-primary" data-sp-checkavail="${vi}|${oi}" style="width:100%"${filled?"":" disabled"}>Book Venue</button>`)}
+          ${fld("Confirm slot",`<button type="button" class="btn btn-primary" data-sp-checkavail="${vi}|${oi}" style="width:100%"${filled?"":" disabled"}>Check availability</button>`)}
         </div>
       </div>
       ${optCheckBanner(chk)}
@@ -9019,7 +9019,7 @@ function spForm(editing){
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px"><b style="font-size:12.5px">Visit ${i+1}</b>${i>0?`<div style="display:flex;gap:8px"><button type="button" class="btn" data-sp-same="${i}">Same as above</button><button type="button" class="btn" data-sp-del-visit="${i}">Remove</button></div>`:""}</div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px 16px;align-items:start">
       ${fld("Date",`<div style="display:flex;gap:8px"><input class="inp" data-spvf="date" value="${esc(v.date)}" placeholder="DD Mon YYYY" style="flex:1"><button type="button" class="btn" data-sp-musoview="${i}" style="white-space:nowrap">View availability</button></div>`)}
-      ${fld("School time slot",`<div class="selwrap"><select class="inp" data-spvf="slotId">${schoolSlotTags(v.slotId)}</select></div>`,schoolMapNote(v.slotId))}
+      ${fld("School time slot",`<div style="display:flex;gap:8px"><div class="selwrap" style="flex:1"><select class="inp" data-spvf="slotId">${schoolSlotTags(v.slotId)}</select></div><button type="button" class="btn" data-sp-musocheck="${i}" style="white-space:nowrap">Check availability</button></div>`,schoolMapNote(v.slotId))}
     </div>
     ${musoCheckBanner("sponsored",i)}
     <div style="${gridAuto};margin-top:12px">
@@ -9035,13 +9035,13 @@ function spForm(editing){
       ${numV("F&B — complementary","foodComp",f.comp,"Charged ₹0.")}
     </div>
     <div style="margin-top:12px;display:flex;flex-direction:column;gap:10px">
-      ${fld("Food vendor",`<div class="selwrap"><select class="inp" data-spvf="foodVendor"${priceLocked?" disabled":""}><option value=""${!f.vendor?" selected":""}>Select vendor…</option>${FOOD_VENDORS.filter(fv2=>fv2.is_active!==false||fv2.name===f.vendor).map(fv2=>`<option value="${escAttr(fv2.name)}"${f.vendor===fv2.name?" selected":""}>${escHtml(fv2.name)}</option>`).join("")}${f.vendor&&!foodVendorByName(f.vendor)?`<option selected>${escAttr(f.vendor)}</option>`:""}</select></div>`,"From the Food vendors master. Pick the F&B option & donor below.")}
+      ${fld("Food vendor",`<div class="selwrap"><select class="inp" data-spvf="foodVendor"${priceLocked?" disabled":""}><option value=""${!f.vendor?" selected":""}>Select vendor…</option>${FOOD_VENDORS.filter(fv2=>fv2.is_active!==false||fv2.name===f.vendor).map(fv2=>`<option value="${escAttr(fv2.name)}"${f.vendor===fv2.name?" selected":""}>${escHtml(fv2.name)}</option>`).join("")}${f.vendor&&!foodVendorByName(f.vendor)?`<option selected>${escAttr(f.vendor)}</option>`:""}</select></div>`,"From the Sponsored School Food vendors master. Pick the F&B option & donor below.")}
       ${f.vendor?fld("F&B option",`<div class="selwrap"><select class="inp" data-spvf="foodOption"${priceLocked?" disabled":""}><option value=""${!f.option?" selected":""}>Select option…</option>${fbOptionNames(f.vendor).map(nm=>`<option value="${escAttr(nm)}"${f.option===nm?" selected":""}>${escHtml(nm)}</option>`).join("")}${f.option&&!fbOptionNames(f.vendor).includes(f.option)?`<option selected>${escAttr(f.option)}</option>`:""}</select></div>`,"Options offered by this vendor."):""}
       ${f.vendor&&f.option?fld("Food donor",`<div class="selwrap"><select class="inp" data-spvf="foodDonor"${priceLocked?" disabled":""}><option value=""${!f.donor?" selected":""}>Select donor…</option>${fbDonorsFor(f.vendor,f.option).map(dn=>{const rr=fbRateFor(f.vendor,f.option,dn)||{};return `<option value="${escAttr(dn)}"${f.donor===dn?" selected":""}>${escHtml(dn)} · ${money(rr.child||0)}/child · ${money(rr.adult||0)}/adult</option>`;}).join("")}${f.donor&&!fbDonorsFor(f.vendor,f.option).includes(f.donor)?`<option selected>${escAttr(f.donor)}</option>`:""}</select></div>`,"Which donor funds this visit's food — the per-head price is shown per donor."):""}
       <div data-fbtot="${i}" style="padding:7px 11px;border-radius:6px;background:#f6f8f5;border:1px solid var(--rule2);font-size:12px">${spFoodTotHtml(+f.students||0,+f.adults||0,f.vendor,f.option,f.donor)}</div></div>
     ${subHead("Transport")}
     <div style="display:flex;flex-direction:column;gap:10px">
-      ${fld("Transport vendor",`<div class="selwrap"><select class="inp" data-spvf="transportVendor"><option value=""${!tp.vendor?" selected":""}>Select vendor…</option>${TRANSPORT_VENDORS.filter(tv2=>tv2.is_active!==false||tv2.name===tp.vendor).map(tv2=>`<option value="${escAttr(tv2.name)}"${tp.vendor===tv2.name?" selected":""}>${escHtml(tv2.name)}</option>`).join("")}${tp.vendor&&!transportVendorByName(tp.vendor)?`<option selected>${escAttr(tp.vendor)}</option>`:""}</select></div>`,"From the Transport vendors master. Add one or more bus types and the number of buses per type.")}
+      ${fld("Transport vendor",`<div class="selwrap"><select class="inp" data-spvf="transportVendor"><option value=""${!tp.vendor?" selected":""}>Select vendor…</option>${TRANSPORT_VENDORS.filter(tv2=>tv2.is_active!==false||tv2.name===tp.vendor).map(tv2=>`<option value="${escAttr(tv2.name)}"${tp.vendor===tv2.name?" selected":""}>${escHtml(tv2.name)}</option>`).join("")}${tp.vendor&&!transportVendorByName(tp.vendor)?`<option selected>${escAttr(tp.vendor)}</option>`:""}</select></div>`,"From the Sponsored School Transport vendors master. Add one or more bus types and the number of buses per type.")}
       ${tp.vendor?`<div style="display:flex;flex-direction:column;gap:8px">${(tp.buses||[]).length?(tp.buses||[]).map(busRow).join(""):'<div class="muted" style="font-size:11.5px">No bus types added yet.</div>'}
         ${(tp.buses||[]).filter(b=>b.type).length>=busTypesOf(tp.vendor).length?`<div class="muted" style="font-size:11px">All bus types for this vendor have been added.</div>`:`<button type="button" class="rep-add" data-sp-add-bus="${i}" style="border-radius:4px;align-self:flex-start">+ Add bus type</button>`}
         <div style="padding:7px 11px;border-radius:6px;background:#f6f8f5;border:1px solid var(--rule2);font-size:12px">Transport cost (incl. GST): <b>${money(visitTransportCost(v))}</b></div>
@@ -12308,6 +12308,8 @@ document.addEventListener("click",e=>{
   if(spVA){ spCaptureForm(); const [vi,oi]=spVA.dataset.spViewavail.split("|").map(Number);
     const o=(((spDraft||{}).visits||[])[vi]||{}).optionals?.[oi]||{}; const p=(o.time||"").split(/[–-]/).map(s=>s.trim());
     venueAvail={venue:o.venue||"",date:o.date||"",start:o.start||p[0]||"",end:o.end||p[1]||"",src:"sponsored",vi,oi}; render(); return; }
+  const spMC=e.target.closest("[data-sp-musocheck]");
+  if(spMC){ spCaptureForm(); musoCheck=runMusoCheck("sponsored",+spMC.dataset.spMusocheck); render(); return; }
   const spAddV=e.target.closest("[data-sp-add-visit]");
   if(spAddV){ spCaptureForm(); const d=spDraft; if(d){ (d.visits=d.visits||[]).push(blankVisit()); } render(); return; }
   const spSame=e.target.closest("[data-sp-same]");
@@ -12709,8 +12711,8 @@ document.addEventListener("change",e=>{
   if(e.target.matches&&e.target.matches("[data-apply-member]")){ syncDiscountForm(); render(); return; }   // show / hide the plan picker
   const oRowC=e.target.closest&&e.target.closest("[data-vorow],[data-spvorow]"); if(oRowC) syncOptCheckBtn(oRowC);
   if(e.target.matches&&e.target.matches('[data-vfsel^="foodopt"],[data-spvfsel^="foodopt"]')){ updateFbTot(e.target.closest("[data-vrow],[data-spvrow]")); }
-  // Sponsored booking: the MuSo availability check runs by itself when the School time slot is picked (no
-  // button). A new date re-runs it if a slot is already chosen, so the verdict never goes stale; clearing the
+  // Sponsored booking: besides the Check availability button, the MuSo availability check also runs by itself
+  // when the School time slot is picked. A new date re-runs it if a slot is already chosen, so the verdict never goes stale; clearing the
   // slot just clears the verdict.
   if(spDraft && e.target.matches&&e.target.matches('[data-spvf="slotId"],[data-spvf="date"]')){
     const row=e.target.closest("[data-spvrow]"), vi=row?+row.dataset.spvrow:-1;
