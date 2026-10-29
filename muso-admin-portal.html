@@ -941,10 +941,10 @@ const GROUPS = [
   {name:"8 · People", color:"#0E6B8A"},
   {name:"9 · Bookings", color:"#1E7F3C"}
 ];
-const ORDER = ["categories","pools","tax","hsn","shopcats","progcats","departments","fboptions","schoolslots","entryprices","sponsors","districts","spprograms","transportvendors","foodvendors","venues","bdaypartytypes","bdayslots","bdaypackages","bdayworkshops","bdayentertainment","corpeventtypes","products","programs","blackout","bookings","checkin",
+const ORDER = ["categories","pools","tax","hsn","shopcats","progcats","departments","fboptions","schoolslots","entryprices","sponsors","districts","spprograms","transportvendors","foodvendors","venues","bdaypartytypes","bdayslots","bdaypackages","bdayworkshops","bdayentertainment","corpeventtypes","cnreasons","products","programs","blackout","bookings","checkin",
                "discounts","sources","scripts","tiers","members",
                "shopitems","movetostore","shopsales","shopcoupons","career","school","sponsored","birthday","corporate","einvoicing"];   // "shopreports", "affiliates", "paymodes" hidden from the rail (code kept)
-const PHASE = {categories:0,pools:0,tax:0,hsn:0,shopcats:0,progcats:0,departments:0,fboptions:0,schoolslots:0,entryprices:0,sponsors:0,districts:0,spprograms:0,transportvendors:0,foodvendors:0,venues:0, bdaypartytypes:0,bdayslots:0,bdaypackages:0,bdayworkshops:0,bdayentertainment:0, corpeventtypes:0, products:1, programs:1, blackout:2,
+const PHASE = {categories:0,pools:0,tax:0,hsn:0,shopcats:0,progcats:0,departments:0,fboptions:0,schoolslots:0,entryprices:0,sponsors:0,districts:0,spprograms:0,transportvendors:0,foodvendors:0,venues:0, bdaypartytypes:0,bdayslots:0,bdaypackages:0,bdayworkshops:0,bdayentertainment:0, corpeventtypes:0,cnreasons:0, products:1, programs:1, blackout:2,
                discounts:3,affiliates:3,
                paymodes:4,sources:4,scripts:4,bookings:2,checkin:2,
                tiers:5,members:5,
@@ -954,7 +954,7 @@ const PHASE = {categories:0,pools:0,tax:0,hsn:0,shopcats:0,progcats:0,department
 const PREREQ = {
   career:[], categories:[], pools:[], tax:[], hsn:[], shopcats:[], departments:[], paymodes:[], sources:[], scripts:[], progcats:[], bookings:["Products & add-ons"], checkin:["Products & add-ons"],
   fboptions:[], schoolslots:["Products & add-ons"], entryprices:[], sponsors:[], districts:[], spprograms:[], transportvendors:[], foodvendors:[], venues:[],
-  bdaypartytypes:[], bdayslots:[], bdaypackages:["Birthday party types"], bdayworkshops:[], bdayentertainment:[], corpeventtypes:[],
+  bdaypartytypes:[], bdayslots:[], bdaypackages:["Birthday party types"], bdayworkshops:[], bdayentertainment:[], corpeventtypes:[], cnreasons:[],
   school:["School F&B options","School time slots"], sponsored:["Sponsored School Donors","School time slots"],
   birthday:["Birthday time windows","Birthday packages"],
   corporate:["Corporate event types","Venues"],
@@ -1453,6 +1453,11 @@ const M = {
     view:"corpeventtypes",
     schema:[["Event type|name","string","As it reads on the inquiry/MOU form, e.g. Conference."],
             ["Active|is_active","bool","Turn it off to retire this type from new bookings."]]},
+  cnreasons:{g:0,n:"Credit note reasons",owner:"Finance & Accounts",perm:"master.cnreason.manage",src:"E-Invoicing",q:1,
+    d:"The reasons a credit note can be raised for — e.g. Sales return, Deficiency in service. The \"Send credit note for approval\" form on a School or Corporate booking picks one from the active reasons, and a reason is required.",
+    view:"cnreasons",
+    schema:[["Reason|name","string","As it reads on the credit note, e.g. Sales return."],
+            ["Active|is_active","bool","Turn it off to retire this reason from new credit notes."]]},
   corporate:{g:8,n:"Corporate booking",owner:"Events & Experiences",perm:"corporate.manage",src:"Corporate booking",q:0,
     d:"Venue-rental enquiries for corporate/collaboration events (conferences, launches, screenings) in one place — inquiry details, the backend MOU form, MOU sign-off, invoicing and payments. A record starts as an enquiry and moves through MOU sent → signed → invoice raised → confirmed → completed.",
     view:"corporate"},
@@ -2470,6 +2475,15 @@ const BDAY_ENTERTAINMENT = [
    source doc names it but never defines the fields) — so for now charges are
    manual line items, the same pattern Birthday uses for its Venue/F&B charge
    fields, rather than a package-style lookup. ========================== */
+/* Credit-note reasons — the master behind the Reason dropdown on the "Send credit note for approval" form
+   (School + Corporate). Seeded with the five reasons that used to be hard-coded in the form. */
+const CN_REASONS = [
+  {name:"Sales return",                          is_active:true},
+  {name:"Post-supply discount",                  is_active:true},
+  {name:"Deficiency in service",                 is_active:true},
+  {name:"Cancellation of visit",                 is_active:true},
+  {name:"Correction — value/tax overcharged",    is_active:true}
+];
 const CORP_EVENT_TYPES = [
   {name:"Conference",                    is_active:true},
   {name:"Book / Product / Film Launch",  is_active:true},
@@ -4957,7 +4971,8 @@ const BDAY_MASTER_REQUIRED = {
   bdaypackages:["pkg","partyType","dayType","kids","adults","kidsPrice","adultsPrice","gst","extraChildRate","extraAdultRate","extraNannyRate"],
   bdayworkshops:["name","price","gst"],
   bdayentertainment:["name","price","gst"],
-  corpeventtypes:["name"]
+  corpeventtypes:["name"],
+  cnreasons:["name"]
 };
 function tipRich(desc,impact){
   // An fk note starts with "→ Target" purely so the picker knows what to list.
@@ -6256,6 +6271,21 @@ const VIEWS = {
         ${addRowNew("Add event type")}</tbody></table></div></div>`;
   },
 
+  cnreasons(){
+    return `<div class="note note-scope"><span class="note-mark">Structure</span><div>
+      The reasons a <b>credit note</b> can be raised for. The credit-note form on a School or Corporate booking lists the active ones in its Reason dropdown, and a reason is required.
+    </div></div>
+    <div class="card"><div class="card-head"><span class="card-title">Credit note reasons</span>
+      <span class="card-note">${CN_REASONS.length} on file</span></div>
+      <div class="matrix-wrap"><table><thead><tr>
+        <th>Reason</th><th>Status</th><th>Actions</th></tr></thead>
+      <tbody>${CN_REASONS.map((p,i)=>`<tr>
+        <td><b style="font-weight:500">${escHtml(p.name)}</b></td>
+        <td>${p.is_active?'<span class="pill pill-ok"><i class="dot"></i>Active</span>':'<span class="pill pill-off">Inactive</span>'}</td>
+        <td><button class="btn" data-medit="${i}">Edit</button></td></tr>`).join("")}
+        ${addRowNew("Add credit note reason")}</tbody></table></div></div>`;
+  },
+
   bdayslots(){
     // One flat table, sorted Weekday-then-Weekend (then by start time) so the two groups still
     // read together rather than interleaved — the Day type column is what tells them apart now.
@@ -7353,7 +7383,7 @@ const SING={blackout:"blackout date",affiliates:"affiliate link",
   bdaypartytypes:"birthday party type",
   bdayslots:"birthday time window",bdaypackages:"birthday package",
   bdayworkshops:"birthday workshop add-on",bdayentertainment:"birthday entertainment add-on",birthday:"birthday booking",
-  corpeventtypes:"corporate event type",corporate:"corporate booking",einvoicing:"e-invoice"};
+  corpeventtypes:"corporate event type",cnreasons:"credit note reason",corporate:"corporate booking",einvoicing:"e-invoice"};
 const singular=(k,n)=>SING[k]||n.toLowerCase().replace(/s$/,"");
 const TYPE_LABEL={media:"Files",string:"Text",int:"Number",decimal:"Number",money:"Amount",
   date:"Date",datetime:"Date and time",time:"Time",bool:"Yes or no",enum:"Choose one",
@@ -9449,7 +9479,7 @@ let selCorp = "", corpFStatus = "", corpQ = "",
     corpCancelConfirm = false, corpsub = "overview",
     corpEInvConfirm = false, corpEInvView = false, corpCNFlyout = false, corpCNView = false;
 
-let einvQ = "", einvFStatus = "", einvFModule = "", einvView = null, einvOpen = new Set();
+let einvQ = "", einvFStatus = "", einvFModule = "", einvView = null, einvOpen = new Set(), einvExp = null;   // einvExp = the Export report popup (null = closed)
 
 function nextBdayId(){
   const n=BIRTHDAY_BOOKINGS.reduce((mx,r)=>{const m=/BDAY-(\d+)/.exec(r.id);return m?Math.max(mx,+m[1]):mx;},0);
@@ -10733,31 +10763,34 @@ function einvInvGenerate(module, rec){
   einvLog(module,rec,`E-invoice ${f.e.id} generated (IRN issued).`); return true;
 }
 /* Read the credit-note form (ids shared by School + Corporate) and send it for approval under the invoice. */
+let einvCnErr = "";   // last validation message from the credit-note form
 function einvCnRequest(module, rec){
   const f=einvFlow(module,rec); if(!f.e||f.e.status!=="Generated"||f.cn) return false;
   const g=id=>(document.getElementById(id)||{}).value||"";
-  const reason=g("schoolCNReason")||"Adjustment", full=g("schoolCNType").indexOf("Full")===0;
+  einvCnErr="";
+  const reason=g("schoolCNReason").trim(), full=g("schoolCNType").indexOf("Full")===0;
+  if(!reason){ einvCnErr="Select a reason — it is required."; return false; }
   let amount=full?f.e.amount:Math.max(0,+g("schoolCNAmt")||0); amount=Math.min(amount,f.e.amount);
-  if(!(amount>0)) return false;
-  const settle=g("schoolCNSettle")||"Refund", exp=g("schoolCNVoucherExp").trim(), user=g("schoolCNRemark").trim();
-  const remark=["Credit type: "+(full?"Full":"Partial"),"Settle as: "+settle+(settle==="Voucher"&&exp?" (valid until "+exp+")":"")].concat(user?[user]:[]).join(" · ");
+  if(!(amount>0)){ einvCnErr="Enter an amount greater than zero."; return false; }
+  // Credit notes are always settled as a refund — no "Settle as" choice, no vouchers issued from them.
+  const user=g("schoolCNRemark").trim();
+  const remark=["Credit type: "+(full?"Full":"Partial")].concat(user?[user]:[]).join(" · ");
   const cn=einvAddCn(f.e,amount,reason,undefined,"Pending approval","",remark);
-  Object.assign(cn,{full,settle,voucherExp:exp,userRemark:user});
+  Object.assign(cn,{full,settle:"Refund",userRemark:user});
   einvLog(module,rec,`Credit note ${cn.id} for ${money(amount)} (${full?"full":"partial"}) sent for approval — ${reason}.`); return true;
 }
-/* Generate an Approved credit note: sets rec.creditNote (+ voucher if settled that way) and flips the record to Generated. */
+/* Generate an Approved credit note: sets rec.creditNote (always settled as a refund) and flips the record to Generated. */
 function einvCnGenerate(module, rec){
   const f=einvFlow(module,rec), cn=f.cn; if(!cn||cn.status!=="Approved") return false;
   const on=fmtDMY(new Date());
   rec.creditNote={number:"CRN-"+rec.id,on,reason:cn.reason,full:!!cn.full,amount:cn.amount,remark:cn.userRemark||""};
-  if(cn.settle==="Voucher"){ const code="CN-"+genCode().slice(0,6); VOUCHERS.push({code,amount:cn.amount,expires:cn.voucherExp||"",status:"Active",issued:on,source:"Credit note "+rec.creditNote.number+" ("+(module==="School"?"school":"corporate")+" booking)"}); rec.creditNote.voucher={code,expires:cn.voucherExp||""}; einvLog(module,rec,"Credit note settled as voucher "+code+" for "+money(cn.amount)+", valid until "+(cn.voucherExp||"—")+"."); }
-  else rec.creditNote.refund=true;
+  rec.creditNote.refund=true;   // always a refund
   cn.status="Generated"; cn.generatedOn=on;
   einvLog(module,rec,`Credit note ${cn.id} generated (IRN issued) against invoice ${f.e.id}.`); return true;
 }
 /* Credit-note form flyout, shared by School and Corporate (ids/attrs the School handlers already use). */
 function einvCnFlyoutHtml(o){
-  const reasons=["Sales return","Post-supply discount","Deficiency in service","Cancellation of visit","Correction — value/tax overcharged"];
+  const reasons=CN_REASONS.filter(r=>r.is_active!==false).map(r=>r.name);   // from the Credit note reasons master
   const init=creditNoteCompute({creditNote:{amount:o.grand}}), cl=`${o.close}="1"`;
   const nx=new Date(), vexp=fmtDMY(new Date(nx.getFullYear()+1,nx.getMonth(),nx.getDate()));
   return `<div class="drawer-layer" id="${o.id}">
@@ -10768,15 +10801,13 @@ function einvCnFlyoutHtml(o){
       <div class="form-body" style="display:block">
         <div style="padding:10px 12px;border-radius:8px;background:#FBFCFA;border:1px solid var(--rule2);font-size:12px;margin-bottom:14px">Against <b>Tax Invoice ${escHtml(o.invNo)}</b> dated ${escHtml(o.invDate||"—")} · Buyer GSTIN <span class="code">${escHtml(o.gstin||"—")}</span> · Invoice total ${money(o.grand)}</div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px 16px">
-          <div class="fld wide" style="margin:0;grid-column:1/-1"><div class="lab"><span class="lab-n">Reason</span></div><div class="selwrap"><select class="inp" id="schoolCNReason">${reasons.map(r=>`<option>${escHtml(r)}</option>`).join("")}</select></div></div>
+          <div class="fld wide" style="margin:0;grid-column:1/-1"><div class="lab"><span class="lab-n">Reason</span><span class="lab-req">Required</span></div><div class="selwrap"><select class="inp" id="schoolCNReason"><option value="">${reasons.length?"Select a reason…":"No active reasons — add one under Credit note reasons"}</option>${reasons.map(r=>`<option>${escHtml(r)}</option>`).join("")}</select></div></div>
           <div class="fld" style="margin:0"><div class="lab"><span class="lab-n">Credit type</span></div><div class="selwrap"><select class="inp" data-school-cn-type id="schoolCNType"><option>Full (entire invoice)</option><option>Partial amount</option></select></div></div>
           <div class="fld" style="margin:0"><div class="lab"><span class="lab-n">Amount (incl. GST)</span></div><input class="inp mono" id="schoolCNAmt" type="number" min="0" max="${o.grand}" value="${o.grand}" disabled></div>
           <div class="fld wide" style="margin:0;grid-column:1/-1"><div class="muted" id="schoolCNBreakdown" style="font-size:11.5px">Of which GST (18%): ${money(init.gst)} (CGST ${money(init.cgst)} + SGST ${money(init.sgst)}) · Taxable ${money(init.taxable)}</div></div>
-          <div class="fld" style="margin:0"><div class="lab"><span class="lab-n">Settle as</span></div><div class="selwrap"><select class="inp" data-school-cn-settle id="schoolCNSettle"><option>${escHtml(o.refundLabel)}</option><option>Voucher</option></select></div></div>
-          <div class="fld" style="margin:0;display:none" id="schoolCNVoucherRow"><div class="lab"><span class="lab-n">Voucher valid until</span></div><input class="inp mono" id="schoolCNVoucherExp" value="${escAttr(vexp)}" placeholder="dd Mon yyyy"></div>
-          <div class="fld wide" style="margin:0;grid-column:1/-1"><div class="muted" style="font-size:11.5px">A voucher is a flat amount usable as payment on a later order. One code, one use: any part of it that an order does not use is lost.</div></div>
           <div class="fld wide" style="margin:0;grid-column:1/-1"><div class="lab"><span class="lab-n">Remark</span></div><textarea class="inp" id="schoolCNRemark" rows="2" style="resize:vertical" placeholder="Optional note for the record"></textarea></div>
         </div>
+        <div class="form-err" id="schoolCNErr" style="margin-top:12px"></div>
         <div class="muted" style="font-size:11px;margin-top:14px;line-height:1.6">The credit note goes to E-Invoicing for approval; once approved, generate it from this page (IRN is issued then). One credit note can be raised per booking. Issue by 30 Nov following the financial year of the original supply.</div>
       </div>
       <div class="form-foot" style="display:flex;gap:8px;justify-content:flex-end;padding:14px 20px;border-top:1px solid var(--rule)">
@@ -10883,7 +10914,8 @@ VIEWS.einvoicing = function(){
         placeholder="Search by booking ref, invoice no. or party" aria-label="Search e-invoices"></label>
       ${sel("data-einv-fstatus","All statuses",["Pending approval","Approved","Generated"],einvFStatus)}
       ${sel("data-einv-fmodule","All modules",EINV_MODULES,einvFModule)}
-      <span class="tool-note" id="einvCount"></span></div>`;
+      <span class="tool-note" id="einvCount"></span>
+      <button class="btn" data-einv-export-open="1">Export report</button></div>`;
   return `<div class="sub-body">${toolbar}
     <div class="card"><div class="matrix-wrap"><table class="reclist" id="einvTable"><thead><tr>
       <th>Module</th><th>Booking ref</th><th>Party</th><th>Amount</th><th>Date</th><th>Status</th><th>Credit notes</th><th></th></tr></thead>
@@ -10891,8 +10923,63 @@ VIEWS.einvoicing = function(){
       <tr data-einv-empty style="display:none"><td colspan="8" class="muted" style="text-align:center;padding:16px">No e-invoices match.</td></tr>
     </tbody></table></div></div>
     <div class="muted" style="font-size:11.5px;margin-top:10px">Invoices are sent here from a School, Sponsored School or Corporate booking (Actions &rarr; Send invoice for approval). Credit notes (School and Corporate) are sent for approval from the booking and listed under each invoice (use the Credit notes link to expand them). Approve them here: Pending approval &rarr; Approved. The e-invoice / credit note is then generated from the booking page (Generate E-invoice / Generate Credit Note), which turns the status to Generated and issues the IRN and QR code. Sponsored School invoices stop at Approved.</div>
-    ${einvFlyout()}</div>`;
+    ${einvFlyout()}${einvExportModal()}</div>`;
 };
+/* ---- Export report (popup): a CSV of e-invoices and, optionally, their credit notes, with a date range ---- */
+const EINV_EXPORT_COLS=["Type","Number","Against invoice","Module","Booking ref","Party","Buyer GSTIN","Date","Taxable value","CGST","SGST","Total GST","Total (incl. GST)","Status","Approved on","Generated on","IRN","Ack no.","Reason","Remark"];
+/* Placeholder IRN for a generated document — same prefix the document view prints (a1b2c3… / c9d8e7…), then 58 more hex digits derived from the number so it is stable. */
+function einvIrn(num,isCn){
+  let h=2166136261; for(const ch of String(num)) h=Math.imul(h^ch.charCodeAt(0),16777619)>>>0;
+  let out=""; while(out.length<58){ h=(Math.imul(h,1664525)+1013904223)>>>0; out+=h.toString(16).padStart(8,"0"); }
+  return (isCn?"c9d8e7":"a1b2c3")+out.slice(0,58);
+}
+function einvExportModal(){
+  if(!einvExp) return "";
+  const fld=(label,inner)=>`<div class="fld" style="margin:0"><div class="lab"><span class="lab-n">${label}</span></div>${inner}</div>`;
+  const sel=(id,opts)=>`<div class="selwrap"><select class="inp" id="${id}">${opts.map(o=>`<option>${escHtml(o)}</option>`).join("")}</select></div>`;
+  return `<div class="confirm-layer"><button class="confirm-backdrop" data-einv-export-cancel="1" aria-label="Close"></button>
+    <div class="confirm-box" role="dialog" aria-modal="true" aria-label="Export e-invoice report" style="max-width:520px;text-align:left">
+      <div class="confirm-title">Export e-invoice report</div>
+      <div class="confirm-body" style="display:grid;grid-template-columns:1fr 1fr;gap:14px 16px">
+        ${fld("From",`<input class="inp" id="einvExpFrom" placeholder="DD Mon YYYY" autocomplete="off">`)}
+        ${fld("To",`<input class="inp" id="einvExpTo" placeholder="DD Mon YYYY" autocomplete="off">`)}
+        ${fld("Filter dates by",sel("einvExpBasis",["Invoice date","Generated date"]))}
+        ${fld("Status",sel("einvExpStatus",["All","Pending approval","Approved","Generated"]))}
+        <label style="grid-column:1/-1;display:flex;gap:8px;align-items:center;font-size:12.5px;cursor:pointer"><input type="checkbox" id="einvExpCn" checked> Include credit notes <span class="muted">(one row each, with the invoice they are against)</span></label>
+        <div class="muted" style="grid-column:1/-1;font-size:11.5px">Leave a date blank to keep that end open; leave both blank to export everything. "Generated date" only picks documents that have been generated.</div>
+        <div class="form-err" id="einvExpErr" style="grid-column:1/-1"></div>
+      </div>
+      <div class="confirm-actions"><button class="btn" data-einv-export-cancel="1">Cancel</button><button class="btn btn-primary" data-einv-export-go="1">Export CSV</button></div>
+    </div></div>`;
+}
+function einvExportGo(){
+  const v=id=>((document.getElementById(id)||{}).value||"").trim();
+  const err=m=>{ const el=document.getElementById("einvExpErr"); if(el) el.textContent=m; };
+  const fromS=v("einvExpFrom"), toS=v("einvExpTo"), basis=v("einvExpBasis")||"Invoice date", status=v("einvExpStatus")||"All";
+  const inclCn=!!(document.getElementById("einvExpCn")||{}).checked;
+  const from=fromS?parseDMY(fromS):null, to=toS?parseDMY(toS):null;
+  if((fromS&&!from)||(toS&&!to)){ err("Enter dates as DD Mon YYYY, e.g. 01 Aug 2026."); return; }
+  if(from&&to&&from>to){ err("The From date can't be after the To date."); return; }
+  const byGen=basis==="Generated date";
+  const dOf=x=>parseDMY(byGen?x.generatedOn:x.date);
+  const inRange=x=>{ if(!from&&!to&&!byGen) return true; const d=dOf(x); if(!d) return !from&&!to&&!byGen; return (!from||d>=from)&&(!to||d<=to); };
+  const okRow=x=>(status==="All"||x.status===status)&&inRange(x)&&(!byGen||!!parseDMY(x.generatedOn));
+  const split=(amount,gst)=>{ const g=+gst||0, c=Math.floor(g/2); return [amount-g,c,g-c,g]; };
+  const rows=[];
+  einvEnsure();
+  EINVOICES.filter(e=>e.type==="Invoice").forEach(e=>{
+    const gen=e.status==="Generated";
+    if(okRow(e)){ const [t,c,sg,g]=split(e.amount,e.gst); rows.push(["Invoice",e.id,"",e.module,e.ref,e.billName||e.party,e.gstin||"",e.date||"",t,c,sg,g,e.amount,e.status,e.approvedOn||"",e.generatedOn||"",gen?einvIrn(e.id,false):"",gen?"1125"+String(e.id).replace(/\D/g,"").padStart(8,"0"):"","",e.note||""]); }
+    if(inclCn) (e.creditNotes||[]).forEach(cn=>{
+      if(!okRow(cn)) return; const cg=cn.status==="Generated"; const [t,c,sg,g]=split(cn.amount,cn.gst);
+      rows.push(["Credit note",cn.id,e.id,e.module,e.ref,e.billName||e.party,e.gstin||"",cn.date||"",t,c,sg,g,cn.amount,cn.status,cn.approvedOn||"",cn.generatedOn||"",cg?einvIrn(cn.id,true):"",cg?"1126"+String(cn.id).replace(/\D/g,"").padStart(8,"0"):"",cn.reason||"",cn.remark||""]);
+    });
+  });
+  if(!rows.length){ err("No e-invoices or credit notes match these filters."); return; }
+  const iso=d=>d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
+  downloadCSV("e-invoice-report"+(from?"_from-"+iso(from):"")+(to?"_to-"+iso(to):"")+".csv",[EINV_EXPORT_COLS].concat(rows));
+  einvExp=null; render();
+}
 function syncEinvSearch(){
   const tbl=document.getElementById("einvTable"); if(!tbl) return;
   const needle=(einvQ||"").trim().toLowerCase(); let shown=0;
@@ -10921,9 +11008,12 @@ function einvFlyout(){
     </aside></div>`;
 }
 function einvHandleClick(e){
-  const t=e.target.closest&&e.target.closest("[data-einv-send],[data-einv-view],[data-einv-approve],[data-einv-close],[data-einv-toggle]");
+  const t=e.target.closest&&e.target.closest("[data-einv-send],[data-einv-view],[data-einv-approve],[data-einv-close],[data-einv-toggle],[data-einv-export-open],[data-einv-export-cancel],[data-einv-export-go]");
   if(!t) return false;
   einvEnsure();
+  if(t.dataset.einvExportOpen!=null){ einvExp={}; render(); return true; }
+  if(t.dataset.einvExportCancel!=null){ einvExp=null; render(); return true; }
+  if(t.dataset.einvExportGo!=null){ einvExportGo(); return true; }
   if(t.dataset.einvToggle!=null){ const k=t.dataset.einvToggle; if(einvOpen.has(k)) einvOpen.delete(k); else einvOpen.add(k); render(); return true; }
   if(t.dataset.einvSend!=null){ const [module,ref]=t.dataset.einvSend.split("|"); einvSend(module,ref); render(); return true; }
   if(t.dataset.einvView!=null){ const it=einvItem(t.dataset.einvView); if(it){ einvView={id:it.inv.id,cn:it.cn?it.cn.id:null}; render(); } return true; }
@@ -11584,7 +11674,7 @@ function careerApplications(){
 const masterData = k => ({categories:CATS, tax:TAXRATES, hsn:HSNCODES, shopcats:SHOP_CATEGORIES, progcats:PROGCATS,
   fboptions:FB_OPTIONS, schoolslots:SCHOOL_SLOTS, entryprices:ENTRY_PRICES, sponsors:SPONSORS, districts:DISTRICTS, spprograms:SP_PROGRAMS, transportvendors:TRANSPORT_VENDORS, foodvendors:FOOD_VENDORS, venues:VENUES, pools:[POOLS.shared,POOLS.children],
   bdaypartytypes:BDAY_PARTY_TYPES, bdayslots:BDAY_SLOTS, bdaypackages:BDAY_PACKAGES, bdayworkshops:BDAY_WORKSHOPS, bdayentertainment:BDAY_ENTERTAINMENT,
-  corpeventtypes:CORP_EVENT_TYPES}[k]);
+  corpeventtypes:CORP_EVENT_TYPES, cnreasons:CN_REASONS}[k]);
 function masterEditValues(k, i){
   const row=(masterData(k)||[])[i]||{};
   if(k==="tax")  return {code:row.code,name:row.name,percentage:row.pct,is_active:true};
@@ -11981,7 +12071,7 @@ document.addEventListener("click",e=>{
     if(a&&a.cv) careerOpenPdf(careerCvPdf(a), a.cv.name); return; }
   if(e.target.closest("[data-career-clear]")){ careerFDept=""; careerFType=""; careerFStatus="all"; render(); return; }
   const nav=e.target.closest(".mitem");
-  if(nav){ current=nav.dataset.k; mEdit=-1; ruleDel=null; venueAvail=null; venueCheck=null; musoAvail=null; musoCheck=null; selP=0; selW=0; selB=0; selE=0; esub="details"; eventCats=new Set(); selBooking=0; tab="list"; sub="details"; csub="details"; editD=-1; selD=0; dsub="summary"; editCond=-1; condDraft=null; draftDiscount=null; addOpen=null; progKind="event"; progCat="Event"; schoolDraft=null; schtab="records"; schoolEmailView=null; schoolMsg=""; schoolEInvView=false; schoolEInvConfirm=false; schoolSaveConfirm=false; schoolBulk=null; schoolPayFlyout=false; schoolPayEdit=-1; schoolPayDel=-1; schoolCNFlyout=false; schoolCNView=false; spDraft=null; sptab="records"; spEmailView=null; spMsg=""; spSaveConfirm=false; spBulk=null; spInvoiceEdit=null; moveScans=[]; moveMsg=""; couponProds=[]; couponProdsOpen=false; bdayDraft=null; bdsub="overview"; bdFStatus=""; bdayMsg=""; bdayFeedbackCompose=null; bdayPayFlyout=false; bdayPayEdit=-1; bdayPayDel=-1; bdaySaveConfirm=false; bdayCancelConfirm=false; corpDraft=null; corpsub="overview"; corpFStatus=""; corpPayFlyout=false; corpPayEdit=-1; corpPayDel=-1; corpCancelConfirm=false; corpEInvConfirm=false; corpEInvView=false; corpCNFlyout=false; corpCNView=false; einvQ=""; einvFStatus=""; einvFModule=""; einvView=null; einvOpen=new Set(); render(); $(".stage").scrollTop=0; return; }
+  if(nav){ current=nav.dataset.k; mEdit=-1; ruleDel=null; venueAvail=null; venueCheck=null; musoAvail=null; musoCheck=null; selP=0; selW=0; selB=0; selE=0; esub="details"; eventCats=new Set(); selBooking=0; tab="list"; sub="details"; csub="details"; editD=-1; selD=0; dsub="summary"; editCond=-1; condDraft=null; draftDiscount=null; addOpen=null; progKind="event"; progCat="Event"; schoolDraft=null; schtab="records"; schoolEmailView=null; schoolMsg=""; schoolEInvView=false; schoolEInvConfirm=false; schoolSaveConfirm=false; schoolBulk=null; schoolPayFlyout=false; schoolPayEdit=-1; schoolPayDel=-1; schoolCNFlyout=false; schoolCNView=false; spDraft=null; sptab="records"; spEmailView=null; spMsg=""; spSaveConfirm=false; spBulk=null; spInvoiceEdit=null; moveScans=[]; moveMsg=""; couponProds=[]; couponProdsOpen=false; bdayDraft=null; bdsub="overview"; bdFStatus=""; bdayMsg=""; bdayFeedbackCompose=null; bdayPayFlyout=false; bdayPayEdit=-1; bdayPayDel=-1; bdaySaveConfirm=false; bdayCancelConfirm=false; corpDraft=null; corpsub="overview"; corpFStatus=""; corpPayFlyout=false; corpPayEdit=-1; corpPayDel=-1; corpCancelConfirm=false; corpEInvConfirm=false; corpEInvView=false; corpCNFlyout=false; corpCNView=false; einvQ=""; einvFStatus=""; einvFModule=""; einvView=null; einvOpen=new Set(); einvExp=null; render(); $(".stage").scrollTop=0; return; }
   const goto=e.target.closest("[data-goto]");
   if(goto){ current=goto.dataset.goto; mEdit=-1; selP=0; selW=0; selB=0; selE=0; selD=0; selBooking=0; tab="list"; sub="details"; csub="details"; dsub="summary"; addOpen=null; render(); $(".stage").scrollTop=0; return; }
   const t=e.target.closest("[data-tab]");
@@ -12284,7 +12374,7 @@ document.addEventListener("click",e=>{
   // ---- Credit note (School) ----
   if(e.target.closest("[data-school-cn-gen]")){ const rec=schoolById(selSchool); if(rec){ const f=einvFlow("School",rec); if(f.e&&f.e.status==="Generated"&&!f.cn) schoolCNFlyout=true; } render(); return; }
   if(e.target.closest("[data-school-cn-close]")){ schoolCNFlyout=false; render(); return; }
-  if(e.target.closest("[data-school-cn-save]")){ const rec=schoolById(selSchool); if(rec&&einvCnRequest("School",rec)) schoolCNFlyout=false; render(); return; }
+  if(e.target.closest("[data-school-cn-save]")){ const rec=schoolById(selSchool); if(rec){ if(einvCnRequest("School",rec)){ schoolCNFlyout=false; render(); } else { const er=document.getElementById("schoolCNErr"); if(er) er.textContent=einvCnErr; } } return; }
   if(e.target.closest("[data-school-cn-generate]")){ const rec=schoolById(selSchool); if(rec&&einvCnGenerate("School",rec)) schoolCNView=true; render(); return; }
   if(e.target.closest("[data-school-cn-view]")){ schoolCNView=true; render(); return; }
   if(e.target.closest("[data-school-cn-viewclose]")){ schoolCNView=false; render(); return; }
@@ -12418,7 +12508,7 @@ document.addEventListener("click",e=>{
   if(e.target.closest("[data-corp-einv-close]")){ corpEInvView=false; render(); return; }
   if(e.target.closest("[data-corp-cn-gen]")){ const rec=corpById(selCorp); if(rec){ const f=einvFlow("Corporate",rec); if(f.e&&f.e.status==="Generated"&&!f.cn) corpCNFlyout=true; } render(); return; }
   if(e.target.closest("[data-corp-cn-close]")){ corpCNFlyout=false; render(); return; }
-  if(e.target.closest("[data-corp-cn-save]")){ const rec=corpById(selCorp); if(rec&&einvCnRequest("Corporate",rec)) corpCNFlyout=false; render(); return; }
+  if(e.target.closest("[data-corp-cn-save]")){ const rec=corpById(selCorp); if(rec){ if(einvCnRequest("Corporate",rec)){ corpCNFlyout=false; render(); } else { const er=document.getElementById("schoolCNErr"); if(er) er.textContent=einvCnErr; } } return; }
   if(e.target.closest("[data-corp-cn-generate]")){ const rec=corpById(selCorp); if(rec&&einvCnGenerate("Corporate",rec)) corpCNView=true; render(); return; }
   if(e.target.closest("[data-corp-cn-view]")){ corpCNView=true; render(); return; }
   if(e.target.closest("[data-corp-cn-viewclose]")){ corpCNView=false; render(); return; }
@@ -12769,7 +12859,6 @@ document.addEventListener("change",e=>{
     if(e.target.matches('[data-bf="partyType"],[data-bf="partyDate"],[data-bf="slotWindow"],[data-bf="venue"]') && venueCheck && venueCheck.src==="birthday") venueCheck=null;
     bdayCaptureForm(); render(); return; }
   // ---- Credit note: settle as refund or voucher (shows the expiry box, no re-render) ----
-  if(e.target.closest&&e.target.closest("[data-school-cn-settle]")){ const row=document.getElementById("schoolCNVoucherRow"); if(row) row.style.display=e.target.value==="Voucher"?"":"none"; return; }
   // ---- Credit note: Full/Partial toggle (no re-render, keeps typed values) ----
   if(e.target.closest&&e.target.closest("[data-school-cn-type]")){ const amtEl=document.getElementById("schoolCNAmt"); const grand=+(amtEl&&amtEl.max)||0; const full=(e.target.value||"").indexOf("Full")===0; if(amtEl){ amtEl.disabled=full; if(full) amtEl.value=grand; } const a=full?grand:(+((amtEl||{}).value)||0), t=Math.round(a/1.18), g=a-t, cg=Math.round(g/2), sg=g-cg; const bd=document.getElementById("schoolCNBreakdown"); if(bd) bd.textContent="Of which GST (18%): "+money(g)+" (CGST "+money(cg)+" + SGST "+money(sg)+") · Taxable "+money(t); return; }
   // ---- School bookings ----
