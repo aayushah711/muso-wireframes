@@ -941,10 +941,10 @@ const GROUPS = [
   {name:"8 · People", color:"#0E6B8A"},
   {name:"9 · Bookings", color:"#1E7F3C"}
 ];
-const ORDER = ["categories","pools","tax","hsn","shopcats","progcats","departments","fboptions","schoolslots","entryprices","sponsors","districts","spprograms","transportvendors","foodvendors","venues","bdaypartytypes","bdayslots","bdaypackages","bdayworkshops","bdayentertainment","corpeventtypes","cnreasons","products","programs","blackout","bookings","checkin",
+const ORDER = ["categories","pools","tax","hsn","shopcats","progcats","departments","fboptions","schoolslots","entryprices","sponsors","districts","spprograms","transportvendors","foodvendors","venues","bdaypartytypes","bdayslots","bdaypackages","bdayworkshops","bdayentertainment","corpeventtypes","cnreasons","adultagegroups","childagegroups","products","programs","blackout","bookings","checkin",
                "discounts","sources","scripts","tiers","members",
                "shopitems","movetostore","shopsales","shopcoupons","career","school","sponsored","birthday","corporate","einvoicing"];   // "shopreports", "affiliates", "paymodes" hidden from the rail (code kept)
-const PHASE = {categories:0,pools:0,tax:0,hsn:0,shopcats:0,progcats:0,departments:0,fboptions:0,schoolslots:0,entryprices:0,sponsors:0,districts:0,spprograms:0,transportvendors:0,foodvendors:0,venues:0, bdaypartytypes:0,bdayslots:0,bdaypackages:0,bdayworkshops:0,bdayentertainment:0, corpeventtypes:0,cnreasons:0, products:1, programs:1, blackout:2,
+const PHASE = {categories:0,pools:0,tax:0,hsn:0,shopcats:0,progcats:0,departments:0,fboptions:0,schoolslots:0,entryprices:0,sponsors:0,districts:0,spprograms:0,transportvendors:0,foodvendors:0,venues:0, bdaypartytypes:0,bdayslots:0,bdaypackages:0,bdayworkshops:0,bdayentertainment:0, corpeventtypes:0,cnreasons:0,adultagegroups:0,childagegroups:0, products:1, programs:1, blackout:2,
                discounts:3,affiliates:3,
                paymodes:4,sources:4,scripts:4,bookings:2,checkin:2,
                tiers:5,members:5,
@@ -954,7 +954,7 @@ const PHASE = {categories:0,pools:0,tax:0,hsn:0,shopcats:0,progcats:0,department
 const PREREQ = {
   career:[], categories:[], pools:[], tax:[], hsn:[], shopcats:[], departments:[], paymodes:[], sources:[], scripts:[], progcats:[], bookings:["Products & add-ons"], checkin:["Products & add-ons"],
   fboptions:[], schoolslots:["Products & add-ons"], entryprices:[], sponsors:[], districts:[], spprograms:[], transportvendors:[], foodvendors:[], venues:[],
-  bdaypartytypes:[], bdayslots:[], bdaypackages:["Birthday party types"], bdayworkshops:[], bdayentertainment:[], corpeventtypes:[], cnreasons:[],
+  bdaypartytypes:[], bdayslots:[], bdaypackages:["Birthday party types"], bdayworkshops:[], bdayentertainment:[], corpeventtypes:[], cnreasons:[], adultagegroups:[], childagegroups:[],
   school:["School F&B options","School time slots"], sponsored:["Sponsored School Donors","School time slots"],
   birthday:["Birthday time windows","Birthday packages"],
   corporate:["Corporate event types","Venues"],
@@ -1458,6 +1458,20 @@ const M = {
     view:"cnreasons",
     schema:[["Reason|name","string","As it reads on the credit note, e.g. Sales return."],
             ["Active|is_active","bool","Turn it off to retire this reason from new credit notes."]]},
+  adultagegroups:{g:0,n:"Adult age groups",owner:"Hasmukh · Sales & Marketing",perm:"master.agegroup.manage",src:"Membership",q:1,
+    d:"The age bands offered for the registered adult on a membership — e.g. 25–34 years. Replaces date of birth and age, so no birth date is stored. The Age group dropdown on the Members form lists the active ones; it is optional for the adult.",
+    view:"adultagegroups",
+    schema:[["Age group|name","string","As it reads in the dropdown, e.g. 25–34 years."],
+            ["From age|from_age","int","Lowest age in the band, in years."],
+            ["To age|to_age","int","Highest age in the band. Leave blank for an open-ended band such as 55+."],
+            ["Active|is_active","bool","Turn it off to retire this band from new members."]]},
+  childagegroups:{g:0,n:"Child age groups",owner:"Hasmukh · Sales & Marketing",perm:"master.agegroup.manage",src:"Membership",q:1,
+    d:"The age bands offered for each registered child on a membership — e.g. 3–5 years. Replaces date of birth and age, so no birth date is stored. The Age group dropdown on the Members form lists the active ones; it is required for every child.",
+    view:"childagegroups",
+    schema:[["Age group|name","string","As it reads in the dropdown, e.g. 3–5 years."],
+            ["From age|from_age","int","Lowest age in the band, in years."],
+            ["To age|to_age","int","Highest age in the band, in years."],
+            ["Active|is_active","bool","Turn it off to retire this band from new members."]]},
   corporate:{g:8,n:"Corporate booking",owner:"Events & Experiences",perm:"corporate.manage",src:"Corporate booking",q:0,
     d:"Venue-rental enquiries for corporate/collaboration events (conferences, launches, screenings) in one place — inquiry details, the backend MOU form, MOU sign-off, invoicing and payments. A record starts as an enquiry and moves through MOU sent → signed → invoice raised → confirmed → completed.",
     view:"corporate"},
@@ -2484,6 +2498,16 @@ const CN_REASONS = [
   {name:"Cancellation of visit",                 is_active:true},
   {name:"Correction — value/tax overcharged",    is_active:true}
 ];
+/* Age groups for the Members form — plain dropdown masters that replace date of birth and age (DPDP: no birth dates kept). */
+const ADULT_AGE_GROUPS = [
+  {name:"18–24 years",from_age:18,to_age:24,is_active:true},{name:"25–34 years",from_age:25,to_age:34,is_active:true},
+  {name:"35–44 years",from_age:35,to_age:44,is_active:true},{name:"45–54 years",from_age:45,to_age:54,is_active:true},
+  {name:"55+ years",from_age:55,to_age:"",is_active:true}];
+const CHILD_AGE_GROUPS = [
+  {name:"0–2 years",from_age:0,to_age:2,is_active:true},{name:"3–5 years",from_age:3,to_age:5,is_active:true},
+  {name:"6–9 years",from_age:6,to_age:9,is_active:true},{name:"10–12 years",from_age:10,to_age:12,is_active:true},
+  {name:"13–17 years",from_age:13,to_age:17,is_active:true}];
+const ageGroupOpts = (list,sel,blank) => (blank?`<option value="">${blank}</option>`:"")+list.filter(g=>g.is_active!==false||g.name===sel).map(g=>`<option${g.name===sel?" selected":""}>${escHtml(g.name)}</option>`).join("");
 const CORP_EVENT_TYPES = [
   {name:"Conference",                    is_active:true},
   {name:"Book / Product / Film Launch",  is_active:true},
@@ -3610,7 +3634,7 @@ const CUSTOMERS = (()=>{ const seen=new Map(); BOOKINGS.forEach(b=>{ if(b.phone 
 /* Plans have configurable names, visit counts (a number, or "Unlimited"), validity, price and
    per-plan discounts. A visit = 1 adult + 1 child. Platinum is unlimited; Gold/Silver are limited. */
 const MEMBERSHIP_TIERS = [
-  {id:"silver",  name:"Silver",  price:2999, prices:[{kids:1,price:2999,strike:3999},{kids:2,price:4499,strike:5999},{kids:3,price:5999,strike:7999}], visits:6,           validity:"3 months", hsn:"999692", priority:false, status:"Active", bday:{pct:5,  perks:""}},
+  {id:"silver",  name:"Silver",  price:2999, prices:[{kids:1,price:2999,strike:3999},{kids:2,price:4499,strike:5999}], visits:6,           validity:"3 months", hsn:"999692", priority:false, status:"Active", bday:{pct:5,  perks:""}},
   {id:"gold",    name:"Gold",    price:5999, prices:[{kids:1,price:5999,strike:7499},{kids:2,price:8999,strike:10999},{kids:3,price:11999,strike:14999}], visits:12,          validity:"6 months", hsn:"999692", priority:true,  status:"Active", bday:{pct:10, perks:"Free welcome kit for the birthday child"}},
   {id:"platinum",name:"Platinum",price:9999, prices:[{kids:1,price:9999,strike:12999},{kids:2,price:14999,strike:18999},{kids:3,price:19999,strike:24999}], visits:"Unlimited", validity:"Yearly",   hsn:"999692", priority:true,  status:"Active", bday:{pct:10, perks:"Free welcome kit for the birthday child\n5 extra children at no charge"}}
 ];
@@ -3623,6 +3647,8 @@ const bdayPerkLabel = t => { const b=t&&t.bday||{}; const x=[]; if(+b.pct) x.pus
 const KID_OPTS = [1,2,3];
 const kidsLabel = n => n+(+n===1?" child":" children");
 function tierPriceRow(t,k){ const r=((t&&t.prices)||[]).find(x=>+x.kids===+k); return r||{kids:+k,price:(+k===1&&t)?t.price:"",strike:""}; }
+/* Only the 1-child price is mandatory; 2 and 3 children are offered only when they have a price. */
+const tierKidOpts = t => KID_OPTS.filter(k=>k===1||+tierPriceRow(t,k).price>0);
 const tierPriceFor = (t,k) => +tierPriceRow(t,k).price||0;
 const priceWithStrike = r => `${money(r.price)}${+r.strike>+r.price?` <s class="muted">${money(r.strike)}</s>`:""}`;
 const memberKids = m => Math.min(3,Math.max(1,+(m&&m.kids)||1));
@@ -3630,32 +3656,32 @@ const MEMBER_TODAY = "24 Aug 2026";   // reference "now" for expiry maths
 /* Each member registers ONE adult-child pair at purchase; only that pair may redeem.
    A visit = 1 adult + 1 child; visitsUsed / visitsTotal count PAIRS (Platinum = Unlimited). */
 const MEMBERS = [
-  {id:"MEM-0421",tier:"Gold",phone:"1234567890",email:"aarav@example.com",adult:"Aarav Mehta",child:"Vihaan Mehta",
+  {id:"MEM-0421",adultGroup:"35–44 years",childGroups:["6–9 years"],guardian:true,tier:"Gold",phone:"1234567890",email:"aarav@example.com",adult:"Aarav Mehta",child:"Vihaan Mehta",
    joined:"12 Apr 2026",expires:"12 Oct 2026",visitsTotal:12,visitsUsed:4,
    purchases:[{date:"12 Apr 2026",item:"Gold membership",amount:5999,channel:"POS",inv:"INV-2041"}],
    redemptions:[{date:"20 Jul 2026",visits:2,balanceAfter:10,channel:"POS",otp:true},
                 {date:"03 Aug 2026",visits:2,balanceAfter:8,channel:"Website",otp:true}]},
-  {id:"MEM-0388",tier:"Silver",phone:"9876543210",email:"nisha@example.com",adult:"Nisha Rao",child:"Anya Rao",
+  {id:"MEM-0388",adultGroup:"25–34 years",childGroups:["3–5 years"],guardian:true,tier:"Silver",phone:"9876543210",email:"nisha@example.com",adult:"Nisha Rao",child:"Anya Rao",
    joined:"02 Jul 2026",expires:"02 Oct 2026",visitsTotal:6,visitsUsed:1,
    purchases:[{date:"02 Jul 2026",item:"Silver membership",amount:2999,channel:"Website",inv:"INV-2103"}],
    redemptions:[{date:"18 Jul 2026",visits:1,balanceAfter:5,channel:"POS",otp:true}]},
-  {id:"MEM-0500",tier:"Platinum",phone:"9930244556",email:"kabir@example.com",adult:"Kabir Shah",child:"Mira Shah",
+  {id:"MEM-0500",adultGroup:"35–44 years",childGroups:["6–9 years"],guardian:true,tier:"Platinum",phone:"9930244556",email:"kabir@example.com",adult:"Kabir Shah",child:"Mira Shah",
    joined:"01 Jun 2026",expires:"01 Jun 2027",visitsTotal:"Unlimited",visitsUsed:9,
    purchases:[{date:"01 Jun 2026",item:"Platinum membership",amount:9999,channel:"POS",inv:"INV-1987"}],
    redemptions:[{date:"10 Jun 2026",visits:1,balanceAfter:"Unlimited",channel:"POS",otp:true},
                 {date:"28 Jun 2026",visits:2,balanceAfter:"Unlimited",channel:"Website",otp:true},
                 {date:"15 Jul 2026",visits:1,balanceAfter:"Unlimited",channel:"POS",otp:true}]},
-  {id:"MEM-0356",tier:"Gold",phone:"9812233445",email:"farida@example.com",adult:"Farida Khan",child:"Zoya Khan",
+  {id:"MEM-0356",adultGroup:"35–44 years",childGroups:["10–12 years"],guardian:true,tier:"Gold",phone:"9812233445",email:"farida@example.com",adult:"Farida Khan",child:"Zoya Khan",
    joined:"10 Mar 2026",expires:"10 Sep 2026",visitsTotal:12,visitsUsed:11,
    purchases:[{date:"10 Mar 2026",item:"Gold membership",amount:5999,channel:"POS",inv:"INV-1820"}],
    redemptions:[{date:"12 Jul 2026",visits:3,balanceAfter:4,channel:"POS",otp:true}]},
-  {id:"MEM-0299",tier:"Silver",phone:"9700011223",email:"deepak@example.com",adult:"Deepak Iyer",child:"Aarohi Iyer",
+  {id:"MEM-0299",adultGroup:"35–44 years",childGroups:["6–9 years"],guardian:true,tier:"Silver",phone:"9700011223",email:"deepak@example.com",adult:"Deepak Iyer",child:"Aarohi Iyer",
    joined:"15 Feb 2026",expires:"15 May 2026",visitsTotal:6,visitsUsed:6,
    purchases:[{date:"15 Feb 2026",item:"Silver membership",amount:2999,channel:"Website",inv:"INV-1655"}],
    redemptions:[{date:"20 Apr 2026",visits:2,balanceAfter:0,channel:"POS",otp:true}]}
 ];
 
-MEMBERS.push({id:"MEM-0512",tier:"Gold",kids:2,phone:"9820055667",email:"priya@example.com",adult:"Priya Nair",child:"Riya Nair, Kabir Nair",children:["Riya Nair","Kabir Nair"],
+MEMBERS.push({id:"MEM-0512",adultGroup:"25–34 years",childGroups:["3–5 years", "6–9 years"],guardian:true,tier:"Gold",kids:2,phone:"9820055667",email:"priya@example.com",adult:"Priya Nair",child:"Riya Nair, Kabir Nair",children:["Riya Nair","Kabir Nair"],
    joined:"05 Aug 2026",expires:"05 Feb 2027",visitsTotal:12,visitsUsed:2,
    purchases:[{date:"05 Aug 2026",item:"Gold membership · 2 children",amount:8999,channel:"Website",inv:"INV-2150"}],
    redemptions:[{date:"15 Aug 2026",visits:2,balanceAfter:10,channel:"POS",otp:true}]});
@@ -4985,7 +5011,9 @@ const BDAY_MASTER_REQUIRED = {
   bdayworkshops:["name","price","gst"],
   bdayentertainment:["name","price","gst"],
   corpeventtypes:["name"],
-  cnreasons:["name"]
+  cnreasons:["name"],
+  adultagegroups:["name"],
+  childagegroups:["name"]
 };
 function tipRich(desc,impact){
   // An fk note starts with "→ Target" purely so the picker knows what to list.
@@ -5692,7 +5720,7 @@ const VIEWS = {
       <th>Plan</th><th>Price by children</th><th>Visits</th><th>Validity</th><th>Member discounts</th><th>Birthday party perks</th><th>Status</th></tr></thead>
     <tbody>${MEMBERSHIP_TIERS.map((t,i)=>`<tr data-open="tier:${i}">
       <td>${tierPill(t.name)}</td>
-      <td class="code">${KID_OPTS.map(k=>`<div style="white-space:nowrap"><span class="muted">${k} ${k===1?"child":"children"} ·</span> ${priceWithStrike(tierPriceRow(t,k))}</div>`).join("")}</td>
+      <td class="code">${tierKidOpts(t).map(k=>`<div style="white-space:nowrap"><span class="muted">${k} ${k===1?"child":"children"} ·</span> ${priceWithStrike(tierPriceRow(t,k))}</div>`).join("")}</td>
       <td class="code">${t.visits==="Unlimited"?'<b style="font-weight:600">Unlimited</b>':t.visits}</td>
       <td>${t.validity}</td>
       <td>${(()=>{const k=tierPerks(t);return k.length?k.map(d=>`${perkLabel(d)} <span class="code">${d.v}</span>`).join("<br>"):'<span class="muted">None</span>';})()}</td>
@@ -6282,6 +6310,38 @@ const VIEWS = {
         <td>${p.is_active?'<span class="pill pill-ok"><i class="dot"></i>Active</span>':'<span class="pill pill-off">Inactive</span>'}</td>
         <td><button class="btn" data-medit="${i}">Edit</button></td></tr>`).join("")}
         ${addRowNew("Add event type")}</tbody></table></div></div>`;
+  },
+
+  adultagegroups(){
+    return `<div class="note note-scope"><span class="note-mark">Structure</span><div>
+      The age bands a member's adult is placed in on the Members form. A plain dropdown — no date of birth or exact age is stored. Optional on the form.
+    </div></div>
+    <div class="card"><div class="card-head"><span class="card-title">Adult age groups</span>
+      <span class="card-note">${ADULT_AGE_GROUPS.length} on file</span></div>
+      <div class="matrix-wrap"><table><thead><tr>
+        <th>Age group</th><th>Age range</th><th>Status</th><th>Actions</th></tr></thead>
+      <tbody>${ADULT_AGE_GROUPS.map((p,i)=>`<tr>
+        <td><b style="font-weight:500">${escHtml(p.name)}</b></td>
+        <td class="code">${p.from_age}${p.to_age===""||p.to_age==null?"+":"–"+p.to_age}</td>
+        <td>${p.is_active?'<span class="pill pill-ok"><i class="dot"></i>Active</span>':'<span class="pill pill-off">Inactive</span>'}</td>
+        <td><button class="btn" data-medit="${i}">Edit</button></td></tr>`).join("")}
+        ${addRowNew("Add adult age group")}</tbody></table></div></div>`;
+  },
+
+  childagegroups(){
+    return `<div class="note note-scope"><span class="note-mark">Structure</span><div>
+      The age bands a member's children is placed in on the Members form. A plain dropdown — no date of birth or exact age is stored. Required for every child.
+    </div></div>
+    <div class="card"><div class="card-head"><span class="card-title">Child age groups</span>
+      <span class="card-note">${CHILD_AGE_GROUPS.length} on file</span></div>
+      <div class="matrix-wrap"><table><thead><tr>
+        <th>Age group</th><th>Age range</th><th>Status</th><th>Actions</th></tr></thead>
+      <tbody>${CHILD_AGE_GROUPS.map((p,i)=>`<tr>
+        <td><b style="font-weight:500">${escHtml(p.name)}</b></td>
+        <td class="code">${p.from_age}${p.to_age===""||p.to_age==null?"+":"–"+p.to_age}</td>
+        <td>${p.is_active?'<span class="pill pill-ok"><i class="dot"></i>Active</span>':'<span class="pill pill-off">Inactive</span>'}</td>
+        <td><button class="btn" data-medit="${i}">Edit</button></td></tr>`).join("")}
+        ${addRowNew("Add child age group")}</tbody></table></div></div>`;
   },
 
   cnreasons(){
@@ -7396,7 +7456,7 @@ const SING={blackout:"blackout date",affiliates:"affiliate link",
   bdaypartytypes:"birthday party type",
   bdayslots:"birthday time window",bdaypackages:"birthday package",
   bdayworkshops:"birthday workshop add-on",bdayentertainment:"birthday entertainment add-on",birthday:"birthday booking",
-  corpeventtypes:"corporate event type",cnreasons:"credit note reason",corporate:"corporate booking",einvoicing:"e-invoice"};
+  corpeventtypes:"corporate event type",cnreasons:"credit note reason",adultagegroups:"adult age group",childagegroups:"child age group",corporate:"corporate booking",einvoicing:"e-invoice"};
 const singular=(k,n)=>SING[k]||n.toLowerCase().replace(/s$/,"");
 const TYPE_LABEL={media:"Files",string:"Text",int:"Number",decimal:"Number",money:"Amount",
   date:"Date",datetime:"Date and time",time:"Time",bool:"Yes or no",enum:"Choose one",
@@ -7694,7 +7754,7 @@ function tierDetail(){
     <div class="two">
       <div>
         <div class="card"><div class="matrix-wrap"><table><thead><tr><th style="width:40%">Field</th><th>Value</th></tr></thead><tbody>
-          ${KID_OPTS.map(k=>row("Price · "+kidsLabel(k),'<span class="code">'+priceWithStrike(tierPriceRow(t,k))+'</span>')).join("")}
+          ${tierKidOpts(t).map(k=>row("Price · "+kidsLabel(k),'<span class="code">'+priceWithStrike(tierPriceRow(t,k))+'</span>')).join("")}
           ${row("Visits included",t.visits==="Unlimited"?'<b style="font-weight:600">Unlimited</b> (1 visit = 1 adult + all registered children)':t.visits+" (1 visit = 1 adult + all registered children)")}
           ${row("Validity",t.validity+" from purchase")}
           ${row("Priority access",t.priority?"Yes":"No")}
@@ -7740,10 +7800,10 @@ function tierForm(editing){
         +fld("HSN / SAC code",`<div class="selwrap"><select class="inp">${HSNCODES.map(h=>`<option value="${h.code}"${(t.hsn||"999692")===h.code?" selected":""}>${h.code} · ${h.desc} · ${h.gst}% GST</option>`).join("")}</select></div>`,"GST on the plan price is taken from this code.",true)
         +fld("Active",`<button type="button" class="sw" data-on="${t.status==="Draft"?0:1}"><i></i><span>${t.status==="Draft"?"Off":"On"}</span></button>`,"Turn it off to keep the plan a draft — draft plans are not on sale yet.",false))}
       ${sec("Pricing by number of children",
-        `<div class="fld wide"><div class="lab"><span class="lab-n">Price for each option</span>${tip("The plan is sold for 1, 2 or 3 children. Each option has its own price and an optional striked (original) price shown struck-through next to it. GST is taken from the HSN / SAC code.")}<span class="lab-req">Required</span></div>
-          <div class="matrix-wrap"><table class="reclist" data-tier-prices><thead><tr><th>Option</th><th>Price</th><th>Striked price <span class="muted" style="font-weight:400">(optional)</span></th></tr></thead><tbody>${KID_OPTS.map(k=>{const r=tierPriceRow(t,k);return `<tr data-kids="${k}"><td><b style="font-weight:500">${kidsLabel(k)}</b><div class="sub">1 adult + ${kidsLabel(k)}</div></td>
-            <td><div class="inp-suffix"><input class="inp mono" data-tp="price" type="number" min="0" value="${escAttr(r.price||"")}" placeholder="0" aria-label="Price for ${kidsLabel(k)}"><span>₹</span></div></td>
-            <td><div class="inp-suffix"><input class="inp mono" data-tp="strike" type="number" min="0" value="${escAttr(r.strike||"")}" placeholder="0" aria-label="Striked price for ${kidsLabel(k)}"><span>₹</span></div></td></tr>`;}).join("")}</tbody></table></div></div>`,
+        `<div class="fld wide"><div class="lab"><span class="lab-n">Price for each option</span>${tip("The plan is sold for 1, 2 or 3 children. The 1-child price is required; 2 and 3 children are optional — leave them blank to not offer that option. Each option has its own price and an optional striked (original) price shown struck-through next to it. GST is taken from the HSN / SAC code.")}<span class="lab-req">1 child required</span></div>
+          <div class="matrix-wrap"><table class="reclist" data-tier-prices><thead><tr><th>Option</th><th>Price</th><th>Striked price <span class="muted" style="font-weight:400">(optional)</span></th></tr></thead><tbody>${KID_OPTS.map(k=>{const r=tierPriceRow(t,k);return `<tr data-kids="${k}"><td><b style="font-weight:500">${kidsLabel(k)}</b> <span class="muted" style="font-size:11px">${k===1?"Required":"Optional"}</span><div class="sub">1 adult + ${kidsLabel(k)}</div></td>
+            <td><div class="inp-suffix"><input class="inp mono" data-tp="price" type="number" min="0" value="${escAttr(r.price||"")}" placeholder="${k===1?"0":"Not offered"}" aria-label="Price for ${kidsLabel(k)}"${k===1?" required":""}><span>₹</span></div></td>
+            <td><div class="inp-suffix"><input class="inp mono" data-tp="strike" type="number" min="0" value="${escAttr(r.strike||"")}" placeholder="0" aria-label="Striked price for ${kidsLabel(k)}"><span>₹</span></div></td></tr>`;}).join("")}</tbody></table></div><div id="tierPriceErr" style="display:none;color:var(--stop);font-size:12px;margin-top:8px">Enter the price for 1 child to continue.</div></div>`,
         "per option")}
       ${sec("Visits & validity",
         fld("Visits included",`<div class="inp-suffix"><input class="inp mono" type="number" min="0" step="1" value="${escAttr(numvis)}" placeholder="Leave blank for Unlimited"><span>visits</span></div>`,"Number of visits included. Leave blank to mean Unlimited. One visit admits 1 adult + all the children registered on the membership.",false)
@@ -7808,19 +7868,20 @@ function memberForm(editing){
     <div class="card-head"><span class="card-title">${editing?"Edit member":"New member"}</span></div>
     <div class="form-body product-form">
       ${sec("Membership",fld("Plan",`<div class="selwrap"><select class="inp" id="memberTier">${MEMBERSHIP_TIERS.map(x=>`<option${m.tier===x.name?" selected":""}>${x.name}</option>`).join("")}</select></div>`,"The plan being purchased.",true)
-        +fld("Children covered",`<div class="selwrap"><select class="inp" id="memberKids">${KID_OPTS.map(k=>`<option value="${k}"${kids===k?" selected":""}>${kidsLabel(k)}</option>`).join("")}</select></div>`,"The option bought — 1, 2 or 3 children. Each option has its own price on the plan, and every child below can redeem.",true)
+        +fld("Children covered",`<div class="selwrap"><select class="inp" id="memberKids">${tierKidOpts(tObj).map(k=>`<option value="${k}"${kids===k?" selected":""}>${kidsLabel(k)}</option>`).join("")}</select></div>`,"The option bought — 1, 2 or 3 children. Each option has its own price on the plan, and every child below can redeem.",true)
         +`<div class="fld wide"><div class="lab"><span class="lab-n">Price</span><span class="lab-req">Calculated</span></div><div id="memberPriceLine" class="code" style="font-size:13px">${priceWithStrike(tierPriceRow(tObj,kids))} <span class="muted">· ${kidsLabel(kids)}</span></div></div>`)}
       ${sec("Registered adult",
         fld("Adult first name",`<input class="inp" value="${escAttr(splitName(m.adult).first)}" placeholder="First name">`,"The registered adult — only this adult may redeem the membership.",true)
         +fld("Adult last name",`<input class="inp" value="${escAttr(splitName(m.adult).last)}" placeholder="Last name">`,"",true)
-        +fld("Date of birth",`<input class="inp mono" data-dob="madult" value="${escAttr(m.adultDob||"")}" placeholder="DD/MM/YYYY">`,"Optional — used to auto-fill the age.",false)
-        +fld("Age",`<input class="inp mono" id="age_madult" value="${escAttr(m.adultDob?ageLabel(m.adultDob):(m.adultAge||""))}" placeholder="Years" aria-live="polite">`,"Auto-filled from date of birth; you can also type it. Optional for the adult.",false))}
+
+        +fld("Age group",`<div class="selwrap"><select class="inp" id="memberAdultGroup">${ageGroupOpts(ADULT_AGE_GROUPS,m.adultGroup||"","— select —")}</select></div>`,"Pick the adult's age band. No date of birth is stored. Managed in Masters → Adult age groups.",false))}
       ${[1,2,3].map(i=>{const nm=splitName(cn[i-1]||""),sfx=i===1?"":String(i),ttl=kids>1?"Registered child "+i:"Registered child";
         return `<div data-child-sec="${i}"${i>kids?" hidden":""}>`+sec(ttl,
         fld("Child first name",`<input class="inp" value="${escAttr(nm.first)}" placeholder="First name">`,"A registered child — only the registered children may redeem the membership.",true)
         +fld("Child last name",`<input class="inp" value="${escAttr(nm.last)}" placeholder="Last name">`,"",true)
-        +fld("Date of birth",`<input class="inp mono" data-dob="mchild${sfx}" value="${escAttr(i===1?(m.childDob||""):((m.childDobs||[])[i-1]||""))}" placeholder="DD/MM/YYYY">`,"Optional — used to auto-fill the age.",false)
-        +fld("Age",`<input class="inp mono" id="age_mchild${sfx}" value="${escAttr(i===1?(m.childDob?ageLabel(m.childDob):(m.childAge||"")):"")}" placeholder="Years" aria-live="polite">`,"Required. Auto-filled from date of birth; you can also type it.",true))+`</div>`;}).join("")}
+
+        +fld("Age group",`<div class="selwrap"><select class="inp" data-child-group="${i}">${ageGroupOpts(CHILD_AGE_GROUPS,(m.childGroups||[])[i-1]||"","— select —")}</select></div>`,"Pick the child's age band. No date of birth is stored. Managed in Masters → Child age groups.",true))+`</div>`;}).join("")}
+      ${sec("Parent / guardian declaration",`<div class="fld wide"><label style="display:flex;gap:10px;align-items:flex-start;font-size:13px;cursor:pointer"><input type="checkbox" id="memberGuardian"${m.guardian?" checked":""} style="margin-top:3px"><span>The registered adult confirms they are the <b>parent or guardian</b> of the registered ${kids>1?"children":"child"} and consents to their details being held for this membership.</span></label><div id="memberGuardianErr" class="booking-discount-msg bad" style="display:none;margin-top:8px">Tick the parent / guardian declaration to continue.</div></div>`)}
       ${sec("Contact",
         fld("Phone",`<input class="inp mono" type="tel" inputmode="tel" value="${escAttr(m.phone||"")}" placeholder="10-digit mobile">`,"Used for OTP at redemption and for confirmations.",true)
         +fld("Email",`<input class="inp" type="email" value="${escAttr(m.email||"")}" placeholder="name@example.com">`,"For confirmations and to view history on login.",true)
@@ -7862,6 +7923,8 @@ function memberDetail(){
         <div class="card"><div class="matrix-wrap"><table><tbody>
           ${row("Member ID",'<span class="code">'+m.id+'</span>')}
           ${row("Children covered",kidsLabel(memberKids(m))+' <span class="code muted">· '+money(tierPriceFor(t,memberKids(m)))+'</span>')}
+          ${row("Age groups",(m.adultGroup?"Adult: "+escHtml(m.adultGroup):'<span class="muted">Adult: not given</span>')+"<br>"+(m.childGroups||[]).map((g,i)=>"Child "+(i+1)+": "+escHtml(g)).join("<br>"))}
+          ${row("Parent / guardian declared",m.guardian?"Yes":'<span style="color:var(--stop)">No</span>')}
           ${row("Phone",'<span class="code">'+m.phone+'</span>')}
           ${row("Email",m.email)}
           ${row("Joined",m.joined)}
@@ -7889,6 +7952,7 @@ function renewFormCard(m){
       ${afFld("Plan",`<div class="selwrap"><select class="inp" id="renewTier">${MEMBERSHIP_TIERS.map(x=>`<option${x.name===m.tier?" selected":""}>${x.name}</option>`).join("")}</select></div>`,"")}
       ${afFld("Validity",`<input class="inp" value="${t.validity||""}" readonly>`,"")}
       ${afFld("Children covered",`<input class="inp" value="${kidsLabel(memberKids(m))}" readonly>`,"The option stays as bought.")}
+      ${afFld("Parent / guardian",`<label style="display:flex;gap:8px;align-items:flex-start;font-size:12.5px"><input type="checkbox" id="renewGuardian" style="margin-top:3px"><span>Adult confirms they are the parent or guardian of the registered ${memberKids(m)>1?"children":"child"}.</span></label><div id="renewGuardianErr" class="booking-discount-msg bad" style="display:none;margin-top:6px">Tick the declaration to confirm the renewal.</div>`,"Re-confirmed at every renewal.",true)}
       ${afFld("Amount",`<input class="inp mono" id="renewAmount" value="${money(tierPriceFor(t,memberKids(m)))}" readonly>`,"")}
     </div>
     <div class="form-foot"><span>A confirmation email &amp; SMS go to the member.</span>
@@ -11697,7 +11761,7 @@ function careerApplications(){
 const masterData = k => ({categories:CATS, tax:TAXRATES, hsn:HSNCODES, shopcats:SHOP_CATEGORIES, progcats:PROGCATS,
   fboptions:FB_OPTIONS, schoolslots:SCHOOL_SLOTS, entryprices:ENTRY_PRICES, sponsors:SPONSORS, districts:DISTRICTS, spprograms:SP_PROGRAMS, transportvendors:TRANSPORT_VENDORS, foodvendors:FOOD_VENDORS, venues:VENUES, pools:[POOLS.shared,POOLS.children],
   bdaypartytypes:BDAY_PARTY_TYPES, bdayslots:BDAY_SLOTS, bdaypackages:BDAY_PACKAGES, bdayworkshops:BDAY_WORKSHOPS, bdayentertainment:BDAY_ENTERTAINMENT,
-  corpeventtypes:CORP_EVENT_TYPES, cnreasons:CN_REASONS}[k]);
+  corpeventtypes:CORP_EVENT_TYPES, cnreasons:CN_REASONS, adultagegroups:ADULT_AGE_GROUPS, childagegroups:CHILD_AGE_GROUPS}[k]);
 function masterEditValues(k, i){
   const row=(masterData(k)||[])[i]||{};
   if(k==="tax")  return {code:row.code,name:row.name,percentage:row.pct,is_active:true};
@@ -12108,6 +12172,7 @@ document.addEventListener("click",e=>{
   // member form Save — Location and PIN code are each optional, but at least one must be given
   const memSave=e.target.closest("[data-member-save]");
   if(memSave){ const loc=((document.getElementById("memberLocation")||{}).value||"").trim(), pin=((document.getElementById("memberPincode")||{}).value||"").trim();
+    const gd=document.getElementById("memberGuardian"); if(gd&&!gd.checked){ const ge=document.getElementById("memberGuardianErr"); if(ge) ge.style.display=""; gd.focus(); return; }
     if(!loc&&!pin){ const err=document.getElementById("memberLocErr"); if(err) err.style.display=""; return; }
     tab="list"; render(); $(".stage").scrollTop=0; return; }
   // ---- reception check-in / out ----
@@ -12740,7 +12805,8 @@ document.addEventListener("click",e=>{
     (m.redemptions=m.redemptions||[]).unshift({date:MEMBER_TODAY,visits:q,balanceAfter:isUnlimited(m)?"Unlimited":visitsBalance(m),channel:"POS",otp:true});
     addOpen=null; redeemStep=1; redeemVisits=1; msub="redemptions"; render(); return; }
   const rndone=e.target.closest("[data-renew-confirm]");
-  if(rndone){ const m=MEMBERS[+rndone.dataset.renewConfirm]; const sel=document.getElementById("renewTier");
+  if(rndone){ const rg=document.getElementById("renewGuardian"); if(rg&&!rg.checked){ const re=document.getElementById("renewGuardianErr"); if(re) re.style.display=""; return; }
+    const m=MEMBERS[+rndone.dataset.renewConfirm]; m.guardian=true; const sel=document.getElementById("renewTier");
     const tierName=(sel&&sel.value)||m.tier; const t=tierOf(tierName)||{price:0,validity:m.expires,visits:m.visitsTotal};
     m.tier=tierName; m.visitsTotal=t.visits; if(!isUnlimited(m)) m.visitsUsed=0;
     const base=parseDMY(MEMBER_TODAY)||new Date(2026,7,24);
@@ -12781,7 +12847,8 @@ document.addEventListener("click",e=>{
   if(cprod){ const pd=cprod.dataset.couponprod; couponProds=couponProds||[]; const i=couponProds.indexOf(pd); if(i>=0) couponProds.splice(i,1); else couponProds.push(pd); render(); return; }
   // ---- membership tier: products + per-product time slots flyout ----
   const tsave=e.target.closest("[data-tier-save]");
-  if(tsave){ if(!tierProdsOk(tierDraft)){ tierSaveTried=true; if(addOpen==="tierprods") addOpen=null; render(); return; } tab="list"; addOpen=null; render(); $(".stage").scrollTop=0; return; }
+  if(tsave){ const p1=document.querySelector('[data-tier-prices] tr[data-kids="1"] [data-tp="price"]'); if(p1&&!(+p1.value>0)){ const er=document.getElementById("tierPriceErr"); if(er) er.style.display=""; p1.focus(); return; }
+    if(!tierProdsOk(tierDraft)){ tierSaveTried=true; if(addOpen==="tierprods") addOpen=null; render(); return; } tab="list"; addOpen=null; render(); $(".stage").scrollTop=0; return; }
   if(e.target.closest("[data-tier-editprods]")){ if(!tierDraft) seedTierDraft(tab==="edit"); tierItemsOpen=false; addOpen="tierprods"; render(); $(".stage").scrollTop=0; return; }
   if(e.target.closest("[data-tiermsel-toggle]")){ tierItemsOpen=!tierItemsOpen; render(); return; }
   const titem=e.target.closest("[data-tieritem]");
@@ -12822,7 +12889,9 @@ document.addEventListener("click",e=>{
 document.addEventListener("change",e=>{
   // member form: Plan / Children covered — show one child section per child and refresh the calculated price
   if(e.target.id==="memberKids"||e.target.id==="memberTier"){
-    const k=+(document.getElementById("memberKids")||{}).value||1, t=tierOf((document.getElementById("memberTier")||{}).value)||MEMBERSHIP_TIERS[0];
+    const t=tierOf((document.getElementById("memberTier")||{}).value)||MEMBERSHIP_TIERS[0], ks=document.getElementById("memberKids");
+    if(e.target.id==="memberTier"&&ks){ const cur=+ks.value, opts=tierKidOpts(t); ks.innerHTML=opts.map(n=>`<option value="${n}">${kidsLabel(n)}</option>`).join(""); ks.value=String(opts.includes(cur)?cur:1); }
+    const k=+(ks||{}).value||1;
     document.querySelectorAll("[data-child-sec]").forEach(el=>{ const i=+el.dataset.childSec; el.hidden=i>k; const tt=el.querySelector(".form-sec-title"); if(tt) tt.textContent=k>1?"Registered child "+i:"Registered child"; });
     const pl=document.getElementById("memberPriceLine"); if(pl) pl.innerHTML=priceWithStrike(tierPriceRow(t,k))+` <span class="muted">· ${kidsLabel(k)}</span>`;
     return;

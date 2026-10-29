@@ -581,7 +581,13 @@ Verified with `node --check` + headless-Chrome render of plan list / detail / fo
 - Every plan is sold in three fixed options (1, 2, 3 children), each with its own **Price** and **Striked price** (`t.prices:[{kids,price,strike}]`; `t.price` kept = 1-child price). Helpers: `KID_OPTS`, `kidsLabel`, `tierPriceRow/tierPriceFor`, `priceWithStrike`, `memberKids`, `childNames`.
 - Tier form: single Price/Striked fields replaced by a "Pricing by number of children" table. Tiers list shows all three prices with strikes; tier detail has a row per option.
 - Members carry `kids` + `children[]` (seed MEM-0512 = Gold, 2 children; others 1). Member form: Plan + "Children covered" select + calculated price line; one Registered-child section per child (toggled live, `data-child-sec`). List/detail/renew/redeem text, pairLabel and POS membership box wording reflect N children; one visit admits the adult + all registered children (visit count unchanged). Renew amount = member's option price.
+- Only the **1-child price is required** (form blocks save with an inline error); 2 and 3 children are optional — blank = not offered (`tierKidOpts`). List/detail show offered options only; member form's "Children covered" lists only the selected plan's offered options. Seed: Silver offers 1 and 2 children only.
 - Seed strike/price for 2- and 3-child options are placeholders.
+
+### 49. Members: age groups replace date of birth/age, parent/guardian declaration (DPDP)
+- Date of birth and Age removed for the adult and every child on the Members form. New plain dropdown masters **Adult age groups** (`ADULT_AGE_GROUPS`, optional on the form) and **Child age groups** (`CHILD_AGE_GROUPS`, required per child) in Masters → Foundations (registry keys `adultagegroups`/`childagegroups`; name, from age, to age, active). Seed bands 18–24…55+ and 0–2…13–17. Members carry `adultGroup`, `childGroups[]`.
+- **Parent / guardian declaration**: required tick box on the member form (save blocked with an error) and re-ticked in the Renew flyout (confirm blocked); member detail shows "Age groups" and "Parent / guardian declared".
+- Schema counterpart (`muso-schema.prisma`): `adult_age_groups`, `child_age_groups`, `members.adult_age_group_id`/`guardian_declared_at`, `member_children.child_age_group_id`; removed child's name blanked 12 months after removal (sweep not built).
 
 ## Known wireframe simplifications / open notes
 - Auto discounts apply on **simplified bases** (whole-cart or the obvious line group), not a full `target/prods/cats` engine.
