@@ -3610,14 +3610,22 @@ const CUSTOMERS = (()=>{ const seen=new Map(); BOOKINGS.forEach(b=>{ if(b.phone 
 /* Plans have configurable names, visit counts (a number, or "Unlimited"), validity, price and
    per-plan discounts. A visit = 1 adult + 1 child. Platinum is unlimited; Gold/Silver are limited. */
 const MEMBERSHIP_TIERS = [
-  {id:"silver",  name:"Silver",  price:2999, visits:6,           validity:"3 months", hsn:"999692", priority:false, status:"Active", bday:{pct:5,  perks:""}},
-  {id:"gold",    name:"Gold",    price:5999, visits:12,          validity:"6 months", hsn:"999692", priority:true,  status:"Active", bday:{pct:10, perks:"Free welcome kit for the birthday child"}},
-  {id:"platinum",name:"Platinum",price:9999, visits:"Unlimited", validity:"Yearly",   hsn:"999692", priority:true,  status:"Active", bday:{pct:10, perks:"Free welcome kit for the birthday child\n5 extra children at no charge"}}
+  {id:"silver",  name:"Silver",  price:2999, prices:[{kids:1,price:2999,strike:3999},{kids:2,price:4499,strike:5999},{kids:3,price:5999,strike:7999}], visits:6,           validity:"3 months", hsn:"999692", priority:false, status:"Active", bday:{pct:5,  perks:""}},
+  {id:"gold",    name:"Gold",    price:5999, prices:[{kids:1,price:5999,strike:7499},{kids:2,price:8999,strike:10999},{kids:3,price:11999,strike:14999}], visits:12,          validity:"6 months", hsn:"999692", priority:true,  status:"Active", bday:{pct:10, perks:"Free welcome kit for the birthday child"}},
+  {id:"platinum",name:"Platinum",price:9999, prices:[{kids:1,price:9999,strike:12999},{kids:2,price:14999,strike:18999},{kids:3,price:19999,strike:24999}], visits:"Unlimited", validity:"Yearly",   hsn:"999692", priority:true,  status:"Active", bday:{pct:10, perks:"Free welcome kit for the birthday child\n5 extra children at no charge"}}
 ];
 /* Birthday-party perks live ON the plan, not in Discounts & offers: birthday parties are booked outside the POS /
    website booking flow, so no discount code or automatic discount ever reaches them. Staff apply bday.pct and the
    listed perks by hand when quoting a member's party. */
 const bdayPerkLabel = t => { const b=t&&t.bday||{}; const x=[]; if(+b.pct) x.push(b.pct+"% off"); (b.perks||"").split("\n").map(l=>l.trim()).filter(Boolean).forEach(l=>x.push(l)); return x; };
+/* A plan is sold in three options — 1, 2 or 3 children — each with its own price and striked price (t.prices).
+   t.price stays as the 1-child price for older code paths. */
+const KID_OPTS = [1,2,3];
+const kidsLabel = n => n+(+n===1?" child":" children");
+function tierPriceRow(t,k){ const r=((t&&t.prices)||[]).find(x=>+x.kids===+k); return r||{kids:+k,price:(+k===1&&t)?t.price:"",strike:""}; }
+const tierPriceFor = (t,k) => +tierPriceRow(t,k).price||0;
+const priceWithStrike = r => `${money(r.price)}${+r.strike>+r.price?` <s class="muted">${money(r.strike)}</s>`:""}`;
+const memberKids = m => Math.min(3,Math.max(1,+(m&&m.kids)||1));
 const MEMBER_TODAY = "24 Aug 2026";   // reference "now" for expiry maths
 /* Each member registers ONE adult-child pair at purchase; only that pair may redeem.
    A visit = 1 adult + 1 child; visitsUsed / visitsTotal count PAIRS (Platinum = Unlimited). */
@@ -3646,6 +3654,11 @@ const MEMBERS = [
    purchases:[{date:"15 Feb 2026",item:"Silver membership",amount:2999,channel:"Website",inv:"INV-1655"}],
    redemptions:[{date:"20 Apr 2026",visits:2,balanceAfter:0,channel:"POS",otp:true}]}
 ];
+
+MEMBERS.push({id:"MEM-0512",tier:"Gold",kids:2,phone:"9820055667",email:"priya@example.com",adult:"Priya Nair",child:"Riya Nair, Kabir Nair",children:["Riya Nair","Kabir Nair"],
+   joined:"05 Aug 2026",expires:"05 Feb 2027",visitsTotal:12,visitsUsed:2,
+   purchases:[{date:"05 Aug 2026",item:"Gold membership · 2 children",amount:8999,channel:"Website",inv:"INV-2150"}],
+   redemptions:[{date:"15 Aug 2026",visits:2,balanceAfter:10,channel:"POS",otp:true}]});
 
 /* Cut a product's slots into segments at every distinct start and end time. */
 function SEGMENTS(a){
@@ -5643,7 +5656,7 @@ const VIEWS = {
         <td>${memberStatusPill(m)}</td></tr>`).join("")
       :'<tr><td colspan="5" class="muted">No memberships need attention.</td></tr>';
     const expiring=`<div class="card"><div class="card-head"><span class="card-title">Memberships needing attention</span><span class="card-note">expiring or expired</span></div>
-      <div class="matrix-wrap"><table class="reclist"><thead><tr><th>Member ID</th><th>Registered pair</th><th>Tier</th><th>Expires</th><th>Status</th></tr></thead>
+      <div class="matrix-wrap"><table class="reclist"><thead><tr><th>Member ID</th><th>Registered adult + children</th><th>Tier</th><th>Expires</th><th>Status</th></tr></thead>
       <tbody>${expRows}</tbody></table></div></div>`;
 
     // ---- Upcoming schools (for Reception) ----
@@ -5676,10 +5689,10 @@ const VIEWS = {
   tiers(){
     return `${toolbar("Search membership tiers",MEMBERSHIP_TIERS.length+" plans")}
     <div class="card"><div class="matrix-wrap"><table class="reclist"><thead><tr>
-      <th>Plan</th><th>Price</th><th>Visits</th><th>Validity</th><th>Member discounts</th><th>Birthday party perks</th><th>Status</th></tr></thead>
+      <th>Plan</th><th>Price by children</th><th>Visits</th><th>Validity</th><th>Member discounts</th><th>Birthday party perks</th><th>Status</th></tr></thead>
     <tbody>${MEMBERSHIP_TIERS.map((t,i)=>`<tr data-open="tier:${i}">
       <td>${tierPill(t.name)}</td>
-      <td class="code">${money(t.price)}</td>
+      <td class="code">${KID_OPTS.map(k=>`<div style="white-space:nowrap"><span class="muted">${k} ${k===1?"child":"children"} ·</span> ${priceWithStrike(tierPriceRow(t,k))}</div>`).join("")}</td>
       <td class="code">${t.visits==="Unlimited"?'<b style="font-weight:600">Unlimited</b>':t.visits}</td>
       <td>${t.validity}</td>
       <td>${(()=>{const k=tierPerks(t);return k.length?k.map(d=>`${perkLabel(d)} <span class="code">${d.v}</span>`).join("<br>"):'<span class="muted">None</span>';})()}</td>
@@ -5702,11 +5715,11 @@ const VIEWS = {
     </div>`;
     const rows=MEMBERS.map((m,i)=>{ const st=memberStatus(m); const bal=visitsBalance(m);
       const visCell=isUnlimited(m)?'<b style="font-weight:600">Unlimited</b>':`${m.visitsUsed||0} / ${m.visitsTotal||0} <span class="muted">(${bal} left)</span>`;
-      const hay=`${String(m.phone).replace(/\D/g,"")} ${m.adult} ${m.child} ${m.id}`.toLowerCase();
+      const hay=`${String(m.phone).replace(/\D/g,"")} ${m.adult} ${childNames(m).join(" ")} ${m.id}`.toLowerCase();
       return `<tr data-open="member:${i}" data-member-row data-search="${escAttr(hay)}">
       <td class="code">${m.id}</td>
       <td><b style="font-weight:500">${pairLabel(m)}</b><div class="sub code">${m.phone}</div></td>
-      <td>${tierPill(m.tier)}</td>
+      <td>${tierPill(m.tier)}<div class="sub">${kidsLabel(memberKids(m))}</div></td>
       <td>${m.expires}${st.daysLeft!=null?`<div class="sub">${st.daysLeft<0?"expired "+(-st.daysLeft)+"d ago":"in "+st.daysLeft+" days"}</div>`:""}</td>
       <td class="code">${visCell}</td>
       <td>${memberStatusPill(m)}</td>
@@ -5715,7 +5728,7 @@ const VIEWS = {
       <span class="tool-note" id="memberCount">${MEMBERS.length} members</span></div>`;
     return tiles+searchbar+
     `<div class="card"><div class="matrix-wrap"><table class="reclist" id="membersTable"><thead><tr>
-      <th>Member ID</th><th>Registered pair</th><th>Tier</th><th>Validity</th><th>Visits</th><th>Membership Status</th><th>Actions</th></tr></thead>
+      <th>Member ID</th><th>Registered adult + children</th><th>Tier</th><th>Validity</th><th>Visits</th><th>Membership Status</th><th>Actions</th></tr></thead>
     <tbody>${rows}
       <tr data-member-addrow><td colspan="7"><button class="rep-add" data-tab="new" style="border-radius:4px">+ New member</button></td></tr>
       <tr data-member-empty style="display:none"><td colspan="7" class="muted" style="text-align:center;padding:16px">No members match that search.</td></tr>
@@ -7139,11 +7152,11 @@ function bookingForm(editing=false){
       <div class="membership-cbs">
         <button type="button" class="mcb-row${visitOn?" mcb-row-on":""}" data-redeem-visit="${pfx}" ${canUse?"":"disabled"}>
           ${cbox(visitOn,!canUse)}
-          <span class="mcb-txt"><b>Use a membership visit for this ticket</b><span>${canUse||visitOn?`Admits 1 child, free — ${passesRemainingAfter} of ${member.passesTotal} left.`:"No visits remaining on this membership."}</span></span>
+          <span class="mcb-txt"><b>Use a membership visit for this ticket</b><span>${canUse||visitOn?`Admits ${member.kids>1?member.kids+" children":"1 child"}, free — ${passesRemainingAfter} of ${member.passesTotal} left.`:"No visits remaining on this membership."}</span></span>
         </button>
         <button type="button" class="mcb-row${adultOn?" mcb-row-on":""}" data-redeem-adult="${pfx}" ${visitOn?"":"disabled"}>
           ${cbox(adultOn,!visitOn)}
-          <span class="mcb-txt"><b>Add the accompanying adult, free</b><span>${visitOn?"One visit admits 1 adult + 1 child.":"Tick a membership visit first."}</span></span>
+          <span class="mcb-txt"><b>Add the accompanying adult, free</b><span>${visitOn?`One visit admits 1 adult + ${member.kids>1?member.kids+" children":"1 child"}.`:"Tick a membership visit first."}</span></span>
         </button>
       </div>
     </div>`;
@@ -7681,8 +7694,8 @@ function tierDetail(){
     <div class="two">
       <div>
         <div class="card"><div class="matrix-wrap"><table><thead><tr><th style="width:40%">Field</th><th>Value</th></tr></thead><tbody>
-          ${row("Price",money(t.price))}
-          ${row("Visits included",t.visits==="Unlimited"?'<b style="font-weight:600">Unlimited</b> (1 visit = 1 adult + 1 child)':t.visits+" (1 visit = 1 adult + 1 child)")}
+          ${KID_OPTS.map(k=>row("Price · "+kidsLabel(k),'<span class="code">'+priceWithStrike(tierPriceRow(t,k))+'</span>')).join("")}
+          ${row("Visits included",t.visits==="Unlimited"?'<b style="font-weight:600">Unlimited</b> (1 visit = 1 adult + all registered children)':t.visits+" (1 visit = 1 adult + all registered children)")}
           ${row("Validity",t.validity+" from purchase")}
           ${row("Priority access",t.priority?"Yes":"No")}
           ${row("HSN / SAC",'<span class="code">'+(t.hsn||"—")+"</span>")}
@@ -7701,7 +7714,7 @@ function tierDetail(){
       <div class="card"><div class="card-head"><span class="card-title">Terms</span></div>
         <ul class="card-body" style="font-size:12.5px;line-height:1.6;color:var(--ink2);margin:0;padding:14px 16px 14px 30px">
           <li>A museum-visitation membership only.</li>
-          <li>Each visit admits the <b style="color:var(--ink)">registered adult + child pair</b> — no other adult or child may use it.</li>
+          <li>Each visit admits the <b style="color:var(--ink)">registered adult + the registered children</b> (1, 2 or 3, as bought) — no other adult or child may use it.</li>
           <li>Members do <b style="color:var(--ink)">not</b> get free admission to special workshops, events, activities, camps, birthdays or special exhibits — those carry the member discounts above (birthday parties get the birthday party perks instead).</li>
           <li>Blackout dates apply — check the calendar.</li>
           <li>Non-refundable and non-transferable.</li>
@@ -7711,7 +7724,7 @@ function tierDetail(){
 }
 /* ---- membership tier create / edit form ---- */
 function tierForm(editing){
-  const t=editing?MEMBERSHIP_TIERS[selTier]:{name:"",price:"",visits:"",validity:"6 months",priority:false,hsn:"999692",status:"Active",bday:{pct:"",perks:""}};
+  const t=editing?MEMBERSHIP_TIERS[selTier]:{name:"",price:"",prices:[],visits:"",validity:"6 months",priority:false,hsn:"999692",status:"Active",bday:{pct:"",perks:""}};
   const bd=t.bday||{};
   if(!tierDraft) seedTierDraft(editing);   // safety net if the form is reached without going through the entry handler
   const td=tierDraft;
@@ -7724,12 +7737,16 @@ function tierForm(editing){
     <div class="form-body product-form">
       ${sec("Basics",
         fld("Plan name",`<input class="inp" value="${escAttr(t.name||"")}" placeholder="e.g. Silver, Gold, Platinum">`,"The plan name shown to customers.",true,true)
-        +fld("Price",`<div class="inp-suffix"><input class="inp mono" type="number" min="0" value="${escAttr(t.price||"")}" placeholder="0"><span>₹</span></div>`,"One-time price of the plan.",true)
-        +fld("Striked price",`<div class="inp-suffix"><input class="inp mono" type="number" min="0" value="${escAttr(t.strikedPrice||"")}" placeholder="0"><span>₹</span></div>`,"Optional original price shown struck-through next to the plan price to signal a discount.",false)
         +fld("HSN / SAC code",`<div class="selwrap"><select class="inp">${HSNCODES.map(h=>`<option value="${h.code}"${(t.hsn||"999692")===h.code?" selected":""}>${h.code} · ${h.desc} · ${h.gst}% GST</option>`).join("")}</select></div>`,"GST on the plan price is taken from this code.",true)
         +fld("Active",`<button type="button" class="sw" data-on="${t.status==="Draft"?0:1}"><i></i><span>${t.status==="Draft"?"Off":"On"}</span></button>`,"Turn it off to keep the plan a draft — draft plans are not on sale yet.",false))}
+      ${sec("Pricing by number of children",
+        `<div class="fld wide"><div class="lab"><span class="lab-n">Price for each option</span>${tip("The plan is sold for 1, 2 or 3 children. Each option has its own price and an optional striked (original) price shown struck-through next to it. GST is taken from the HSN / SAC code.")}<span class="lab-req">Required</span></div>
+          <div class="matrix-wrap"><table class="reclist" data-tier-prices><thead><tr><th>Option</th><th>Price</th><th>Striked price <span class="muted" style="font-weight:400">(optional)</span></th></tr></thead><tbody>${KID_OPTS.map(k=>{const r=tierPriceRow(t,k);return `<tr data-kids="${k}"><td><b style="font-weight:500">${kidsLabel(k)}</b><div class="sub">1 adult + ${kidsLabel(k)}</div></td>
+            <td><div class="inp-suffix"><input class="inp mono" data-tp="price" type="number" min="0" value="${escAttr(r.price||"")}" placeholder="0" aria-label="Price for ${kidsLabel(k)}"><span>₹</span></div></td>
+            <td><div class="inp-suffix"><input class="inp mono" data-tp="strike" type="number" min="0" value="${escAttr(r.strike||"")}" placeholder="0" aria-label="Striked price for ${kidsLabel(k)}"><span>₹</span></div></td></tr>`;}).join("")}</tbody></table></div></div>`,
+        "per option")}
       ${sec("Visits & validity",
-        fld("Visits included",`<div class="inp-suffix"><input class="inp mono" type="number" min="0" step="1" value="${escAttr(numvis)}" placeholder="Leave blank for Unlimited"><span>visits</span></div>`,"Number of visits included. Leave blank to mean Unlimited. One visit admits 1 adult + 1 child.",false)
+        fld("Visits included",`<div class="inp-suffix"><input class="inp mono" type="number" min="0" step="1" value="${escAttr(numvis)}" placeholder="Leave blank for Unlimited"><span>visits</span></div>`,"Number of visits included. Leave blank to mean Unlimited. One visit admits 1 adult + all the children registered on the membership.",false)
         +fld("Validity",`<div class="selwrap"><select class="inp">${["3 months","6 months","Yearly"].map(o=>`<option${t.validity===o?" selected":""}>${o}</option>`).join("")}</select></div>`,"Membership auto-expires when the validity period ends.",true)
         +fld("Priority access",`<button type="button" class="sw" data-on="${t.priority?1:0}"><i></i><span>${t.priority?"On":"Off"}</span></button>`,"Priority access to select activities.",false))}
       ${sec("Products & time slots",
@@ -7783,23 +7800,27 @@ function tierProdsFormCard(){
 }
 /* ---- member create form (registers the adult-child pair) ---- */
 function memberForm(editing){
-  const m=editing?MEMBERS[selMember]:{tier:"Gold",adult:"",child:"",phone:"",email:""};
+  const m=editing?MEMBERS[selMember]:{tier:"Gold",kids:1,adult:"",child:"",phone:"",email:""};
+  const kids=memberKids(m), cn=childNames(m), tObj=tierOf(m.tier)||MEMBERSHIP_TIERS[0];
   const sec=(title,body)=>`<section class="form-sec"><div class="form-sec-head"><span class="form-sec-title">${title}</span></div><div class="form-sec-body">${body}</div></section>`;
   const fld=(label,inner,hint,req,wide)=>`<div class="fld${wide?" wide":""}"><div class="lab"><span class="lab-n">${label}</span>${hint?tip(hint):""}<span class="lab-req">${req?"Required":"Optional"}</span></div>${inner}</div>`;
   return `<div><div class="card">
     <div class="card-head"><span class="card-title">${editing?"Edit member":"New member"}</span></div>
     <div class="form-body product-form">
-      ${sec("Membership",fld("Plan",`<div class="selwrap"><select class="inp">${MEMBERSHIP_TIERS.map(x=>`<option${m.tier===x.name?" selected":""}>${x.name}</option>`).join("")}</select></div>`,"The plan being purchased.",true,true))}
+      ${sec("Membership",fld("Plan",`<div class="selwrap"><select class="inp" id="memberTier">${MEMBERSHIP_TIERS.map(x=>`<option${m.tier===x.name?" selected":""}>${x.name}</option>`).join("")}</select></div>`,"The plan being purchased.",true)
+        +fld("Children covered",`<div class="selwrap"><select class="inp" id="memberKids">${KID_OPTS.map(k=>`<option value="${k}"${kids===k?" selected":""}>${kidsLabel(k)}</option>`).join("")}</select></div>`,"The option bought — 1, 2 or 3 children. Each option has its own price on the plan, and every child below can redeem.",true)
+        +`<div class="fld wide"><div class="lab"><span class="lab-n">Price</span><span class="lab-req">Calculated</span></div><div id="memberPriceLine" class="code" style="font-size:13px">${priceWithStrike(tierPriceRow(tObj,kids))} <span class="muted">· ${kidsLabel(kids)}</span></div></div>`)}
       ${sec("Registered adult",
         fld("Adult first name",`<input class="inp" value="${escAttr(splitName(m.adult).first)}" placeholder="First name">`,"The registered adult — only this adult may redeem the membership.",true)
         +fld("Adult last name",`<input class="inp" value="${escAttr(splitName(m.adult).last)}" placeholder="Last name">`,"",true)
         +fld("Date of birth",`<input class="inp mono" data-dob="madult" value="${escAttr(m.adultDob||"")}" placeholder="DD/MM/YYYY">`,"Optional — used to auto-fill the age.",false)
         +fld("Age",`<input class="inp mono" id="age_madult" value="${escAttr(m.adultDob?ageLabel(m.adultDob):(m.adultAge||""))}" placeholder="Years" aria-live="polite">`,"Auto-filled from date of birth; you can also type it. Optional for the adult.",false))}
-      ${sec("Registered child",
-        fld("Child first name",`<input class="inp" value="${escAttr(splitName(m.child).first)}" placeholder="First name">`,"The registered child — only this child may redeem the membership.",true)
-        +fld("Child last name",`<input class="inp" value="${escAttr(splitName(m.child).last)}" placeholder="Last name">`,"",true)
-        +fld("Date of birth",`<input class="inp mono" data-dob="mchild" value="${escAttr(m.childDob||"")}" placeholder="DD/MM/YYYY">`,"Optional — used to auto-fill the age.",false)
-        +fld("Age",`<input class="inp mono" id="age_mchild" required aria-required="true" value="${escAttr(m.childDob?ageLabel(m.childDob):(m.childAge||""))}" placeholder="Years" aria-live="polite">`,"Required. Auto-filled from date of birth; you can also type it.",true))}
+      ${[1,2,3].map(i=>{const nm=splitName(cn[i-1]||""),sfx=i===1?"":String(i),ttl=kids>1?"Registered child "+i:"Registered child";
+        return `<div data-child-sec="${i}"${i>kids?" hidden":""}>`+sec(ttl,
+        fld("Child first name",`<input class="inp" value="${escAttr(nm.first)}" placeholder="First name">`,"A registered child — only the registered children may redeem the membership.",true)
+        +fld("Child last name",`<input class="inp" value="${escAttr(nm.last)}" placeholder="Last name">`,"",true)
+        +fld("Date of birth",`<input class="inp mono" data-dob="mchild${sfx}" value="${escAttr(i===1?(m.childDob||""):((m.childDobs||[])[i-1]||""))}" placeholder="DD/MM/YYYY">`,"Optional — used to auto-fill the age.",false)
+        +fld("Age",`<input class="inp mono" id="age_mchild${sfx}" value="${escAttr(i===1?(m.childDob?ageLabel(m.childDob):(m.childAge||"")):"")}" placeholder="Years" aria-live="polite">`,"Required. Auto-filled from date of birth; you can also type it.",true))+`</div>`;}).join("")}
       ${sec("Contact",
         fld("Phone",`<input class="inp mono" type="tel" inputmode="tel" value="${escAttr(m.phone||"")}" placeholder="10-digit mobile">`,"Used for OTP at redemption and for confirmations.",true)
         +fld("Email",`<input class="inp" type="email" value="${escAttr(m.email||"")}" placeholder="name@example.com">`,"For confirmations and to view history on login.",true)
@@ -7820,7 +7841,7 @@ function memberDetail(){
       <div class="matrix-wrap"><table><thead><tr><th>Date</th><th>Item</th><th>Tier</th><th>Amount</th><th>Channel</th><th>Invoice</th></tr></thead>
       <tbody>${(m.purchases||[]).map(p=>`<tr><td class="code">${p.date}</td><td>${p.item}</td><td>${tierPill(m.tier)}</td><td class="code">${money(p.amount)}</td><td>${p.channel}</td><td class="code muted">${p.inv}</td></tr>`).join("")}</tbody></table></div></div>`;
   } else if(msub==="redemptions"){
-    body=`<div class="card"><div class="card-head"><span class="card-title">Redemptions &amp; visits</span><span class="card-note">a visit admits the registered adult + child</span></div>
+    body=`<div class="card"><div class="card-head"><span class="card-title">Redemptions &amp; visits</span><span class="card-note">a visit admits the registered adult + all registered children</span></div>
       <div class="matrix-wrap"><table><thead><tr><th>Date</th><th class="ctr">Visits</th><th>Balance after</th><th>Channel</th><th>OTP</th><th>Present</th></tr></thead>
       <tbody>${(m.redemptions||[]).map(r=>`<tr><td class="code">${r.date}</td><td class="ctr code">${r.visits}</td><td class="code">${r.balanceAfter==="Unlimited"?"Unlimited":r.balanceAfter}</td><td>${r.channel}</td><td>${r.otp?'<span class="pill pill-ok"><i class="dot"></i>Verified</span>':'<span class="muted">—</span>'}</td><td class="sub">${pairLabel(m)}</td></tr>`).join("")||'<tr><td colspan="6" class="muted">No redemptions yet.</td></tr>'}</tbody></table></div></div>`;
   } else {
@@ -7833,13 +7854,14 @@ function memberDetail(){
       <div>
         <div class="card"><div class="card-body">
           <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">${tierPill(m.tier)}${memberStatusPill(m)}</div>
-          <div style="font-size:11px;color:var(--ink3);font-family:var(--mono);letter-spacing:.05em;text-transform:uppercase;margin-bottom:4px">Registered pair — only this pair may redeem</div>
+          <div style="font-size:11px;color:var(--ink3);font-family:var(--mono);letter-spacing:.05em;text-transform:uppercase;margin-bottom:4px">Registered ${memberKids(m)>1?"adult + "+memberKids(m)+" children":"pair"} — only they may redeem</div>
           <div style="font-size:15px;font-weight:600;margin-bottom:12px">${pairLabel(m)}</div>
           <div style="margin-bottom:6px"><div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px"><span>Visits</span><span class="code">${isUnlimited(m)?"Unlimited":used+" of "+tot+" used · "+bal+" left"}</span></div><div class="meter"><div class="meter-fill ${isUnlimited(m)?"ok":(bal<=0?"sold":bal<=2?"low":"ok")}" style="width:${visPct}%"></div></div></div>
           <div style="margin-top:12px"><div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px"><span>Validity</span><span class="code">${dl==null?m.expires:(dl<0?"Expired":"in "+dl+" days")}</span></div><div class="meter"><div class="meter-fill ${valColor}" style="width:${valPct}%"></div></div></div>
         </div></div>
         <div class="card"><div class="matrix-wrap"><table><tbody>
           ${row("Member ID",'<span class="code">'+m.id+'</span>')}
+          ${row("Children covered",kidsLabel(memberKids(m))+' <span class="code muted">· '+money(tierPriceFor(t,memberKids(m)))+'</span>')}
           ${row("Phone",'<span class="code">'+m.phone+'</span>')}
           ${row("Email",m.email)}
           ${row("Joined",m.joined)}
@@ -7866,7 +7888,8 @@ function renewFormCard(m){
       ${afFld("Member",`<input class="inp" value="${escAttr(pairLabel(m))}" readonly>`,"",true)}
       ${afFld("Plan",`<div class="selwrap"><select class="inp" id="renewTier">${MEMBERSHIP_TIERS.map(x=>`<option${x.name===m.tier?" selected":""}>${x.name}</option>`).join("")}</select></div>`,"")}
       ${afFld("Validity",`<input class="inp" value="${t.validity||""}" readonly>`,"")}
-      ${afFld("Amount",`<input class="inp mono" value="${money(t.price||0)}" readonly>`,"")}
+      ${afFld("Children covered",`<input class="inp" value="${kidsLabel(memberKids(m))}" readonly>`,"The option stays as bought.")}
+      ${afFld("Amount",`<input class="inp mono" id="renewAmount" value="${money(tierPriceFor(t,memberKids(m)))}" readonly>`,"")}
     </div>
     <div class="form-foot"><span>A confirmation email &amp; SMS go to the member.</span>
       <button class="btn" data-addcancel="1">Cancel</button>
@@ -7880,14 +7903,14 @@ function redeemFormCard(m){
         <div class="fld wide" style="font-size:12.5px;color:var(--ink2)">Redeeming <b>${redeemVisits} visit${redeemVisits===1?"":"s"}</b> for <b>${pairLabel(m)}</b>. A 6-digit OTP has been sent to <b>${m.phone}</b>.</div>
         ${afFld("OTP",`<input class="inp mono" id="redeemOtp" placeholder="6-digit code" maxlength="6" style="letter-spacing:.3em">`,"Wireframe — any value is accepted.",true)}
       </div>
-      <div class="form-foot"><span>Each visit admits 1 adult + 1 child.</span>
+      <div class="form-foot"><span>Each visit admits 1 adult + ${memberKids(m)>1?memberKids(m)+" children":"1 child"}.</span>
         <button class="btn" data-addcancel="1">Cancel</button>
         <button class="btn btn-primary" data-redeem-confirm="${selMember}">Confirm redemption</button></div>`);
   }
   return afCard("Record redemption",unl?"Unlimited plan":`${bal} visit${bal===1?"":"s"} left`,
     `<div class="form-body">
-      ${afFld("Registered pair",`<input class="inp" value="${escAttr(pairLabel(m))}" readonly>`,"Only the registered adult + child may redeem.",true)}
-      ${afFld("Visits to redeem",`<input class="inp mono" id="redeemQty" value="1" placeholder="1">`,unl?"Each visit admits 1 adult + 1 child.":`Up to ${bal}. Each visit = 1 adult + 1 child.`)}
+      ${afFld("Registered "+(memberKids(m)>1?"adult + children":"pair"),`<input class="inp" value="${escAttr(pairLabel(m))}" readonly>`,"Only the registered adult + "+(memberKids(m)>1?"children":"child")+" may redeem.",true)}
+      ${afFld("Visits to redeem",`<input class="inp mono" id="redeemQty" value="1" placeholder="1">`,unl?`Each visit admits 1 adult + ${memberKids(m)>1?memberKids(m)+" children":"1 child"}.`:`Up to ${bal}. Each visit = 1 adult + ${memberKids(m)>1?memberKids(m)+" children":"1 child"}.`)}
     </div>
     <div class="form-foot"><span>An OTP will be sent to verify.</span>
       <button class="btn" data-addcancel="1">Cancel</button>
@@ -11865,7 +11888,8 @@ function tierOf(name){ return MEMBERSHIP_TIERS.find(t=>t.name===name||t.id===nam
 function isUnlimited(m){ return m.visitsTotal==="Unlimited"; }
 function visitsBalance(m){ return isUnlimited(m)?Infinity:Math.max(0,(+m.visitsTotal||0)-(+m.visitsUsed||0)); }
 function visitsLabel(m){ return isUnlimited(m)?"Unlimited visits":`${m.visitsUsed||0} of ${m.visitsTotal||0} visits used`; }
-function pairLabel(m){ return `${m.adult} (adult) + ${m.child} (child)`; }
+function childNames(m){ return (m.children&&m.children.length)?m.children:(m.child?[m.child]:[]); }
+function pairLabel(m){ const c=childNames(m); return `${m.adult} (adult) + ${c.join(" & ")} (${c.length>1?"children":"child"})`; }
 function memberStatus(m){
   const exp=parseDMY(m.expires), today=parseDMY(MEMBER_TODAY);
   if(!exp||!today) return {key:"ok",label:"Active",daysLeft:null};
@@ -12723,7 +12747,7 @@ document.addEventListener("click",e=>{
     const months={"3 months":3,"6 months":6,"Yearly":12}[t.validity]||12;
     const exp=new Date(base.getFullYear(),base.getMonth()+months,base.getDate());
     m.expires=fmtDMY(exp);
-    (m.purchases=m.purchases||[]).unshift({date:MEMBER_TODAY,item:(t.name||tierName)+" renewal",amount:t.price||0,channel:"POS",inv:"INV-"+Math.floor(2100+selMember*7)});
+    (m.purchases=m.purchases||[]).unshift({date:MEMBER_TODAY,item:(t.name||tierName)+" renewal"+(memberKids(m)>1?" · "+kidsLabel(memberKids(m)):""),amount:tierPriceFor(t,memberKids(m))||t.price||0,channel:"POS",inv:"INV-"+Math.floor(2100+selMember*7)});
     addOpen=null; msub="purchases"; render(); return; }
   const es=e.target.closest("[data-esub]");
   if(es){ esub=es.dataset.esub; addOpen=null; render(); return; }
@@ -12796,6 +12820,13 @@ document.addEventListener("click",e=>{
     sw.querySelector("span").textContent=on?"Off":"On"; }
 });
 document.addEventListener("change",e=>{
+  // member form: Plan / Children covered — show one child section per child and refresh the calculated price
+  if(e.target.id==="memberKids"||e.target.id==="memberTier"){
+    const k=+(document.getElementById("memberKids")||{}).value||1, t=tierOf((document.getElementById("memberTier")||{}).value)||MEMBERSHIP_TIERS[0];
+    document.querySelectorAll("[data-child-sec]").forEach(el=>{ const i=+el.dataset.childSec; el.hidden=i>k; const tt=el.querySelector(".form-sec-title"); if(tt) tt.textContent=k>1?"Registered child "+i:"Registered child"; });
+    const pl=document.getElementById("memberPriceLine"); if(pl) pl.innerHTML=priceWithStrike(tierPriceRow(t,k))+` <span class="muted">· ${kidsLabel(k)}</span>`;
+    return;
+  }
   if(e.target.matches&&e.target.matches("[data-sp-ackconsent]")){ const rec=spById(selSp); if(rec) rec.ackConsent=e.target.checked; return; }   // post-visit contact consent
   if(e.target.matches&&e.target.matches("[data-sp-actual]")){ const rec=spById(selSp); if(rec){ const v=e.target.value.trim(); const k=e.target.dataset.spActual; if(k==="children") rec.actualChildren=v; else if(k==="adults") rec.actualAdults=v; else if(k==="days") rec.wastageDays=v; else rec.actualComp=v; rec.checkinSaved=false; } render(); return; }   // Vendor Invoices — actual attendance gate; editing clears "Saved ✓" until re-saved
   if(e.target.matches&&e.target.matches("[data-sp-wastage-donor]")){ const rec=spById(selSp); if(rec){ rec.wastageDonor=e.target.value; rec.checkinSaved=false; } render(); return; }   // Vendor Invoices — food wastage donor
