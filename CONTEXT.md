@@ -589,6 +589,16 @@ Verified with `node --check` + headless-Chrome render of plan list / detail / fo
 - **Parent / guardian declaration**: required tick box on the member form (save blocked with an error) and re-ticked in the Renew flyout (confirm blocked); member detail shows "Age groups" and "Parent / guardian declared".
 - Schema counterpart (`muso-schema.prisma`): `adult_age_groups`, `child_age_groups`, `members.adult_age_group_id`/`guardian_declared_at`, `member_children.child_age_group_id`; removed child's name blanked 12 months after removal (sweep not built).
 
+### 50. Member numbers MUS-GOLD-29847 (age-group part superseded by §51)
+- **Member number** = tier prefix + random 5-digit number (`MUS-GOLD-29847`), replacing `MEM-####`. New tier-form field **Member number prefix** (`prefix`, required, letters/digits/hyphens; editing affects new members and renewals only); tiers list and detail show `PREFIX-#####`; the member form shows a generated-number line that follows the chosen plan. Renewing on a different plan swaps the prefix and keeps the 5 digits (`MUS-SILVER-41206` → `MUS-GOLD-41206`). Column headers now say "Member number".
+- **Age groups** is ONE master (`AGE_GROUPS`, registry key `agegroups`) with Type Adult/Child, replacing the separate Adult/Child masters; `ageGroupsOf(type)` feeds the member form dropdowns.
+- Schema counterpart: `membership_tiers.member_number_prefix`, `members.member_serial` + `member_number`, split first/last names, merged `age_groups` (`is_adult`), `membership_purchases.invoice_file_id` -> `private_files`.
+
+### 51. Age groups merged into Visitor categories
+- The separate **Age groups** master is gone. **Visitor categories** (`VISITOR_CATS`) is the one master: each row has **Used for** (Ticket / Membership, can be both; `uses[]` field on the form, new Used for column on the list). Ticket rows (`CATS` = the ticket-use subset) feed every booking/pricing screen unchanged; Membership rows (adult bands 18–24…55+, child bands 0–2…13–17, each with an `is_adult` flag) feed the Members form dropdowns via `ageGroupsOf("Adult"|"Child")`.
+- The "no gaps, no overlaps" note on the list now says it applies within Ticket use; membership bands are checked separately.
+- Schema counterpart: `visitor_categories.uses VisitorCategoryUse[]`; `age_groups` dropped; `members.adult_visitor_category_id`, `member_children.visitor_category_id`. Supersedes the age-group part of §49/§50.
+
 ## Known wireframe simplifications / open notes
 - Auto discounts apply on **simplified bases** (whole-cart or the obvious line group), not a full `target/prods/cats` engine.
 - ~~Per "stack all", there is **no** mutual-exclusion (`no[]`) or biggest-saving enforcement in the POS — a member can get both the member add-on line and the Membership auto row.~~ — superseded by §19: one discount per order
